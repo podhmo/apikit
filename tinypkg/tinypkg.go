@@ -109,6 +109,6 @@ type Symbol struct {
 func (s *Symbol) String() string {
 	return s.Name
 }
-func (s *Symbol) GoSting() string {
-	return s.Package.Name + "." + s.Name
+func (s *Symbol) GoString() string {
+	return s.Package.Path + "." + s.Name
 }
