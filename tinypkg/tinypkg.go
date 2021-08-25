@@ -1,6 +1,9 @@
 package tinypkg
 
-import "sync"
+import (
+	"strings"
+	"sync"
+)
 
 type Universe struct {
 	packages map[string]*Package
@@ -20,6 +23,11 @@ func (u *Universe) NewPackage(path, name string) *Package {
 	if ok {
 		return pkg
 	}
+	if name == "" {
+		parts := strings.Split(path, "/")
+		name = parts[len(parts)-1]
+	}
+
 	pkg = &Package{
 		Path:     path,
 		Name:     name,
