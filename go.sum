@@ -41,6 +41,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/podhmo/reflect-openapi v0.0.10 h1:aD8FelWMbsihfqlCG3cwwuJkwnOkLX3wTqycHqC6Xi4=
 github.com/podhmo/reflect-openapi v0.0.10/go.mod h1:mOX9cETbzoE4oi3Uvf3XkcJF8VTPYkdxZHfpn48PU4I=
+github.com/podhmo/reflect-openapi v0.0.11 h1:HaIxpssESfyY+8BvbySoEP3+Dhsk0cXiKrHeuNVloEI=
+github.com/podhmo/reflect-openapi v0.0.11/go.mod h1:mOX9cETbzoE4oi3Uvf3XkcJF8VTPYkdxZHfpn48PU4I=
 github.com/podhmo/tenuki v0.0.3/go.mod h1:gnvC6oMXHaf8sZO/nE6Eqa9sdNtHKTLu7UL6hDHD7WQ=
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
