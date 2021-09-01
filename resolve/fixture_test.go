@@ -34,6 +34,9 @@ func GetUserWithStruct(db *DB, input GetUserInput) *User {
 func GetUserWithPrimitive(db *DB, userID string) *User {
 	return nil
 }
+func GetUserWithStructWithError(db *DB, input GetUserInput) (*User, error) {
+	return nil, nil
+}
 
 // https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/golang-handler.html
 // func ()
