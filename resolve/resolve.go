@@ -76,6 +76,18 @@ type Item struct {
 	Kind  Kind
 	Name  string
 	Shape shape.Shape
+	sym   *tinypkg.Symbol
+}
+
+func (i *Item) Symbol() *tinypkg.Symbol {
+	if i.sym != nil {
+		return i.sym
+	}
+	i.sym = i.extractSymbol()
+	return i.sym
+}
+func (i *Item) extractSymbol() *tinypkg.Symbol {
+	return nil // TODO: implement
 }
 
 type Kind string

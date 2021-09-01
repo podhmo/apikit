@@ -1,49 +1,8 @@
 package resolve
 
 import (
-	"context"
-	"fmt"
 	"testing"
 )
-
-type DB struct{}
-
-type User struct{}
-
-func ListUser(db *DB) []*User {
-	return nil
-}
-
-func ListUserWithContext(ctx context.Context, db *DB) []*User {
-	return nil
-}
-func ListUserWithFunction(getdb func() (*DB, error)) []*User {
-	return nil
-}
-func ListUserWithInterface(stringer fmt.Stringer) []*User {
-	return nil
-}
-
-type GetUserInput struct {
-	UserID string `path:"userID"`
-}
-
-func GetUserWithStruct(db *DB, input GetUserInput) *User {
-	return nil
-}
-func GetUserWithPrimitive(db *DB, userID string) *User {
-	return nil
-}
-
-// https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/golang-handler.html
-// func ()
-// func () error
-// func (TIn), error
-// func () (TOut, error)
-// func (context.Context) error
-// func (context.Context, TIn) error
-// func (context.Context) (TOut, error)
-// func (context.Context, TIn) (TOut, error)
 
 // TODO: handle returns
 
@@ -96,7 +55,7 @@ func Test(t *testing.T) {
 			for i, x := range Def.Args {
 				wantKind := c.Args[i]
 				gotKind := x.Kind
-				t.Run(x.name, func(t *testing.T) {
+				t.Run(x.Name, func(t *testing.T) {
 					if wantKind != gotKind {
 						t.Errorf("want %s but got %s", wantKind, gotKind)
 					}

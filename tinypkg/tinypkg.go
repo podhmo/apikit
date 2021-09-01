@@ -65,22 +65,40 @@ type ImportedPackage struct {
 }
 
 func (ip *ImportedPackage) Lookup(sym *Symbol) *ImportedSymbol {
-	return &ImportedSymbol{pkg: ip, Name: sym.Name}
+	return &ImportedSymbol{pkg: ip, sym: sym}
 }
 
 type ImportedSymbol struct {
-	pkg  *ImportedPackage
-	Name string
+	pkg *ImportedPackage
+	sym *Symbol
+}
+
+func ToRelativeTypeString(here *Package, symboler interface{ Symbol() *Symbol }) string {
+	sym := symboler.Symbol()
+	if here == sym.Package {
+		return sym.Name
+	}
+	if impl, ok := symboler.(interface{ Qualifier() string }); ok {
+		qualifier := impl.Qualifier()
+		return qualifier + "." + sym.Name
+	}
+	return sym.Name
+}
+
+func (im *ImportedSymbol) Qualifier() string {
+	qualifier := im.pkg.qualifier
+	if qualifier != "" {
+		return qualifier
+	}
+	return im.pkg.pkg.Name
+}
+
+func (im *ImportedSymbol) Symbol() *Symbol {
+	return im.sym
 }
 
 func (im *ImportedSymbol) String() string {
-	if im.pkg.here == im.pkg.pkg {
-		return im.Name
-	}
-	if im.pkg.qualifier == "" {
-		return im.pkg.pkg.Name + "." + im.Name
-	}
-	return im.pkg.qualifier + "." + im.Name
+	return ToRelativeTypeString(im.pkg.here, im)
 }
 
 func (p *Package) NewSymbol(name string) *Symbol {
@@ -106,6 +124,9 @@ type Symbol struct {
 	Package *Package
 }
 
+func (s *Symbol) Symbol() *Symbol {
+	return s
+}
 func (s *Symbol) String() string {
 	return s.Name
 }
