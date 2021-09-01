@@ -17,6 +17,8 @@ func ListUser(db *DB) []User                   { return nil }
 func ListName(db *DB) []string                 { return nil }
 func ListUserWithError(db *DB) ([]User, error) { return nil, nil }
 
+func ListUserFromAnotherDB(anotherDb *DB) []User { return nil }
+
 func TestTracker(t *testing.T) {
 	main := tinypkg.NewPackage("main", "main")
 	pkg := tinypkg.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
@@ -34,7 +36,7 @@ func TestTracker(t *testing.T) {
 			input: []interface{}{ListUser},
 			want: `
 type Component interface {
-	Db() *translate.DB
+	DB() *translate.DB
 }`,
 		},
 		{
@@ -43,7 +45,7 @@ type Component interface {
 			input: []interface{}{ListUser},
 			want: `
 type Component interface {
-	Db() *DB
+	DB() *DB
 }`,
 		},
 		{
@@ -52,7 +54,17 @@ type Component interface {
 			input: []interface{}{ListUser, ListName, ListUserWithError},
 			want: `
 type Component interface {
+	DB() *translate.DB
+}`,
+		},
+		{
+			msg:   "same types but with another name, another package",
+			here:  main,
+			input: []interface{}{ListUser, ListUserFromAnotherDB},
+			want: `
+type Component interface {
 	Db() *translate.DB
+	AnotherDb() *translate.DB
 }`,
 		},
 	}
