@@ -1,6 +1,7 @@
 package tinypkg
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -73,7 +74,7 @@ type ImportedSymbol struct {
 	sym *Symbol
 }
 
-func ToRelativeTypeString(here *Package, symboler interface{ Symbol() *Symbol }) string {
+func ToRelativeTypeString(here *Package, symboler Symboler) string {
 	sym := symboler.Symbol()
 	if here == sym.Package {
 		return sym.Name
@@ -131,5 +132,65 @@ func (s *Symbol) String() string {
 	return s.Name
 }
 func (s *Symbol) GoString() string {
+	if s.Package == nil {
+		return s.Name
+	}
 	return s.Package.Path + "." + s.Name
+}
+
+type Symboler interface {
+	fmt.Stringer
+	Symbol() *Symbol
+}
+
+type Pointer struct {
+	Lv int
+	V  Symboler
+}
+
+func (c *Pointer) String() string {
+	return strings.Repeat("*", c.Lv) + c.V.String()
+}
+func (c *Pointer) Symbol() *Symbol {
+	return c.V.Symbol()
+}
+
+type Map struct {
+	K Symboler
+	V Symboler
+}
+
+func (c *Map) String() string {
+	return fmt.Sprintf("map[%s]%s", c.K, c.V)
+}
+func (c *Map) Symbol() *Symbol {
+	k := c.K.Symbol()
+	if k != nil {
+		return k // TODO: return K and V
+	}
+	return c.V.Symbol()
+}
+
+type Slice struct {
+	V Symboler
+}
+
+func (c *Slice) Symbol() *Symbol {
+	return c.V.Symbol()
+}
+
+func (c *Slice) String() string {
+	return fmt.Sprintf("[]%s", c.V)
+}
+
+type Array struct {
+	V Symboler
+	N int
+}
+
+func (c *Array) String() string {
+	return fmt.Sprintf("[%d]%s", c.N, c.V)
+}
+func (c *Array) Symbol() *Symbol {
+	return c.V.Symbol()
 }
