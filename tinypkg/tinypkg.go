@@ -194,3 +194,40 @@ func (c *Array) String() string {
 func (c *Array) Symbol() *Symbol {
 	return c.V.Symbol()
 }
+
+type Func struct {
+	Name    string
+	Params  []*Var
+	Returns []*Var
+}
+
+func (f *Func) Symbol() *Symbol {
+	return nil // TODO: this is broken.
+}
+func (f *Func) String() string {
+	params := make([]string, len(f.Params))
+	for i, x := range f.Params {
+		params[i] = x.String()
+	}
+	returns := make([]string, len(f.Returns))
+	for i, x := range f.Returns {
+		returns[i] = x.String()
+	}
+
+	if len(returns) == 1 {
+		return fmt.Sprintf("func(%s) %s", strings.Join(params, ", "), strings.Join(returns, ", "))
+	}
+	return fmt.Sprintf("func(%s) (%s)", strings.Join(params, ", "), strings.Join(returns, ", "))
+}
+
+type Var struct {
+	Name string
+	Symboler
+}
+
+func (v *Var) String() string {
+	if v.Name == "" {
+		return v.Symboler.String()
+	}
+	return v.Name + " " + v.Symboler.String()
+}

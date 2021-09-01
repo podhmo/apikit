@@ -75,8 +75,16 @@ func TestResolveSymbol(t *testing.T) {
 			input:  KindComponent,
 			output: "resolve.Kind",
 		},
-		// TODO: func
+		{
+			// OK: func
+			msg:    "improted func type",
+			here:   main,
+			input:  GetUserWithStructWithError,
+			output: "func(db *resolve.DB, input resolve.GetUserInput) (*resolve.User, error)",
+		},
+		// TODO: anonymous function is not supported, yet
 	}
+
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
