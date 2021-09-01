@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"reflect"
 	"strings"
 
@@ -38,6 +39,7 @@ func (t *Tracker) Track(def *resolve.Def) {
 	}
 	t.visitedDef[path] = true
 
+toplevel:
 	for _, arg := range def.Args {
 		arg := arg
 		switch arg.Kind {
@@ -48,9 +50,10 @@ func (t *Tracker) Track(def *resolve.Def) {
 		case resolve.KindComponent:
 			k := arg.Shape.GetReflectType()
 			needs := t.seen[k]
+
 			for _, n := range needs {
 				if n.Name == arg.Name {
-					continue
+					continue toplevel
 				}
 			}
 			need := &Need{
@@ -78,6 +81,9 @@ func WriteInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string)
 		if len(t.seen[k]) > 1 {
 			// TODO:
 			// Db() *Db,  and Xdb() *Db
+			for i, x := range t.seen[k] {
+				fmt.Fprintf(os.Stderr, "\t* %d: %+v\n", i, x)
+			}
 			panic("unsupported: TODO")
 		} else {
 			methodName := strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName

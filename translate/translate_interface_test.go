@@ -13,7 +13,9 @@ import (
 type DB struct{}
 type User struct{}
 
-func ListUser(db *DB) []User { return nil }
+func ListUser(db *DB) []User                   { return nil }
+func ListName(db *DB) []string                 { return nil }
+func ListUserWithError(db *DB) ([]User, error) { return nil, nil }
 
 func TestTracker(t *testing.T) {
 	main := tinypkg.NewPackage("main", "main")
@@ -42,6 +44,15 @@ type Component interface {
 			want: `
 type Component interface {
 	Db() *DB
+}`,
+		},
+		{
+			msg:   "N component, another package",
+			here:  main,
+			input: []interface{}{ListUser, ListName, ListUserWithError},
+			want: `
+type Component interface {
+	Db() *translate.DB
 }`,
 		},
 	}
