@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"reflect"
 	"strings"
 
@@ -38,7 +37,6 @@ func (t *Tracker) Track(def *resolve.Def) {
 		return
 	}
 	t.visitedDef[path] = true
-
 toplevel:
 	for _, arg := range def.Args {
 		arg := arg
@@ -78,24 +76,19 @@ func WriteInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string)
 	usedNames := map[string]bool{}
 	for _, need := range t.Needs {
 		k := need.rt
+		methodName := need.rt.Name()
 		if len(t.seen[k]) > 1 {
-			// TODO:
-			// Db() *Db,  and Xdb() *Db
-			for i, x := range t.seen[k] {
-				fmt.Fprintf(os.Stderr, "\t* %d: %+v\n", i, x)
-			}
-			panic("unsupported: TODO")
-		} else {
-			methodName := strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
-			// TODO: T, (T, error)
-			// TODO: support correct type expression
-			typeExpr := resolve.ExtractSymbol(here, need.raw.Shape).String()
-			fmt.Fprintf(w, "\t%s() %s\n", methodName, typeExpr)
-			if _, duplicated := usedNames[methodName]; duplicated {
-				log.Printf("WARN: method name %s is duplicated", methodName)
-			}
-			usedNames[methodName] = true
+			methodName = strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
 		}
+
+		// TODO: T, (T, error)
+		// TODO: support correct type expression
+		typeExpr := resolve.ExtractSymbol(here, need.raw.Shape).String()
+		fmt.Fprintf(w, "\t%s() %s\n", methodName, typeExpr)
+		if _, duplicated := usedNames[methodName]; duplicated {
+			log.Printf("WARN: method name %s is duplicated", methodName)
+		}
+		usedNames[methodName] = true
 	}
 	io.WriteString(w, "}\n")
 }

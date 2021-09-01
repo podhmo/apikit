@@ -14,7 +14,11 @@ type Resolver struct {
 }
 
 func NewResolver() *Resolver {
-	e := &shape.Extractor{Seen: map[reflect.Type]shape.Shape{}, ArglistLookup: arglist.NewLookup()}
+	e := &shape.Extractor{
+		Seen:           map[reflect.Type]shape.Shape{},
+		ArglistLookup:  arglist.NewLookup(),
+		RevisitArglist: true,
+	}
 	return &Resolver{
 		extractor: e,
 		universe:  tinypkg.NewUniverse(),
