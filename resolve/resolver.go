@@ -21,7 +21,7 @@ func NewResolver() *Resolver {
 	}
 }
 
-func (r *Resolver) Resolve(fn interface{}) *Node {
+func (r *Resolver) Resolve(fn interface{}) *Def {
 	sfn := r.extractor.Extract(fn).(shape.Function)
 	pkg := r.universe.NewPackage(sfn.Package, "")
 	args := make([]Item, 0, len(sfn.Params.Keys))
@@ -55,18 +55,18 @@ func (r *Resolver) Resolve(fn interface{}) *Node {
 
 		args = append(args, Item{
 			Kind:  kind,
-			name:  name,
+			Name:  name,
 			Shape: s,
 		})
 	}
-	return &Node{
+	return &Def{
 		Symbol: pkg.NewSymbol(sfn.Name),
 		Shape:  sfn,
 		Args:   args,
 	}
 }
 
-type Node struct {
+type Def struct {
 	*tinypkg.Symbol
 	Shape shape.Function
 	Args  []Item
@@ -74,7 +74,7 @@ type Node struct {
 
 type Item struct {
 	Kind  Kind
-	name  string
+	Name  string
 	Shape shape.Shape
 }
 

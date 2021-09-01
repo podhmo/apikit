@@ -35,55 +35,65 @@ func GetUserWithPrimitive(db *DB, userID string) *User {
 	return nil
 }
 
+// https://docs.aws.amazon.com/ja_jp/lambda/latest/dg/golang-handler.html
+// func ()
+// func () error
+// func (TIn), error
+// func () (TOut, error)
+// func (context.Context) error
+// func (context.Context, TIn) error
+// func (context.Context) (TOut, error)
+// func (context.Context, TIn) (TOut, error)
+
 // TODO: handle returns
 
 func Test(t *testing.T) {
 	resolver := NewResolver()
 	cases := []struct {
-		Node *Node
+		Def  *Def
 		Args []Kind
 	}{
 		{
 			// OK: handle params pointer -> component
-			Node: resolver.Resolve(ListUser),
+			Def:  resolver.Resolve(ListUser),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params context.Context -> ignored
-			Node: resolver.Resolve(ListUserWithContext),
+			Def:  resolver.Resolve(ListUserWithContext),
 			Args: []Kind{KindIgnored, KindComponent},
 		},
 		{
 			// OK: handle params function -> component
-			Node: resolver.Resolve(ListUserWithFunction),
+			Def:  resolver.Resolve(ListUserWithFunction),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params interface -> component
-			Node: resolver.Resolve(ListUserWithInterface),
+			Def:  resolver.Resolve(ListUserWithInterface),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params struct -> data
-			Node: resolver.Resolve(GetUserWithStruct),
+			Def:  resolver.Resolve(GetUserWithStruct),
 			Args: []Kind{KindComponent, KindData},
 		},
 		{
 			// OK: handle params primitive -> primitive
-			Node: resolver.Resolve(GetUserWithPrimitive),
+			Def:  resolver.Resolve(GetUserWithPrimitive),
 			Args: []Kind{KindComponent, KindPrimitive},
 		},
 	}
 
 	for _, c := range cases {
 		c := c
-		node := c.Node
+		Def := c.Def
 
-		t.Run(node.Name, func(t *testing.T) {
-			t.Logf("input    : %+v", node.GoString())
-			t.Logf("signature: %+v", node.Shape.GetReflectType())
+		t.Run(Def.Name, func(t *testing.T) {
+			t.Logf("input    : %+v", Def.GoString())
+			t.Logf("signature: %+v", Def.Shape.GetReflectType())
 			t.Logf("want args: %+v", c.Args)
-			for i, x := range node.Args {
+			for i, x := range Def.Args {
 				wantKind := c.Args[i]
 				gotKind := x.Kind
 				t.Run(x.name, func(t *testing.T) {
