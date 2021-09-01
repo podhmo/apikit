@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/resolve"
+	"github.com/podhmo/apikit/tinypkg"
 )
 
 type Need struct {
@@ -67,7 +68,9 @@ func (t *Tracker) Track(def *resolve.Def) {
 	}
 }
 
-func WriteInterface(w io.Writer, t *Tracker, name string) {
+// TODO: import
+// TODO: same package
+func WriteInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) {
 	fmt.Fprintf(w, "type %s interface {\n", name)
 	usedNames := map[string]bool{}
 	for _, need := range t.Needs {
@@ -78,10 +81,10 @@ func WriteInterface(w io.Writer, t *Tracker, name string) {
 			panic("unsupported: TODO")
 		} else {
 			methodName := strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
-			typeExpr := need.raw                                                // xxx
 			// TODO: T, (T, error)
 			// TODO: support correct type expression
-			fmt.Fprintf(w, "\t%s()%s\n", methodName, typeExpr)
+			typeExpr := resolve.ExtractSymbol(here, need.raw.Shape).String()
+			fmt.Fprintf(w, "\t%s() %s\n", methodName, typeExpr)
 			if _, duplicated := usedNames[methodName]; duplicated {
 				log.Printf("WARN: method name %s is duplicated", methodName)
 			}
