@@ -6,6 +6,6 @@ type Symboler interface {
 	fmt.Stringer
 	Symbol() *Symbol
 }
-type walker interface {
+type walkerNode interface {
 	onWalk(use func(*Symbol) error) error
 }
