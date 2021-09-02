@@ -138,11 +138,6 @@ func (s *Symbol) GoString() string {
 	return s.Package.Path + "." + s.Name
 }
 
-type Symboler interface {
-	fmt.Stringer
-	Symbol() *Symbol
-}
-
 type Pointer struct {
 	Lv int
 	V  Symboler
@@ -153,6 +148,12 @@ func (c *Pointer) String() string {
 }
 func (c *Pointer) Symbol() *Symbol {
 	return c.V.Symbol()
+}
+func (c *Pointer) onWalk(use func(*Symbol) error) error {
+	if v, ok := c.V.(walker); ok {
+		return v.onWalk(use)
+	}
+	return use(c.Symbol())
 }
 
 type Map struct {
@@ -170,6 +171,21 @@ func (c *Map) Symbol() *Symbol {
 	}
 	return c.V.Symbol()
 }
+func (c *Map) onWalk(use func(*Symbol) error) error {
+	if v, ok := c.K.(walker); ok {
+		if err := v.onWalk(use); err != nil {
+			return err
+		}
+	} else {
+		if err := use(c.K.Symbol()); err != nil {
+			return err
+		}
+	}
+	if v, ok := c.V.(walker); ok {
+		return v.onWalk(use)
+	}
+	return use(c.V.Symbol())
+}
 
 type Slice struct {
 	V Symboler
@@ -178,9 +194,14 @@ type Slice struct {
 func (c *Slice) Symbol() *Symbol {
 	return c.V.Symbol()
 }
-
 func (c *Slice) String() string {
 	return fmt.Sprintf("[]%s", c.V)
+}
+func (c *Slice) onWalk(use func(*Symbol) error) error {
+	if v, ok := c.V.(walker); ok {
+		return v.onWalk(use)
+	}
+	return use(c.Symbol())
 }
 
 type Array struct {
@@ -194,6 +215,12 @@ func (c *Array) String() string {
 func (c *Array) Symbol() *Symbol {
 	return c.V.Symbol()
 }
+func (c *Array) onWalk(use func(*Symbol) error) error {
+	if v, ok := c.V.(walker); ok {
+		return v.onWalk(use)
+	}
+	return use(c.Symbol())
+}
 
 type Func struct {
 	Name    string
@@ -204,6 +231,32 @@ type Func struct {
 func (f *Func) Symbol() *Symbol {
 	return nil // TODO: this is broken.
 }
+func (f *Func) onWalk(use func(*Symbol) error) error {
+	for _, x := range f.Params {
+		if v, ok := x.Symboler.(walker); ok {
+			if err := v.onWalk(use); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := use(x.Symbol()); err != nil {
+			return err
+		}
+	}
+	for _, x := range f.Returns {
+		if v, ok := x.Symboler.(walker); ok {
+			if err := v.onWalk(use); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := use(x.Symbol()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (f *Func) String() string {
 	params := make([]string, len(f.Params))
 	for i, x := range f.Params {
