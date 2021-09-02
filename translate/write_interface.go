@@ -4,69 +4,31 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/tinypkg"
 )
 
-type Need struct {
-	Name string
-	raw  resolve.Item
-	rt   reflect.Type
-}
-
-type Tracker struct {
-	Needs []*Need
-
-	visitedDef map[string]bool
-	seen       map[reflect.Type][]*Need
-}
-
-func NewTracker() *Tracker {
-	return &Tracker{
-		visitedDef: map[string]bool{},
-		seen:       map[reflect.Type][]*Need{},
+func collectImports(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
+	imports := make([]*tinypkg.ImportedPackage, 0, len(t.Needs))
+	seen := map[*tinypkg.Package]bool{}
+	use := func(sym *tinypkg.Symbol) error {
+		if sym.Package.Path == "" {
+			return nil // bultins type (e.g. string, bool, ...)
+		}
+		if _, ok := seen[sym.Package]; ok {
+			return nil
+		}
+		seen[sym.Package] = true
+		imports = append(imports, here.Import(sym.Package))
 	}
-}
-
-func (t *Tracker) Track(def *resolve.Def) {
-	path := def.Shape.GetFullName()
-	if _, ok := t.visitedDef[path]; ok {
-		return
-	}
-	t.visitedDef[path] = true
-toplevel:
-	for _, arg := range def.Args {
-		arg := arg
-		switch arg.Kind {
-		case resolve.KindIgnored, resolve.KindUnsupported:
-			continue
-		case resolve.KindData:
-			continue
-		case resolve.KindComponent:
-			k := arg.Shape.GetReflectType()
-			needs := t.seen[k]
-
-			for _, n := range needs {
-				if n.Name == arg.Name {
-					continue toplevel
-				}
-			}
-			need := &Need{
-				Name: arg.Name,
-				rt:   k,
-				raw:  arg,
-			}
-			t.seen[k] = append(t.seen[k], need)
-			t.Needs = append(t.Needs, need)
-		case resolve.KindPrimitive:
-			continue
-		default:
-			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))
+	for _, need := range t.Needs {
+		if err := tinypkg.Walk(need.raw, use); err != nil {
+			return err
 		}
 	}
+	return imports
 }
 
 // TODO: import
