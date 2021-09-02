@@ -10,3 +10,13 @@ func NewPackage(path, name string) *Package {
 func NewSymbol(name string) *Symbol {
 	return builtins.NewSymbol(name)
 }
+
+func Walk(x Symboler, use func(*Symbol) error) error {
+	if v, ok := x.(walker); ok {
+		if err := v.onWalk(use); err != nil {
+			return err
+		}
+		return nil
+	}
+	return use(x.Symbol())
+}
