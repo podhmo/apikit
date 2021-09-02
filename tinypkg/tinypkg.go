@@ -150,7 +150,7 @@ func (c *Pointer) Symbol() *Symbol {
 	return c.V.Symbol()
 }
 func (c *Pointer) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walker); ok {
+	if v, ok := c.V.(walkerNode); ok {
 		return v.onWalk(use)
 	}
 	return use(c.Symbol())
@@ -172,7 +172,7 @@ func (c *Map) Symbol() *Symbol {
 	return c.V.Symbol()
 }
 func (c *Map) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.K.(walker); ok {
+	if v, ok := c.K.(walkerNode); ok {
 		if err := v.onWalk(use); err != nil {
 			return err
 		}
@@ -181,7 +181,7 @@ func (c *Map) onWalk(use func(*Symbol) error) error {
 			return err
 		}
 	}
-	if v, ok := c.V.(walker); ok {
+	if v, ok := c.V.(walkerNode); ok {
 		return v.onWalk(use)
 	}
 	return use(c.V.Symbol())
@@ -198,7 +198,7 @@ func (c *Slice) String() string {
 	return fmt.Sprintf("[]%s", c.V)
 }
 func (c *Slice) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walker); ok {
+	if v, ok := c.V.(walkerNode); ok {
 		return v.onWalk(use)
 	}
 	return use(c.Symbol())
@@ -216,7 +216,7 @@ func (c *Array) Symbol() *Symbol {
 	return c.V.Symbol()
 }
 func (c *Array) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walker); ok {
+	if v, ok := c.V.(walkerNode); ok {
 		return v.onWalk(use)
 	}
 	return use(c.Symbol())
@@ -233,7 +233,7 @@ func (f *Func) Symbol() *Symbol {
 }
 func (f *Func) onWalk(use func(*Symbol) error) error {
 	for _, x := range f.Params {
-		if v, ok := x.Symboler.(walker); ok {
+		if v, ok := x.Symboler.(walkerNode); ok {
 			if err := v.onWalk(use); err != nil {
 				return err
 			}
@@ -244,7 +244,7 @@ func (f *Func) onWalk(use func(*Symbol) error) error {
 		}
 	}
 	for _, x := range f.Returns {
-		if v, ok := x.Symboler.(walker); ok {
+		if v, ok := x.Symboler.(walkerNode); ok {
 			if err := v.onWalk(use); err != nil {
 				return err
 			}

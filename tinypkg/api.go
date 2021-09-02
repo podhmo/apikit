@@ -12,7 +12,7 @@ func NewSymbol(name string) *Symbol {
 }
 
 func Walk(x Symboler, use func(*Symbol) error) error {
-	if v, ok := x.(walker); ok {
+	if v, ok := x.(walkerNode); ok {
 		if err := v.onWalk(use); err != nil {
 			return err
 		}
