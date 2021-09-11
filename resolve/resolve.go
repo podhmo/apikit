@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/podhmo/apikit/tinypkg"
-	"github.com/podhmo/reflect-shape"
+	reflectshape "github.com/podhmo/reflect-shape"
 	"github.com/podhmo/reflect-shape/arglist"
 )
 
@@ -25,55 +25,70 @@ func NewResolver() *Resolver {
 	}
 }
 
+func detectKind(s reflectshape.Shape) Kind {
+	if s.GetLv() > 0 {
+		// TODO: if the pointer of primitive passed, treated as optional value? (not yet)
+		return KindComponent
+	}
+
+	switch s := s.(type) {
+	case reflectshape.Primitive:
+		return KindPrimitive
+	case reflectshape.Interface:
+		if s.GetFullName() == "context.Context" {
+			return KindIgnored
+		} else {
+			return KindComponent
+		}
+	case reflectshape.Struct:
+		return KindData
+	case reflectshape.Container: // slice, map
+		return KindUnsupported
+	case reflectshape.Function:
+		return KindComponent
+	default:
+		return KindUnsupported
+	}
+}
+
 func (r *Resolver) Resolve(fn interface{}) *Def {
 	sfn := r.extractor.Extract(fn).(reflectshape.Function)
 	pkg := r.universe.NewPackage(sfn.Package, "")
 	args := make([]Item, 0, len(sfn.Params.Keys))
+	returns := make([]Item, 0, len(sfn.Returns.Keys))
 
 	for i, name := range sfn.Params.Keys {
 		s := sfn.Params.Values[i]
-		var kind Kind
-
-		if s.GetLv() > 0 {
-			kind = KindComponent
-		} else {
-			switch s := s.(type) {
-			case reflectshape.Primitive:
-				kind = KindPrimitive
-			case reflectshape.Interface:
-				if s.GetFullName() == "context.Context" {
-					kind = KindIgnored
-				} else {
-					kind = KindComponent
-				}
-			case reflectshape.Struct:
-				kind = KindData
-			case reflectshape.Container: // slice, map
-				kind = KindUnsupported
-			case reflectshape.Function:
-				kind = KindComponent
-			default:
-				kind = KindUnsupported
-			}
-		}
-
+		kind := detectKind(s)
 		args = append(args, Item{
 			Kind:  kind,
 			Name:  name,
 			Shape: s,
 		})
 	}
+	for i, name := range sfn.Returns.Keys {
+		s := sfn.Returns.Values[i]
+		kind := detectKind(s)
+		returns = append(returns, Item{
+			Kind:  kind,
+			Name:  name,
+			Shape: s,
+		})
+	}
+
 	return &Def{
-		Symbol: pkg.NewSymbol(sfn.Name),
-		Shape:  sfn,
-		Args:   args,
+		Symbol:  pkg.NewSymbol(sfn.Name),
+		Shape:   sfn,
+		Args:    args,
+		Returns: returns,
 	}
 }
 
 type Def struct {
 	*tinypkg.Symbol
-	Shape reflectshape.Function
-	Args  []Item
+	Shape   reflectshape.Function
+	Args    []Item
+	Returns []Item
 }
 
 type Item struct {
