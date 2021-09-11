@@ -30,7 +30,7 @@ func NewResolver() *Resolver {
 	}
 }
 
-func (r *Resolver) Resolve(fn interface{}) *Def {
+func (r *Resolver) Def(fn interface{}) *Def {
 	return ExtractDef(r.universe, r.extractor, fn)
 }
 

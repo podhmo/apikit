@@ -14,32 +14,32 @@ func Test(t *testing.T) {
 	}{
 		{
 			// OK: handle params pointer -> component
-			Def:  resolver.Resolve(ListUser),
+			Def:  resolver.Def(ListUser),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params context.Context -> ignored
-			Def:  resolver.Resolve(ListUserWithContext),
+			Def:  resolver.Def(ListUserWithContext),
 			Args: []Kind{KindIgnored, KindComponent},
 		},
 		{
 			// OK: handle params function -> component
-			Def:  resolver.Resolve(ListUserWithFunction),
+			Def:  resolver.Def(ListUserWithFunction),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params interface -> component
-			Def:  resolver.Resolve(ListUserWithInterface),
+			Def:  resolver.Def(ListUserWithInterface),
 			Args: []Kind{KindComponent},
 		},
 		{
 			// OK: handle params struct -> data
-			Def:  resolver.Resolve(GetUserWithStruct),
+			Def:  resolver.Def(GetUserWithStruct),
 			Args: []Kind{KindComponent, KindData},
 		},
 		{
 			// OK: handle params primitive -> primitive
-			Def:  resolver.Resolve(GetUserWithPrimitive),
+			Def:  resolver.Def(GetUserWithPrimitive),
 			Args: []Kind{KindComponent, KindPrimitive},
 		},
 	}

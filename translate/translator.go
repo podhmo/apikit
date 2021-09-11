@@ -43,7 +43,7 @@ type Translator struct {
 func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
 	tracker := NewTracker()
 	for _, fn := range fns {
-		def := resolver.Resolve(fn)
+		def := resolver.Def(fn)
 		tracker.Track(def)
 	}
 	return &Translator{
