@@ -84,7 +84,7 @@ type Component interface {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			translator := NewTranslator(resolver, c.input...)
-			code := translator.TranslateInterface(c.here, "Component")
+			code := translator.TranslateToInterface(c.here, "Component")
 
 			var buf strings.Builder
 			if err := code.EmitImports(&buf); err != nil {

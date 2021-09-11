@@ -10,7 +10,7 @@ import (
 	"github.com/podhmo/apikit/tinypkg"
 )
 
-func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *Code {
 	return &Code{
 		Name:     name,
 		Here:     here,
