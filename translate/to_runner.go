@@ -12,20 +12,27 @@ import (
 // TODO: omit provider arguments
 
 func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) *Code {
+	if name == "" {
+		name = def.Name
+	}
+	if provider == nil {
+		provider = t.providerVar
+	}
+
 	return &Code{
 		Name:     name,
 		Here:     here,
 		EmitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForRunner(here, t.Resolver, def)
+			return collectImportsForRunner(here, t.Resolver, def, provider)
 		},
 		EmitCode: func(w io.Writer) error {
-			return writeRunner(w, here, t.Resolver, def, name, provider)
+			return writeRunner(w, here, t.Resolver, def, provider, name)
 		},
 	}
 }
 
-func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
 	imports := make([]*tinypkg.ImportedPackage, 0, len(def.Args)+len(def.Returns))
 	seen := map[*tinypkg.Package]bool{}
 	use := func(sym *tinypkg.Symbol) error {
@@ -55,10 +62,13 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 			return nil, err
 		}
 	}
+	if err := tinypkg.Walk(provider, use); err != nil {
+		return nil, err
+	}
 	return imports, nil
 }
 
-func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, name string, provider *tinypkg.Var) error {
+func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, provider *tinypkg.Var, name string) error {
 	// TODO:
 	// get components
 	// rest as arguments
@@ -107,14 +117,18 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		fmt.Fprintf(w, "func %s(%s) (%s) {\n", name, strings.Join(args, ", "), strings.Join(returns, ", "))
 	}
 
+	// var <component> <type>
+	// {
+	//   <component> = <provider>.<method>()
+	// }
 	if len(components) > 0 {
 		for _, x := range components {
-			fmt.Fprintln(w, "\t{")
-			sym := resolver.Symbol(here, x.Shape)
-			fmt.Fprintf(w, "\t\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
-
 			// TODO: communicate with write_interface.go's functions
+			sym := resolver.Symbol(here, x.Shape)
 			methodName := x.Shape.GetReflectType().Name()
+
+			fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+			fmt.Fprintln(w, "\t{")
 			fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
 			fmt.Fprintln(w, "\t}")
 		}
