@@ -14,7 +14,7 @@ type Resolver struct {
 	universe  *tinypkg.Universe
 
 	mu           sync.RWMutex
-	symbolsCache map[reflectshape.Shape][]*symbolCacheItem
+	symbolsCache map[reflectshape.Identity][]*symbolCacheItem
 }
 
 func NewResolver() *Resolver {
@@ -26,7 +26,7 @@ func NewResolver() *Resolver {
 	return &Resolver{
 		extractor:    e,
 		universe:     tinypkg.NewUniverse(),
-		symbolsCache: map[reflectshape.Shape][]*symbolCacheItem{},
+		symbolsCache: map[reflectshape.Identity][]*symbolCacheItem{},
 	}
 }
 
@@ -40,11 +40,12 @@ type symbolCacheItem struct {
 	Symboler tinypkg.Symboler
 }
 
-func (r *Resolver) ResolveSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
-	defer r.mu.Unlock()
+func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
 	r.mu.RLock()
-	cached, ok := r.symbolsCache[s]
+	k := s.GetIdentity()
+	cached, ok := r.symbolsCache[k]
 	r.mu.RUnlock()
+
 	if ok {
 		for _, item := range cached {
 			if item.Here == here {
@@ -53,12 +54,14 @@ func (r *Resolver) ResolveSymbol(here *tinypkg.Package, s reflectshape.Shape) ti
 		}
 	}
 	symboler := ExtractSymbol(here, s)
+
 	r.mu.Lock()
-	r.symbolsCache[s] = append(cached, &symbolCacheItem{
+	r.symbolsCache[k] = append(cached, &symbolCacheItem{
 		Here:     here,
 		Shape:    s,
 		Symboler: symboler,
 	})
 	r.mu.Unlock()
+
 	return symboler
 }
