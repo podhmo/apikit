@@ -74,7 +74,7 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			translator := NewTranslator(resolver)
-			def := resolver.Resolve(c.input)
+			def := resolver.Def(c.input)
 
 			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
 			provider := &tinypkg.Var{Name: "provider", Symboler: providerSymbol}

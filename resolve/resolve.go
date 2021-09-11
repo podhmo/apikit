@@ -2,6 +2,7 @@ package resolve
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/podhmo/apikit/tinypkg"
 	reflectshape "github.com/podhmo/reflect-shape"
@@ -11,6 +12,9 @@ import (
 type Resolver struct {
 	extractor *reflectshape.Extractor
 	universe  *tinypkg.Universe
+
+	mu           sync.RWMutex
+	symbolsCache map[reflectshape.Identity][]*symbolCacheItem
 }
 
 func NewResolver() *Resolver {
@@ -20,89 +24,44 @@ func NewResolver() *Resolver {
 		RevisitArglist: true,
 	}
 	return &Resolver{
-		extractor: e,
-		universe:  tinypkg.NewUniverse(),
+		extractor:    e,
+		universe:     tinypkg.NewUniverse(),
+		symbolsCache: map[reflectshape.Identity][]*symbolCacheItem{},
 	}
 }
 
-func detectKind(s reflectshape.Shape) Kind {
-	if s.GetLv() > 0 {
-		// TODO: if the pointer of primitive passed, treated as optional value? (not yet)
-		return KindComponent
-	}
+func (r *Resolver) Def(fn interface{}) *Def {
+	return ExtractDef(r.universe, r.extractor, fn)
+}
 
-	switch s := s.(type) {
-	case reflectshape.Primitive:
-		return KindPrimitive
-	case reflectshape.Interface:
-		if s.GetFullName() == "context.Context" {
-			return KindIgnored
-		} else {
-			return KindComponent
+type symbolCacheItem struct {
+	Here     *tinypkg.Package
+	Shape    reflectshape.Shape
+	Symboler tinypkg.Symboler
+}
+
+func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
+	r.mu.RLock()
+	k := s.GetIdentity()
+	cached, ok := r.symbolsCache[k]
+	r.mu.RUnlock()
+
+	if ok {
+		for _, item := range cached {
+			if item.Here == here {
+				return item.Symboler
+			}
 		}
-	case reflectshape.Struct:
-		return KindData
-	case reflectshape.Container: // slice, map
-		return KindUnsupported
-	case reflectshape.Function:
-		return KindComponent
-	default:
-		return KindUnsupported
 	}
+	symboler := ExtractSymbol(here, s)
+
+	r.mu.Lock()
+	r.symbolsCache[k] = append(cached, &symbolCacheItem{
+		Here:     here,
+		Shape:    s,
+		Symboler: symboler,
+	})
+	r.mu.Unlock()
+
+	return symboler
 }
-
-func (r *Resolver) Resolve(fn interface{}) *Def {
-	sfn := r.extractor.Extract(fn).(reflectshape.Function)
-	pkg := r.universe.NewPackage(sfn.Package, "")
-	args := make([]Item, 0, len(sfn.Params.Keys))
-	returns := make([]Item, 0, len(sfn.Returns.Keys))
-
-	for i, name := range sfn.Params.Keys {
-		s := sfn.Params.Values[i]
-		kind := detectKind(s)
-		args = append(args, Item{
-			Kind:  kind,
-			Name:  name,
-			Shape: s,
-		})
-	}
-	for i, name := range sfn.Returns.Keys {
-		s := sfn.Returns.Values[i]
-		kind := detectKind(s)
-		returns = append(returns, Item{
-			Kind:  kind,
-			Name:  name,
-			Shape: s,
-		})
-	}
-
-	return &Def{
-		Symbol:  pkg.NewSymbol(sfn.Name),
-		Shape:   sfn,
-		Args:    args,
-		Returns: returns,
-	}
-}
-
-type Def struct {
-	*tinypkg.Symbol
-	Shape   reflectshape.Function
-	Args    []Item
-	Returns []Item
-}
-
-type Item struct {
-	Kind  Kind
-	Name  string
-	Shape reflectshape.Shape
-}
-
-type Kind string
-
-const (
-	KindComponent   Kind = "component"   // pointer, function, interface
-	KindData        Kind = "data"        // struct
-	KindIgnored     Kind = "ignoerd"     // context.Context
-	KindPrimitive   Kind = "primitve"    // string, int, ...
-	KindUnsupported Kind = "unsupported" // slice, map
-)
