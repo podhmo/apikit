@@ -9,8 +9,8 @@ import (
 )
 
 func ListUser(component component.Component) ([]*design.User, error) {
+	var db *design.DB
 	{
-		var db design.DB
 		db = component.DB()
 	}
 	return design.ListUser(db)
