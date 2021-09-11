@@ -21,19 +21,22 @@ func collectImports(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPacka
 			return nil
 		}
 		seen[sym.Package] = true
+		if here == sym.Package {
+			return nil
+		}
 		imports = append(imports, here.Import(sym.Package))
+		return nil
 	}
 	for _, need := range t.Needs {
-		if err := tinypkg.Walk(need.raw, use); err != nil {
-			return err
+		sym := resolve.ExtractSymbol(here, need.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return nil, err
 		}
 	}
-	return imports
+	return imports, nil
 }
 
-// TODO: import
-// TODO: same package
-func WriteInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) {
+func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) {
 	fmt.Fprintf(w, "type %s interface {\n", name)
 	usedNames := map[string]bool{}
 	for _, need := range t.Needs {
@@ -45,7 +48,7 @@ func WriteInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string)
 
 		// TODO: T, (T, error)
 		// TODO: support correct type expression
-		typeExpr := resolve.ExtractSymbol(here, need.raw.Shape).String()
+		typeExpr := resolve.ExtractSymbol(here, need.Shape).String()
 		fmt.Fprintf(w, "\t%s() %s\n", methodName, typeExpr)
 		if _, duplicated := usedNames[methodName]; duplicated {
 			log.Printf("WARN: method name %s is duplicated", methodName)

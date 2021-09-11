@@ -24,25 +24,39 @@ func NewTranslator(resolver *resolve.Resolver, fns []interface{}) *Translator {
 	}
 }
 
-type Code struct {
-	Name    string
-	Imports func(here *tinypkg.Package) []*tinypkg.ImportedPackage
-	Emit    func(here *tinypkg.Package, w io.Writer) error
-}
-
 func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Code {
 	return &Code{
 		Name: name,
-		Imports: func(here *tinypkg.Package) []*tinypkg.ImportedPackage {
-			imports := make([]*tinypkg.ImportedPackage, 0, len(t.Tracker.Needs))
-			for _, need := range t.Tracker.Needs {
-
-			}
-			return imports
+		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+			return collectImports(here, t.Tracker)
 		},
-		Emit: func(here *tinypkg.Package, w io.Writer) error {
+		EmitCode: func(w io.Writer) error {
 			writeInterface(w, here, t.Tracker, name)
 			return nil
 		},
 	}
+}
+
+type Code struct {
+	Name           string
+	ImportPackages func() ([]*tinypkg.ImportedPackage, error)
+	EmitCode       func(w io.Writer) error
+}
+
+func (c *Code) EmitImports(w io.Writer) error {
+	impkgs, err := c.ImportPackages()
+	if err != nil {
+		return err
+	}
+	if len(impkgs) == 0 {
+		return nil
+	}
+
+	io.WriteString(w, "import (\n")
+	for _, impkg := range impkgs {
+		io.WriteString(w, "\t")
+		impkg.Emit(w)
+	}
+	io.WriteString(w, ")\n")
+	return nil
 }

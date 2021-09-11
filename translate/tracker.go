@@ -8,9 +8,8 @@ import (
 )
 
 type Need struct {
-	Name string
-	raw  resolve.Item
-	rt   reflect.Type
+	rt reflect.Type
+	resolve.Item
 }
 
 type Tracker struct {
@@ -51,9 +50,8 @@ toplevel:
 				}
 			}
 			need := &Need{
-				Name: arg.Name,
 				rt:   k,
-				raw:  arg,
+				Item: arg,
 			}
 			t.seen[k] = append(t.seen[k], need)
 			t.Needs = append(t.Needs, need)
