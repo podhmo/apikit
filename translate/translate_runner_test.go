@@ -45,7 +45,7 @@ import (
 )
 func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
-		var session translate.Session
+		var session *translate.Session
 		session = provider.Session()
 	}
 	return translate.AddTodo(session, title, done)
@@ -62,7 +62,7 @@ import (
 )
 func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
-		var session translate.Session
+		var session *translate.Session
 		session = provider.Session()
 	}
 	return translate.AddTodoWithContext(ctx, session, title, done)

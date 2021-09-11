@@ -70,6 +70,7 @@ func (ip *ImportedPackage) Lookup(sym *Symbol) *ImportedSymbol {
 	return &ImportedSymbol{pkg: ip, sym: sym}
 }
 
+// TODO: omit
 func (ip *ImportedPackage) Emit(w io.Writer) error {
 	if ip.qualifier != "" {
 		io.WriteString(w, ip.qualifier)
@@ -82,23 +83,6 @@ func (ip *ImportedPackage) Emit(w io.Writer) error {
 type ImportedSymbol struct {
 	pkg *ImportedPackage
 	sym *Symbol
-}
-
-func ToRelativeTypeString(here *Package, symboler Symboler) string {
-	if x, ok := symboler.(*Var); ok {
-		return x.Name + " " + ToRelativeTypeString(here, x.Symboler)
-	}
-
-	sym := symboler.Symbol()
-	if here == sym.Package {
-		return sym.Name
-	}
-
-	if impl, ok := symboler.(interface{ Qualifier() string }); ok {
-		qualifier := impl.Qualifier()
-		return qualifier + "." + sym.Name
-	}
-	return sym.Package.Name + "." + sym.Name
 }
 
 func (im *ImportedSymbol) Qualifier() string {
@@ -159,7 +143,7 @@ type Pointer struct {
 }
 
 func (c *Pointer) String() string {
-	return strings.Repeat("*", c.Lv) + c.V.String()
+	return ToRelativeTypeString(nil, c)
 }
 func (c *Pointer) Symbol() *Symbol {
 	return c.V.Symbol()
@@ -177,7 +161,7 @@ type Map struct {
 }
 
 func (c *Map) String() string {
-	return fmt.Sprintf("map[%s]%s", c.K, c.V)
+	return ToRelativeTypeString(nil, c)
 }
 func (c *Map) Symbol() *Symbol {
 	k := c.K.Symbol()
@@ -210,7 +194,7 @@ func (c *Slice) Symbol() *Symbol {
 	return c.V.Symbol()
 }
 func (c *Slice) String() string {
-	return fmt.Sprintf("[]%s", c.V)
+	return ToRelativeTypeString(nil, c)
 }
 func (c *Slice) onWalk(use func(*Symbol) error) error {
 	if v, ok := c.V.(walkerNode); ok {
@@ -225,7 +209,7 @@ type Array struct {
 }
 
 func (c *Array) String() string {
-	return fmt.Sprintf("[%d]%s", c.N, c.V)
+	return ToRelativeTypeString(nil, c)
 }
 func (c *Array) Symbol() *Symbol {
 	return c.V.Symbol()
@@ -273,19 +257,7 @@ func (f *Func) onWalk(use func(*Symbol) error) error {
 }
 
 func (f *Func) String() string {
-	params := make([]string, len(f.Params))
-	for i, x := range f.Params {
-		params[i] = x.String()
-	}
-	returns := make([]string, len(f.Returns))
-	for i, x := range f.Returns {
-		returns[i] = x.String()
-	}
-
-	if len(returns) == 1 {
-		return fmt.Sprintf("func(%s) %s", strings.Join(params, ", "), strings.Join(returns, ", "))
-	}
-	return fmt.Sprintf("func(%s) (%s)", strings.Join(params, ", "), strings.Join(returns, ", "))
+	return ToRelativeTypeString(nil, f)
 }
 
 type Var struct {
@@ -294,8 +266,5 @@ type Var struct {
 }
 
 func (v *Var) String() string {
-	if v.Name == "" {
-		return v.Symboler.String()
-	}
-	return v.Name + " " + v.Symboler.String()
+	return ToRelativeTypeString(nil, v)
 }

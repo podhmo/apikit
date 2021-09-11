@@ -72,9 +72,9 @@ foo.Boo
 			},
 			want: `
 context.Context
-.string
+string
 foo.User
-.error
+error
 `,
 		},
 	}
