@@ -16,8 +16,8 @@ func main() {
 	resolver := resolve.NewResolver()
 	translator := translate.NewTranslator(resolver, design.ListUser)
 
-	here := tinypkg.NewPackage("m/00simple/component", "component")
-	code := translator.TranslateInterface(here, "Component")
+	here := tinypkg.NewPackage("m/00simple/component", "")
+	code := translator.TranslateToInterface(here, "Component")
 
 	code.Emit(os.Stdout, code)
 }
