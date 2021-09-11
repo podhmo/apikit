@@ -38,6 +38,8 @@ type Translator struct {
 	Tracker  *Tracker
 	Resolver *resolve.Resolver
 	EmitFunc EmitFunc
+
+	providerVar *tinypkg.Var
 }
 
 func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
