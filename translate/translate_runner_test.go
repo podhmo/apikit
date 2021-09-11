@@ -40,6 +40,9 @@ func TestWriteRunner(t *testing.T) {
 			input: AddTodo,
 			here:  main,
 			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+)
 func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
 		var session translate.Session
@@ -53,6 +56,10 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 			input: AddTodoWithContext,
 			here:  main,
 			want: `
+import (
+	"context"
+	"github.com/podhmo/apikit/translate"
+)
 func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
 		var session translate.Session
@@ -74,6 +81,12 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 
 			code := translator.TranslateToRunner(c.here, def, c.name, provider)
 			var buf bytes.Buffer
+
+			if err := code.EmitImports(&buf); err != nil {
+				if c.wantError == nil || c.wantError != err {
+					t.Fatalf("unexpected error, import %+v", err)
+				}
+			}
 			if err := code.EmitCode(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, code %+v", err)
