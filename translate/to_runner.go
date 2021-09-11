@@ -117,14 +117,18 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		fmt.Fprintf(w, "func %s(%s) (%s) {\n", name, strings.Join(args, ", "), strings.Join(returns, ", "))
 	}
 
+	// var <component> <type>
+	// {
+	//   <component> = <provider>.<method>()
+	// }
 	if len(components) > 0 {
 		for _, x := range components {
-			fmt.Fprintln(w, "\t{")
-			sym := resolver.Symbol(here, x.Shape)
-			fmt.Fprintf(w, "\t\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
-
 			// TODO: communicate with write_interface.go's functions
+			sym := resolver.Symbol(here, x.Shape)
 			methodName := x.Shape.GetReflectType().Name()
+
+			fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+			fmt.Fprintln(w, "\t{")
 			fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
 			fmt.Fprintln(w, "\t}")
 		}
