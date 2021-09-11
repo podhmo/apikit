@@ -15,7 +15,7 @@ type Resolver struct {
 
 	mu           sync.RWMutex
 	symbolsCache map[reflectshape.Identity][]*symbolCacheItem
-	defCache     map[reflect.Type]*Def
+	defCache     map[uintptr]*Def
 }
 
 func NewResolver() *Resolver {
@@ -28,13 +28,14 @@ func NewResolver() *Resolver {
 		extractor:    e,
 		universe:     tinypkg.NewUniverse(),
 		symbolsCache: map[reflectshape.Identity][]*symbolCacheItem{},
-		defCache:     map[reflect.Type]*Def{},
+		defCache:     map[uintptr]*Def{},
 	}
 }
 
 func (r *Resolver) Def(fn interface{}) *Def {
 	r.mu.RLock()
-	k := reflect.TypeOf(fn)
+	k := reflect.ValueOf(fn).Pointer()
+
 	cached, ok := r.defCache[k]
 	r.mu.RUnlock()
 	if ok {
