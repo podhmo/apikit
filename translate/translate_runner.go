@@ -17,6 +17,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name stri
 	// TODO: handling context.Context
 
 	var components []resolve.Item
+	var ignored []string
 	argNames := make([]string, 0, len(def.Args))
 	args := make([]string, 0, len(def.Args)+1)
 	{
@@ -31,7 +32,14 @@ func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name stri
 		}
 
 		sym := resolve.ExtractSymbol(here, x.Shape)
-		args = append(args, fmt.Sprintf("%s %s", x.Name, sym.String()))
+		if x.Kind == resolve.KindIgnored { // e.g. context.Context
+			ignored = append(ignored, fmt.Sprintf("%s %s", x.Name, sym.String()))
+		} else {
+			args = append(args, fmt.Sprintf("%s %s", x.Name, sym.String()))
+		}
+	}
+	if len(ignored) > 0 {
+		args = append(ignored, args...)
 	}
 
 	returns := make([]string, 0, len(def.Returns))

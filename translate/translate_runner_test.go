@@ -2,6 +2,7 @@ package translate
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
@@ -17,6 +18,9 @@ type Todo struct {
 }
 
 func AddTodo(session *Session, title string, done bool) (*Todo, error) {
+	return nil, nil
+}
+func AddTodoWithContext(ctx context.Context, session *Session, title string, done bool) (*Todo, error) {
 	return nil, nil
 }
 
@@ -41,6 +45,19 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 		session = provider.Session()
 	}
 	return translate.AddTodo(session, title, done)
+}`,
+		},
+		{
+			name:  "RunAddTodoWithContext",
+			input: AddTodoWithContext,
+			here:  main,
+			want: `
+func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	{
+		var session translate.Session
+		session = provider.Session()
+	}
+	return translate.AddTodoWithContext(ctx, session, title, done)
 }`,
 		},
 	}
