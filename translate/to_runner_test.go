@@ -42,6 +42,7 @@ func TestWriteRunner(t *testing.T) {
 			want: `
 import (
 	"github.com/podhmo/apikit/translate"
+	"m/component"
 )
 func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
@@ -59,6 +60,7 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 import (
 	"context"
 	"github.com/podhmo/apikit/translate"
+	"m/component"
 )
 func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
