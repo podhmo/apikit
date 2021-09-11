@@ -8,6 +8,9 @@ import (
 func ToRelativeTypeString(here *Package, symboler Symboler) string {
 	switch x := symboler.(type) {
 	case *Var:
+		if x.Name == "" {
+			return ToRelativeTypeString(here, x.Symboler)
+		}
 		return x.Name + " " + ToRelativeTypeString(here, x.Symboler)
 	case *Pointer:
 		return strings.Repeat("*", x.Lv) + ToRelativeTypeString(here, x.V)
@@ -43,6 +46,7 @@ func ToRelativeTypeString(here *Package, symboler Symboler) string {
 		}
 		return x.Package.Name + "." + x.Name
 	case *ImportedSymbol:
+		here := x.pkg.here
 		if x.pkg.pkg.Name == "" {
 			return x.sym.Name
 		}
