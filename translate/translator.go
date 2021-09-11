@@ -53,21 +53,6 @@ func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
 	}
 }
 
-func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Code {
-	return &Code{
-		Name:     name,
-		Here:     here,
-		EmitFunc: t.EmitFunc,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImports(here, t.Tracker)
-		},
-		EmitCode: func(w io.Writer) error {
-			writeInterface(w, here, t.Tracker, name)
-			return nil
-		},
-	}
-}
-
 type Code struct {
 	Name string
 	Here *tinypkg.Package
