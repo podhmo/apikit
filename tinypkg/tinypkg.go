@@ -84,23 +84,6 @@ type ImportedSymbol struct {
 	sym *Symbol
 }
 
-func ToRelativeTypeString(here *Package, symboler Symboler) string {
-	if x, ok := symboler.(*Var); ok {
-		return x.Name + " " + ToRelativeTypeString(here, x.Symboler)
-	}
-
-	sym := symboler.Symbol()
-	if here == sym.Package {
-		return sym.Name
-	}
-
-	if impl, ok := symboler.(interface{ Qualifier() string }); ok {
-		qualifier := impl.Qualifier()
-		return qualifier + "." + sym.Name
-	}
-	return sym.Package.Name + "." + sym.Name
-}
-
 func (im *ImportedSymbol) Qualifier() string {
 	qualifier := im.pkg.qualifier
 	if qualifier != "" {
