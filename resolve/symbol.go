@@ -5,10 +5,10 @@ import (
 	"strconv"
 
 	"github.com/podhmo/apikit/tinypkg"
-	"github.com/podhmo/reflect-openapi/pkg/shape"
+	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func ExtractSymbol(here *tinypkg.Package, s shape.Shape) tinypkg.Symboler {
+func ExtractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
 	lv := s.GetLv()
 	if lv == 0 {
 		return extractSymbol(here, s)
@@ -16,16 +16,16 @@ func ExtractSymbol(here *tinypkg.Package, s shape.Shape) tinypkg.Symboler {
 	return &tinypkg.Pointer{Lv: lv, V: extractSymbol(here, s)}
 }
 
-func extractSymbol(here *tinypkg.Package, s shape.Shape) tinypkg.Symboler {
+func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
 	switch s := s.(type) {
-	case shape.Primitive, shape.Interface, shape.Struct:
+	case reflectshape.Primitive, reflectshape.Interface, reflectshape.Struct:
 		if s.GetPackage() == "" { // e.g. string, bool, error
 			return tinypkg.NewSymbol(s.GetName())
 		}
 		pkg := tinypkg.NewPackage(s.GetPackage(), "")
 		sym := pkg.NewSymbol(s.GetName())
 		return here.Import(pkg).Lookup(sym)
-	case shape.Container: // slice, map
+	case reflectshape.Container: // slice, map
 		name := s.GetName()
 		switch name {
 		case "map":
@@ -38,7 +38,7 @@ func extractSymbol(here *tinypkg.Package, s shape.Shape) tinypkg.Symboler {
 		default:
 			panic(fmt.Sprintf("unsupported container shape %+v", s))
 		}
-	case shape.Function:
+	case reflectshape.Function:
 		params := make([]*tinypkg.Var, 0, s.Params.Len())
 		{
 			// TODO: this is shape package's feature (feature request)
