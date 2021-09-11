@@ -25,10 +25,11 @@ func TestInterface(t *testing.T) {
 	resolver := resolve.NewResolver()
 
 	cases := []struct {
-		msg   string
-		input []interface{}
-		here  *tinypkg.Package
-		want  string
+		msg       string
+		input     []interface{}
+		here      *tinypkg.Package
+		want      string
+		wantError error
 	}{
 		{
 			msg:   "1 component, another package",
@@ -50,6 +51,7 @@ type Component interface {
 type Component interface {
 	DB() *DB
 }`,
+			wantError: ErrNoImports,
 		},
 		// TODO: support qualified import
 		{
@@ -86,10 +88,14 @@ type Component interface {
 
 			var buf strings.Builder
 			if err := code.EmitImports(&buf); err != nil {
-				t.Fatalf("unexpected error, import %+v", err)
+				if c.wantError == nil || c.wantError != err {
+					t.Fatalf("unexpected error, import %+v", err)
+				}
 			}
 			if err := code.EmitCode(&buf); err != nil {
-				t.Fatalf("unexpected error, code %+v", err)
+				if c.wantError == nil || c.wantError != err {
+					t.Fatalf("unexpected error, code %+v", err)
+				}
 			}
 
 			got := buf.String()

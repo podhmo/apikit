@@ -4,18 +4,18 @@ import (
 	"reflect"
 
 	"github.com/podhmo/apikit/tinypkg"
-	"github.com/podhmo/reflect-openapi/pkg/arglist"
-	"github.com/podhmo/reflect-openapi/pkg/shape"
+	"github.com/podhmo/reflect-shape"
+	"github.com/podhmo/reflect-shape/arglist"
 )
 
 type Resolver struct {
-	extractor *shape.Extractor
+	extractor *reflectshape.Extractor
 	universe  *tinypkg.Universe
 }
 
 func NewResolver() *Resolver {
-	e := &shape.Extractor{
-		Seen:           map[reflect.Type]shape.Shape{},
+	e := &reflectshape.Extractor{
+		Seen:           map[reflect.Type]reflectshape.Shape{},
 		ArglistLookup:  arglist.NewLookup(),
 		RevisitArglist: true,
 	}
@@ -26,7 +26,7 @@ func NewResolver() *Resolver {
 }
 
 func (r *Resolver) Resolve(fn interface{}) *Def {
-	sfn := r.extractor.Extract(fn).(shape.Function)
+	sfn := r.extractor.Extract(fn).(reflectshape.Function)
 	pkg := r.universe.NewPackage(sfn.Package, "")
 	args := make([]Item, 0, len(sfn.Params.Keys))
 
@@ -38,19 +38,19 @@ func (r *Resolver) Resolve(fn interface{}) *Def {
 			kind = KindComponent
 		} else {
 			switch s := s.(type) {
-			case shape.Primitive:
+			case reflectshape.Primitive:
 				kind = KindPrimitive
-			case shape.Interface:
+			case reflectshape.Interface:
 				if s.GetFullName() == "context.Context" {
 					kind = KindIgnored
 				} else {
 					kind = KindComponent
 				}
-			case shape.Struct:
+			case reflectshape.Struct:
 				kind = KindData
-			case shape.Container: // slice, map
+			case reflectshape.Container: // slice, map
 				kind = KindUnsupported
-			case shape.Function:
+			case reflectshape.Function:
 				kind = KindComponent
 			default:
 				kind = KindUnsupported
@@ -72,14 +72,14 @@ func (r *Resolver) Resolve(fn interface{}) *Def {
 
 type Def struct {
 	*tinypkg.Symbol
-	Shape shape.Function
+	Shape reflectshape.Function
 	Args  []Item
 }
 
 type Item struct {
 	Kind  Kind
 	Name  string
-	Shape shape.Shape
+	Shape reflectshape.Shape
 }
 
 type Kind string
