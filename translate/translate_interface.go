@@ -16,15 +16,15 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *C
 		Here:     here,
 		EmitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForInterface(here, t.Tracker)
+			return collectImportsForInterface(here, t.Resolver, t.Tracker)
 		},
 		EmitCode: func(w io.Writer) error {
-			return writeInterface(w, here, t.Tracker, name)
+			return writeInterface(w, here, t.Resolver, t.Tracker, name)
 		},
 	}
 }
 
-func collectImportsForInterface(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
 	imports := make([]*tinypkg.ImportedPackage, 0, len(t.Needs))
 	seen := map[*tinypkg.Package]bool{}
 	use := func(sym *tinypkg.Symbol) error {
@@ -42,7 +42,7 @@ func collectImportsForInterface(here *tinypkg.Package, t *Tracker) ([]*tinypkg.I
 		return nil
 	}
 	for _, need := range t.Needs {
-		sym := resolve.ExtractSymbol(here, need.Shape)
+		sym := resolver.Symbol(here, need.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return nil, err
 		}
@@ -50,7 +50,7 @@ func collectImportsForInterface(here *tinypkg.Package, t *Tracker) ([]*tinypkg.I
 	return imports, nil
 }
 
-func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) error {
+func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker, name string) error {
 	fmt.Fprintf(w, "type %s interface {\n", name)
 	usedNames := map[string]bool{}
 	for _, need := range t.Needs {
@@ -62,7 +62,7 @@ func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string)
 
 		// TODO: T, (T, error)
 		// TODO: support correct type expression
-		typeExpr := resolve.ExtractSymbol(here, need.Shape).String()
+		typeExpr := resolver.Symbol(here, need.Shape).String()
 		fmt.Fprintf(w, "\t%s() %s\n", methodName, typeExpr)
 		if _, duplicated := usedNames[methodName]; duplicated {
 			log.Printf("WARN: method name %s is duplicated", methodName)

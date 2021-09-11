@@ -17,15 +17,15 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, 
 		Here:     here,
 		EmitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForRunner(here, def)
+			return collectImportsForRunner(here, t.Resolver, def)
 		},
 		EmitCode: func(w io.Writer) error {
-			return writeRunner(w, here, def, name, provider)
+			return writeRunner(w, here, t.Resolver, def, name, provider)
 		},
 	}
 }
 
-func collectImportsForRunner(here *tinypkg.Package, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
 	imports := make([]*tinypkg.ImportedPackage, 0, len(def.Args)+len(def.Returns))
 	seen := map[*tinypkg.Package]bool{}
 	use := func(sym *tinypkg.Symbol) error {
@@ -44,13 +44,13 @@ func collectImportsForRunner(here *tinypkg.Package, def *resolve.Def) ([]*tinypk
 	}
 
 	for _, x := range def.Args {
-		sym := resolve.ExtractSymbol(here, x.Shape)
+		sym := resolver.Symbol(here, x.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return nil, err
 		}
 	}
 	for _, x := range def.Returns {
-		sym := resolve.ExtractSymbol(here, x.Shape)
+		sym := resolver.Symbol(here, x.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return nil, err
 		}
@@ -58,7 +58,7 @@ func collectImportsForRunner(here *tinypkg.Package, def *resolve.Def) ([]*tinypk
 	return imports, nil
 }
 
-func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) error {
+func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, name string, provider *tinypkg.Var) error {
 	// TODO:
 	// get components
 	// rest as arguments
@@ -80,7 +80,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name stri
 			continue
 		}
 
-		sym := resolve.ExtractSymbol(here, x.Shape)
+		sym := resolver.Symbol(here, x.Shape)
 		if x.Kind == resolve.KindIgnored { // e.g. context.Context
 			ignored = append(ignored, fmt.Sprintf("%s %s", x.Name, sym.String()))
 		} else {
@@ -93,7 +93,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name stri
 
 	returns := make([]string, 0, len(def.Returns))
 	for _, x := range def.Returns {
-		sym := resolve.ExtractSymbol(here, x.Shape)
+		sym := resolver.Symbol(here, x.Shape)
 		returns = append(returns, sym.String()) // TODO: need using x.Name?
 	}
 
@@ -110,7 +110,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name stri
 	if len(components) > 0 {
 		for _, x := range components {
 			fmt.Fprintln(w, "\t{")
-			sym := resolve.ExtractSymbol(here, x.Shape)
+			sym := resolver.Symbol(here, x.Shape)
 			fmt.Fprintf(w, "\t\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
 
 			// TODO: communicate with write_interface.go's functions
