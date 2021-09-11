@@ -9,6 +9,22 @@ import (
 	"github.com/podhmo/apikit/tinypkg"
 )
 
+// TODO: omit provider arguments
+
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) *Code {
+	return &Code{
+		Name:     name,
+		Here:     here,
+		EmitFunc: t.EmitFunc,
+		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+			return collectImports(here, t.Tracker)
+		},
+		EmitCode: func(w io.Writer) error {
+			return writeRunner(w, here, def, name, provider)
+		},
+	}
+}
+
 func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) error {
 	// TODO:
 	// get components
