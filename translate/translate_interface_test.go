@@ -51,6 +51,7 @@ type Component interface {
 	DB() *DB
 }`,
 		},
+		// TODO: support qualified import
 		{
 			msg:   "N component, another package",
 			here:  main,
