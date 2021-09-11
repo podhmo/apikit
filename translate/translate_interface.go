@@ -10,13 +10,13 @@ import (
 	"github.com/podhmo/apikit/tinypkg"
 )
 
-func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *Code {
 	return &Code{
 		Name:     name,
 		Here:     here,
 		EmitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImports(here, t.Tracker)
+			return collectImportsForInterface(here, t.Tracker)
 		},
 		EmitCode: func(w io.Writer) error {
 			return writeInterface(w, here, t.Tracker, name)
@@ -24,7 +24,7 @@ func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Cod
 	}
 }
 
-func collectImports(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForInterface(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
 	imports := make([]*tinypkg.ImportedPackage, 0, len(t.Needs))
 	seen := map[*tinypkg.Package]bool{}
 	use := func(sym *tinypkg.Symbol) error {

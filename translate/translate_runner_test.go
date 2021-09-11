@@ -26,6 +26,7 @@ func AddTodoWithContext(ctx context.Context, session *Session, title string, don
 
 func TestWriteRunner(t *testing.T) {
 	main := tinypkg.NewPackage("main", "")
+	resolver := resolve.NewResolver()
 
 	cases := []struct {
 		name      string
@@ -39,6 +40,9 @@ func TestWriteRunner(t *testing.T) {
 			input: AddTodo,
 			here:  main,
 			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+)
 func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
 		var session translate.Session
@@ -52,6 +56,10 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 			input: AddTodoWithContext,
 			here:  main,
 			want: `
+import (
+	"context"
+	"github.com/podhmo/apikit/translate"
+)
 func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	{
 		var session translate.Session
@@ -65,16 +73,23 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			resolver := resolve.NewResolver()
+			translator := NewTranslator(resolver)
 			def := resolver.Resolve(c.input)
 
 			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
 			provider := &tinypkg.Var{Name: "provider", Symboler: providerSymbol}
 
+			code := translator.TranslateToRunner(c.here, def, c.name, provider)
 			var buf bytes.Buffer
-			if err := writeRunner(&buf, c.here, def, c.name, provider); err != nil {
+
+			if err := code.EmitImports(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {
-					t.Fatalf("unexpected error %+v", err)
+					t.Fatalf("unexpected error, import %+v", err)
+				}
+			}
+			if err := code.EmitCode(&buf); err != nil {
+				if c.wantError == nil || c.wantError != err {
+					t.Fatalf("unexpected error, code %+v", err)
 				}
 			}
 

@@ -9,6 +9,55 @@ import (
 	"github.com/podhmo/apikit/tinypkg"
 )
 
+// TODO: omit provider arguments
+
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) *Code {
+	return &Code{
+		Name:     name,
+		Here:     here,
+		EmitFunc: t.EmitFunc,
+		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+			return collectImportsForRunner(here, def)
+		},
+		EmitCode: func(w io.Writer) error {
+			return writeRunner(w, here, def, name, provider)
+		},
+	}
+}
+
+func collectImportsForRunner(here *tinypkg.Package, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
+	imports := make([]*tinypkg.ImportedPackage, 0, len(def.Args)+len(def.Returns))
+	seen := map[*tinypkg.Package]bool{}
+	use := func(sym *tinypkg.Symbol) error {
+		if sym.Package.Path == "" {
+			return nil // bultins type (e.g. string, bool, ...)
+		}
+		if _, ok := seen[sym.Package]; ok {
+			return nil
+		}
+		seen[sym.Package] = true
+		if here == sym.Package {
+			return nil
+		}
+		imports = append(imports, here.Import(sym.Package))
+		return nil
+	}
+
+	for _, x := range def.Args {
+		sym := resolve.ExtractSymbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return nil, err
+		}
+	}
+	for _, x := range def.Returns {
+		sym := resolve.ExtractSymbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return nil, err
+		}
+	}
+	return imports, nil
+}
+
 func writeRunner(w io.Writer, here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) error {
 	// TODO:
 	// get components
