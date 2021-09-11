@@ -25,7 +25,11 @@ func defaultEmitFunc(w io.Writer, code *Code) error {
 	fmt.Fprintln(w, Header)
 	fmt.Fprintf(w, "package %s\n\n", code.Here.Name)
 	if err := code.EmitImports(w); err != nil {
-		return err
+		if err != ErrNoImports {
+			return err
+		}
+	} else {
+		io.WriteString(w, "\n")
 	}
 	return code.EmitCode(w)
 }
@@ -36,7 +40,7 @@ type Translator struct {
 	EmitFunc EmitFunc
 }
 
-func NewTranslator(resolver *resolve.Resolver, fns []interface{}) *Translator {
+func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
 	tracker := NewTracker()
 	for _, fn := range fns {
 		def := resolver.Resolve(fn)
@@ -74,13 +78,15 @@ type Code struct {
 	EmitFunc
 }
 
+var ErrNoImports = fmt.Errorf("no imports")
+
 func (c *Code) EmitImports(w io.Writer) error {
 	impkgs, err := c.ImportPackages()
 	if err != nil {
 		return err
 	}
 	if len(impkgs) == 0 {
-		return nil
+		return ErrNoImports
 	}
 
 	io.WriteString(w, "import (\n")

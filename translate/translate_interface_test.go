@@ -81,7 +81,7 @@ type Component interface {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			translator := NewTranslator(resolver, c.input)
+			translator := NewTranslator(resolver, c.input...)
 			code := translator.TranslateInterface(c.here, "Component")
 
 			var buf strings.Builder
