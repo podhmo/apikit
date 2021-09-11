@@ -62,6 +62,8 @@ func AssertGotAndWantString(t *testing.T, got interface{}, want string) {
 }
 
 func LogDiffGotStringAndWantString(t *testing.T, gotString, wantString string) {
+	t.Helper()
+
 	diff := cdiff.Diff(gotString, wantString, cdiff.WordByWord)
 	output := diff.UnifiedWithGooKitColor("got", "want", 3, cdiff.GooKitColorTheme)
 
