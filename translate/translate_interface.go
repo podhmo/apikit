@@ -19,8 +19,7 @@ func (t *Translator) TranslateInterface(here *tinypkg.Package, name string) *Cod
 			return collectImports(here, t.Tracker)
 		},
 		EmitCode: func(w io.Writer) error {
-			writeInterface(w, here, t.Tracker, name)
-			return nil
+			return writeInterface(w, here, t.Tracker, name)
 		},
 	}
 }
@@ -51,7 +50,7 @@ func collectImports(here *tinypkg.Package, t *Tracker) ([]*tinypkg.ImportedPacka
 	return imports, nil
 }
 
-func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) {
+func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string) error {
 	fmt.Fprintf(w, "type %s interface {\n", name)
 	usedNames := map[string]bool{}
 	for _, need := range t.Needs {
@@ -71,4 +70,5 @@ func writeInterface(w io.Writer, here *tinypkg.Package, t *Tracker, name string)
 		usedNames[methodName] = true
 	}
 	io.WriteString(w, "}\n")
+	return nil
 }
