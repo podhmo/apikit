@@ -2,6 +2,7 @@ package tinypkg
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 )
@@ -67,6 +68,15 @@ type ImportedPackage struct {
 
 func (ip *ImportedPackage) Lookup(sym *Symbol) *ImportedSymbol {
 	return &ImportedSymbol{pkg: ip, sym: sym}
+}
+
+func (ip *ImportedPackage) Emit(w io.Writer) error {
+	if ip.qualifier != "" {
+		io.WriteString(w, ip.qualifier)
+		io.WriteString(w, " ")
+	}
+	fmt.Fprintf(w, "%q\n", ip.pkg.Path)
+	return nil
 }
 
 type ImportedSymbol struct {

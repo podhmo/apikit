@@ -19,7 +19,7 @@ func ListUserWithError(db *DB) ([]User, error) { return nil, nil }
 
 func ListUserFromAnotherDB(anotherDb *DB) []User { return nil }
 
-func TestTracker(t *testing.T) {
+func TestInterface(t *testing.T) {
 	main := tinypkg.NewPackage("main", "main")
 	pkg := tinypkg.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
 	resolver := resolve.NewResolver()
@@ -35,6 +35,9 @@ func TestTracker(t *testing.T) {
 			here:  main,
 			input: []interface{}{ListUser},
 			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+)
 type Component interface {
 	DB() *translate.DB
 }`,
@@ -48,11 +51,15 @@ type Component interface {
 	DB() *DB
 }`,
 		},
+		// TODO: support qualified import
 		{
 			msg:   "N component, another package",
 			here:  main,
 			input: []interface{}{ListUser, ListName, ListUserWithError},
 			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+)
 type Component interface {
 	DB() *translate.DB
 }`,
@@ -62,6 +69,9 @@ type Component interface {
 			here:  main,
 			input: []interface{}{ListUser, ListUserFromAnotherDB},
 			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+)
 type Component interface {
 	Db() *translate.DB
 	AnotherDb() *translate.DB
@@ -71,14 +81,17 @@ type Component interface {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			tracker := NewTracker()
-			for _, x := range c.input {
-				def := resolver.Resolve(x)
-				tracker.Track(def)
+			translator := NewTranslator(resolver, c.input)
+			code := translator.TranslateInterface(c.here, "Component")
+
+			var buf strings.Builder
+			if err := code.EmitImports(&buf); err != nil {
+				t.Fatalf("unexpected error, import %+v", err)
+			}
+			if err := code.EmitCode(&buf); err != nil {
+				t.Fatalf("unexpected error, code %+v", err)
 			}
 
-			buf := new(strings.Builder)
-			WriteInterface(buf, c.here, tracker, "Component")
 			got := buf.String()
 			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(got); want != got {
 				difftest.LogDiffGotStringAndWantString(t, got, want)
