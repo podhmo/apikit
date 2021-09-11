@@ -2,10 +2,10 @@ package translate
 
 import (
 	"bytes"
-	"fmt"
-	"os"
+	"strings"
 	"testing"
 
+	"github.com/podhmo/apikit/difftest"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/tinypkg"
 )
@@ -21,15 +21,50 @@ func AddTodo(session *Session, title string, done bool) (*Todo, error) {
 }
 
 func TestWriteRunner(t *testing.T) {
-	here := tinypkg.NewPackage("main", "")
-	resolver := resolve.NewResolver()
-	def := resolver.Resolve(AddTodo)
+	main := tinypkg.NewPackage("main", "")
 
-	provider := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
+	cases := []struct {
+		name      string
+		input     interface{}
+		here      *tinypkg.Package
+		want      string
+		wantError error
+	}{
+		{
+			name:  "RunAddTodo",
+			input: AddTodo,
+			here:  main,
+			want: `
+func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	{
+		var session translate.Session
+		session = provider.Session()
+	}
+	return translate.AddTodo(session, title, done)
+}`,
+		},
+	}
 
-	var buf bytes.Buffer
-	writeRunner(&buf, here, def, "RunAddTodo", &tinypkg.Var{Name: "provider", Symboler: provider})
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			resolver := resolve.NewResolver()
+			def := resolver.Resolve(c.input)
 
-	got := buf.String()
-	fmt.Fprintln(os.Stdout, got)
+			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
+			provider := &tinypkg.Var{Name: "provider", Symboler: providerSymbol}
+
+			var buf bytes.Buffer
+			if err := writeRunner(&buf, c.here, def, c.name, provider); err != nil {
+				if c.wantError == nil || c.wantError != err {
+					t.Fatalf("unexpected error %+v", err)
+				}
+			}
+
+			got := buf.String()
+			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(got); want != got {
+				difftest.LogDiffGotStringAndWantString(t, got, want)
+			}
+		})
+	}
 }
