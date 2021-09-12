@@ -11,7 +11,7 @@ import (
 )
 
 func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *Code {
-	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Symboler: here.NewSymbol(name)}
+	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
 
 	return &Code{
 		Name:     name,

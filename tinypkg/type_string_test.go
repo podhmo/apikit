@@ -12,7 +12,7 @@ func TestTypeRepr(t *testing.T) {
 	cases := []struct {
 		msg   string
 		here  *Package
-		input Symboler
+		input Node
 		want  string
 	}{
 		{

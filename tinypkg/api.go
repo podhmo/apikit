@@ -11,6 +11,6 @@ func NewSymbol(name string) *Symbol {
 	return builtins.NewSymbol(name)
 }
 
-func Walk(x Symboler, use func(*Symbol) error) error {
+func Walk(x Node, use func(*Symbol) error) error {
 	return x.onWalk(use)
 }

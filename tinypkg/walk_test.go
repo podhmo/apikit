@@ -17,7 +17,7 @@ func TestWalk(t *testing.T) {
 	cases := []struct {
 		msg   string
 		here  *Package
-		input Symboler
+		input Node
 		want  string
 	}{
 		{
@@ -62,12 +62,12 @@ foo.Boo
 			here: main,
 			input: &Func{
 				Params: []*Var{
-					{Name: "ctx", Symboler: u.NewPackage("context", "").NewSymbol("Context")},
-					{Name: "userId", Symboler: builtins.NewSymbol("string")},
+					{Name: "ctx", Node: u.NewPackage("context", "").NewSymbol("Context")},
+					{Name: "userId", Node: builtins.NewSymbol("string")},
 				},
 				Returns: []*Var{
-					{Symboler: &Slice{V: &Pointer{Lv: 1, V: pkg.NewSymbol("User")}}},
-					{Symboler: builtins.NewSymbol("error")},
+					{Node: &Slice{V: &Pointer{Lv: 1, V: pkg.NewSymbol("User")}}},
+					{Node: builtins.NewSymbol("error")},
 				},
 			},
 			want: `

@@ -8,7 +8,7 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func ExtractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
+func ExtractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	lv := s.GetLv()
 	if lv == 0 {
 		return extractSymbol(here, s)
@@ -16,7 +16,7 @@ func ExtractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler
 	return &tinypkg.Pointer{Lv: lv, V: extractSymbol(here, s)}
 }
 
-func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
+func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	switch s := s.(type) {
 	case reflectshape.Primitive, reflectshape.Interface, reflectshape.Struct:
 		if s.GetPackage() == "" { // e.g. string, bool, error
@@ -54,7 +54,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler
 				if !hasName {
 					name = ""
 				}
-				params = append(params, &tinypkg.Var{Name: name, Symboler: ExtractSymbol(here, arg)})
+				params = append(params, &tinypkg.Var{Name: name, Node: ExtractSymbol(here, arg)})
 			}
 		}
 		returns := make([]*tinypkg.Var, 0, s.Returns.Len())
@@ -71,7 +71,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler
 				if !hasName {
 					name = ""
 				}
-				returns = append(returns, &tinypkg.Var{Name: name, Symboler: ExtractSymbol(here, arg)})
+				returns = append(returns, &tinypkg.Var{Name: name, Node: ExtractSymbol(here, arg)})
 			}
 		}
 		return &tinypkg.Func{

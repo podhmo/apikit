@@ -136,7 +136,7 @@ func (s *Symbol) onWalk(use func(*Symbol) error) error {
 
 type Pointer struct {
 	Lv int
-	V  Symboler
+	V  Node
 }
 
 func (c *Pointer) String() string {
@@ -147,8 +147,8 @@ func (c *Pointer) onWalk(use func(*Symbol) error) error {
 }
 
 type Map struct {
-	K Symboler
-	V Symboler
+	K Node
+	V Node
 }
 
 func (c *Map) String() string {
@@ -163,7 +163,7 @@ func (c *Map) onWalk(use func(*Symbol) error) error {
 }
 
 type Slice struct {
-	V Symboler
+	V Node
 }
 
 func (c *Slice) String() string {
@@ -174,7 +174,7 @@ func (c *Slice) onWalk(use func(*Symbol) error) error {
 }
 
 type Array struct {
-	V Symboler
+	V Node
 	N int
 }
 
@@ -193,12 +193,12 @@ type Func struct {
 
 func (f *Func) onWalk(use func(*Symbol) error) error {
 	for _, x := range f.Params {
-		if err := x.Symboler.onWalk(use); err != nil {
+		if err := x.Node.onWalk(use); err != nil {
 			return err
 		}
 	}
 	for _, x := range f.Returns {
-		if err := x.Symboler.onWalk(use); err != nil {
+		if err := x.Node.onWalk(use); err != nil {
 			return err
 		}
 	}
@@ -211,7 +211,7 @@ func (f *Func) String() string {
 
 type Var struct {
 	Name string
-	Symboler
+	Node
 }
 
 func (v *Var) String() string {

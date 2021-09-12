@@ -5,13 +5,13 @@ import (
 	"strings"
 )
 
-func ToRelativeTypeString(here *Package, symboler Symboler) string {
-	switch x := symboler.(type) {
+func ToRelativeTypeString(here *Package, Node Node) string {
+	switch x := Node.(type) {
 	case *Var:
 		if x.Name == "" {
-			return ToRelativeTypeString(here, x.Symboler)
+			return ToRelativeTypeString(here, x.Node)
 		}
-		return x.Name + " " + ToRelativeTypeString(here, x.Symboler)
+		return x.Name + " " + ToRelativeTypeString(here, x.Node)
 	case *Pointer:
 		return strings.Repeat("*", x.Lv) + ToRelativeTypeString(here, x.V)
 	case *Array:
@@ -55,6 +55,6 @@ func ToRelativeTypeString(here *Package, symboler Symboler) string {
 		}
 		return x.Qualifier() + "." + x.sym.Name
 	default:
-		panic(fmt.Sprintf("unsupported type %T", symboler))
+		panic(fmt.Sprintf("unsupported type %T", Node))
 	}
 }

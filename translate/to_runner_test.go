@@ -79,7 +79,7 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 			def := resolver.Def(c.input)
 
 			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
-			provider := &tinypkg.Var{Name: "provider", Symboler: providerSymbol}
+			provider := &tinypkg.Var{Name: "provider", Node: providerSymbol}
 
 			code := translator.TranslateToRunner(c.here, def, c.name, provider)
 			var buf bytes.Buffer
