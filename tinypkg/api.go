@@ -1,5 +1,7 @@
 package tinypkg
 
+import "fmt"
+
 var universe = NewUniverse()
 var builtins = universe.NewPackage("", "")
 
@@ -11,12 +13,11 @@ func NewSymbol(name string) *Symbol {
 	return builtins.NewSymbol(name)
 }
 
-func Walk(x Symboler, use func(*Symbol) error) error {
-	if v, ok := x.(walkerNode); ok {
-		if err := v.onWalk(use); err != nil {
-			return err
-		}
-		return nil
-	}
-	return use(x.Symbol())
+func Walk(x Node, use func(*Symbol) error) error {
+	return x.onWalk(use)
+}
+
+type Node interface {
+	fmt.Stringer
+	onWalk(use func(*Symbol) error) error
 }

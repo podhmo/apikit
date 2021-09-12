@@ -51,12 +51,12 @@ func (r *Resolver) Def(fn interface{}) *Def {
 }
 
 type symbolCacheItem struct {
-	Here     *tinypkg.Package
-	Shape    reflectshape.Shape
-	Symboler tinypkg.Symboler
+	Here  *tinypkg.Package
+	Shape reflectshape.Shape
+	Node  tinypkg.Node
 }
 
-func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Symboler {
+func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	r.mu.RLock()
 	k := s.GetIdentity()
 	cached, ok := r.symbolsCache[k]
@@ -65,19 +65,19 @@ func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.S
 	if ok {
 		for _, item := range cached {
 			if item.Here == here {
-				return item.Symboler
+				return item.Node
 			}
 		}
 	}
-	symboler := ExtractSymbol(here, s)
+	sym := ExtractSymbol(here, s)
 
 	r.mu.Lock()
 	r.symbolsCache[k] = append(cached, &symbolCacheItem{
-		Here:     here,
-		Shape:    s,
-		Symboler: symboler,
+		Here:  here,
+		Shape: s,
+		Node:  sym,
 	})
 	r.mu.Unlock()
 
-	return symboler
+	return sym
 }
