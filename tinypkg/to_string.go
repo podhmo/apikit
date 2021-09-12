@@ -5,6 +5,9 @@ import (
 	"strings"
 )
 
+// e.g.
+// - "m/foo"
+// - foo "m/foo"
 func ToImportPackageString(ip *ImportedPackage) string {
 	if ip.qualifier != "" {
 		return fmt.Sprintf("%s %q", ip.qualifier, ip.pkg.Path)
@@ -12,8 +15,15 @@ func ToImportPackageString(ip *ImportedPackage) string {
 	return fmt.Sprintf("%q", ip.pkg.Path)
 }
 
-func ToRelativeTypeString(here *Package, Node Node) string {
-	switch x := Node.(type) {
+// e.g.
+// - string
+// - foo.Foo
+// - *foo.Foo
+// - map[string]*foo.Foo
+// - []*foo.Foo
+// - func() (*foo.Foo, error)
+func ToRelativeTypeString(here *Package, node Node) string {
+	switch x := node.(type) {
 	case *Var:
 		if x.Name == "" {
 			return ToRelativeTypeString(here, x.Node)
@@ -38,7 +48,7 @@ func ToRelativeTypeString(here *Package, Node Node) string {
 		}
 
 		if len(returns) == 1 {
-			return fmt.Sprintf("func(%s) %s", strings.Join(args, ", "), strings.Join(returns, ", "))
+			return fmt.Sprintf("func(%s) %s", strings.Join(args, ", "), returns[0])
 		}
 		return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 	case *Symbol:
@@ -62,6 +72,30 @@ func ToRelativeTypeString(here *Package, Node Node) string {
 		}
 		return x.Qualifier() + "." + x.sym.Name
 	default:
-		panic(fmt.Sprintf("unsupported type %T", Node))
+		panic(fmt.Sprintf("unsupported type %T", node))
+	}
+}
+
+// e.g.
+// Foo() foo.Foo
+// Foo() (foo.Foo, error)
+func ToInterfaceMethodString(here *Package, name string, node Node) string {
+	switch x := node.(type) {
+	case *Func:
+		args := make([]string, len(x.Args))
+		for i, x := range x.Args {
+			args[i] = ToRelativeTypeString(here, x)
+		}
+		returns := make([]string, len(x.Returns))
+		for i, x := range x.Returns {
+			returns[i] = ToRelativeTypeString(here, x)
+		}
+
+		if len(returns) == 1 {
+			return fmt.Sprintf("%s(%s) %s", name, strings.Join(args, ", "), returns[0])
+		}
+		return fmt.Sprintf("%s(%s) (%s)", name, strings.Join(args, ", "), strings.Join(returns, ", "))
+	default:
+		return fmt.Sprintf("%s() %s", name, ToRelativeTypeString(here, node))
 	}
 }
