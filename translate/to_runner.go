@@ -69,18 +69,14 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 }
 
 func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, provider *tinypkg.Var, name string) error {
-	// TODO:
-	// get components
-	// rest as arguments
-	// TODO: components
-	// TODO: handling context.Context
 
 	var components []resolve.Item
-	var ignored []string
+	var ignored []*tinypkg.Var
 	argNames := make([]string, 0, len(def.Args))
-	args := make([]string, 0, len(def.Args)+1)
+	args := make([]*tinypkg.Var, 0, len(def.Args)+1)
 	{
-		args = append(args, tinypkg.ToRelativeTypeString(here, provider))
+		sym := provider.Node.(*tinypkg.Symbol)
+		args = append(args, &tinypkg.Var{Name: provider.Name, Node: here.Import(sym.Package).Lookup(sym)})
 	}
 	for _, x := range def.Args {
 		argNames = append(argNames, x.Name)
@@ -92,55 +88,46 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 
 		sym := resolver.Symbol(here, x.Shape)
 		if x.Kind == resolve.KindIgnored { // e.g. context.Context
-			ignored = append(ignored, fmt.Sprintf("%s %s", x.Name, sym.String()))
+			ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 		} else {
-			args = append(args, fmt.Sprintf("%s %s", x.Name, sym.String()))
+			args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
 		}
 	}
 	if len(ignored) > 0 {
 		args = append(ignored, args...)
 	}
 
-	returns := make([]string, 0, len(def.Returns))
+	returns := make([]*tinypkg.Var, 0, len(def.Returns))
 	for _, x := range def.Returns {
 		sym := resolver.Symbol(here, x.Shape)
-		returns = append(returns, sym.String()) // TODO: need using x.Name?
+		returns = append(returns, &tinypkg.Var{Node: sym}) // TODO: need using x.Name?
 	}
 
-	// func <name>(<args>...) (<returns>) {
-	switch len(returns) {
-	case 0:
-		fmt.Fprintf(w, "func %s(%s) {\n", name, strings.Join(args, ", "))
-	case 1:
-		fmt.Fprintf(w, "func %s(%s) %s {\n", name, strings.Join(args, ", "), returns[0])
-	default:
-		fmt.Fprintf(w, "func %s(%s) (%s) {\n", name, strings.Join(args, ", "), strings.Join(returns, ", "))
-	}
+	return tinypkg.WriteFunc(w, name, &tinypkg.Func{Params: args, Returns: returns},
+		func() error {
+			// var <component> <type>
+			// {
+			//   <component> = <provider>.<method>()
+			// }
+			if len(components) > 0 {
+				for _, x := range components {
+					// TODO: communicate with write_interface.go's functions
+					sym := resolver.Symbol(here, x.Shape)
+					methodName := x.Shape.GetReflectType().Name()
 
-	// var <component> <type>
-	// {
-	//   <component> = <provider>.<method>()
-	// }
-	if len(components) > 0 {
-		for _, x := range components {
-			// TODO: communicate with write_interface.go's functions
-			sym := resolver.Symbol(here, x.Shape)
-			methodName := x.Shape.GetReflectType().Name()
+					fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+					fmt.Fprintln(w, "\t{")
+					fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
+					fmt.Fprintln(w, "\t}")
+				}
+			}
 
-			fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
-			fmt.Fprintln(w, "\t{")
-			fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
-			fmt.Fprintln(w, "\t}")
-		}
-	}
-
-	// return <inner function>(<args>...)
-	fmt.Fprintf(w, "\treturn %s(%s)\n",
-		tinypkg.ToRelativeTypeString(here, def.Symbol),
-		strings.Join(argNames, ", "),
+			// return <inner function>(<args>...)
+			fmt.Fprintf(w, "\treturn %s(%s)\n",
+				tinypkg.ToRelativeTypeString(here, def.Symbol),
+				strings.Join(argNames, ", "),
+			)
+			return nil
+		},
 	)
-
-	// }
-	fmt.Fprintln(w, "}")
-	return nil
 }
