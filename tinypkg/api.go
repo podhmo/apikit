@@ -1,5 +1,7 @@
 package tinypkg
 
+import "fmt"
+
 var universe = NewUniverse()
 var builtins = universe.NewPackage("", "")
 
@@ -16,5 +18,6 @@ func Walk(x Node, use func(*Symbol) error) error {
 }
 
 type Node interface {
+	fmt.Stringer
 	onWalk(use func(*Symbol) error) error
 }

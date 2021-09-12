@@ -1,7 +1,6 @@
 package tinypkg
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -67,14 +66,6 @@ type ImportedPackage struct {
 
 func (ip *ImportedPackage) Lookup(sym *Symbol) *ImportedSymbol {
 	return &ImportedSymbol{pkg: ip, sym: sym}
-}
-
-// TODO: move somewhere
-func ToImportPackageString(ip *ImportedPackage) string {
-	if ip.qualifier != "" {
-		return fmt.Sprintf("%s %q", ip.qualifier, ip.pkg.Path)
-	}
-	return fmt.Sprintf("%q", ip.pkg.Path)
 }
 
 type ImportedSymbol struct {
@@ -217,3 +208,14 @@ type Var struct {
 func (v *Var) String() string {
 	return ToRelativeTypeString(nil, v)
 }
+
+var (
+	_ Node = &Symbol{}
+	_ Node = &ImportedSymbol{}
+	_ Node = &Pointer{}
+	_ Node = &Slice{}
+	_ Node = &Array{}
+	_ Node = &Map{}
+	_ Node = &Func{}
+	_ Node = &Var{}
+)
