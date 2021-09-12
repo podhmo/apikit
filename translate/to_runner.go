@@ -19,6 +19,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, 
 		provider = t.providerVar
 	}
 
+	t.Tracker.Track(def)
 	return &Code{
 		Name:     name,
 		Here:     here,
@@ -27,7 +28,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, 
 			return collectImportsForRunner(here, t.Resolver, def, provider)
 		},
 		EmitCode: func(w io.Writer) error {
-			return writeRunner(w, here, t.Resolver, def, provider, name)
+			return writeRunner(w, here, t.Resolver, t.Tracker, def, provider, name)
 		},
 	}
 }
@@ -68,8 +69,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 	return imports, nil
 }
 
-func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, def *resolve.Def, provider *tinypkg.Var, name string) error {
-
+func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
 	var components []resolve.Item
 	var ignored []*tinypkg.Var
 	argNames := make([]string, 0, len(def.Args))
