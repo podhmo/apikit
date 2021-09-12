@@ -69,15 +69,15 @@ func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.N
 			}
 		}
 	}
-	Node := ExtractSymbol(here, s)
+	sym := ExtractSymbol(here, s)
 
 	r.mu.Lock()
 	r.symbolsCache[k] = append(cached, &symbolCacheItem{
 		Here:  here,
 		Shape: s,
-		Node:  Node,
+		Node:  sym,
 	})
 	r.mu.Unlock()
 
-	return Node
+	return sym
 }
