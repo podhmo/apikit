@@ -14,3 +14,7 @@ func NewSymbol(name string) *Symbol {
 func Walk(x Node, use func(*Symbol) error) error {
 	return x.onWalk(use)
 }
+
+type Node interface {
+	onWalk(use func(*Symbol) error) error
+}
