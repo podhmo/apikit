@@ -28,9 +28,9 @@ func ToRelativeTypeString(here *Package, Node Node) string {
 	case *Map:
 		return fmt.Sprintf("map[%s]%s", ToRelativeTypeString(here, x.K), ToRelativeTypeString(here, x.V))
 	case *Func:
-		params := make([]string, len(x.Params))
-		for i, x := range x.Params {
-			params[i] = ToRelativeTypeString(here, x)
+		args := make([]string, len(x.Args))
+		for i, x := range x.Args {
+			args[i] = ToRelativeTypeString(here, x)
 		}
 		returns := make([]string, len(x.Returns))
 		for i, x := range x.Returns {
@@ -38,9 +38,9 @@ func ToRelativeTypeString(here *Package, Node Node) string {
 		}
 
 		if len(returns) == 1 {
-			return fmt.Sprintf("func(%s) %s", strings.Join(params, ", "), strings.Join(returns, ", "))
+			return fmt.Sprintf("func(%s) %s", strings.Join(args, ", "), strings.Join(returns, ", "))
 		}
-		return fmt.Sprintf("func(%s) (%s)", strings.Join(params, ", "), strings.Join(returns, ", "))
+		return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 	case *Symbol:
 		if x.Package.Name == "" {
 			return x.Name

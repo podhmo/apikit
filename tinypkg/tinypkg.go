@@ -178,12 +178,12 @@ func (c *Array) onWalk(use func(*Symbol) error) error {
 
 type Func struct {
 	Name    string
-	Params  []*Var
+	Args    []*Var
 	Returns []*Var
 }
 
 func (f *Func) onWalk(use func(*Symbol) error) error {
-	for _, x := range f.Params {
+	for _, x := range f.Args {
 		if err := x.Node.onWalk(use); err != nil {
 			return err
 		}

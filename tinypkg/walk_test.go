@@ -61,7 +61,7 @@ foo.Boo
 			msg:  "func(ctx context.Context, userID string)([]*User, error)",
 			here: main,
 			input: &Func{
-				Params: []*Var{
+				Args: []*Var{
 					{Name: "ctx", Node: u.NewPackage("context", "").NewSymbol("Context")},
 					{Name: "userId", Node: builtins.NewSymbol("string")},
 				},
