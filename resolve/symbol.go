@@ -39,7 +39,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 			panic(fmt.Sprintf("unsupported container shape %+v", s))
 		}
 	case reflectshape.Function:
-		params := make([]*tinypkg.Var, 0, s.Params.Len())
+		args := make([]*tinypkg.Var, 0, s.Params.Len())
 		{
 			// TODO: this is shape package's feature (feature request)
 			hasName := false
@@ -54,7 +54,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 				if !hasName {
 					name = ""
 				}
-				params = append(params, &tinypkg.Var{Name: name, Node: ExtractSymbol(here, arg)})
+				args = append(args, &tinypkg.Var{Name: name, Node: ExtractSymbol(here, arg)})
 			}
 		}
 		returns := make([]*tinypkg.Var, 0, s.Returns.Len())
@@ -76,7 +76,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 		}
 		return &tinypkg.Func{
 			Name:    s.GetName(),
-			Params:  params,
+			Args:    args,
 			Returns: returns,
 		}
 	default:

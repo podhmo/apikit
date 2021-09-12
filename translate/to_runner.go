@@ -103,7 +103,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		returns = append(returns, &tinypkg.Var{Node: sym}) // TODO: need using x.Name?
 	}
 
-	return tinypkg.WriteFunc(w, name, &tinypkg.Func{Params: args, Returns: returns},
+	return tinypkg.WriteFunc(w, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
 			// var <component> <type>
 			// {

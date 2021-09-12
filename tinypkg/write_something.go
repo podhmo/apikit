@@ -7,8 +7,8 @@ import (
 )
 
 func WriteFunc(w io.Writer, name string, f *Func, body func() error) error {
-	args := make([]string, 0, len(f.Params))
-	for _, x := range f.Params {
+	args := make([]string, 0, len(f.Args))
+	for _, x := range f.Args {
 		args = append(args, x.String())
 	}
 
