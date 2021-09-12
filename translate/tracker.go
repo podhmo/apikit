@@ -8,8 +8,10 @@ import (
 )
 
 type Need struct {
-	rt reflect.Type
-	resolve.Item
+	rt          reflect.Type
+	overrideDef *resolve.Def
+
+	*resolve.Item
 }
 
 type Tracker struct {
@@ -51,7 +53,7 @@ toplevel:
 			}
 			need := &Need{
 				rt:   k,
-				Item: arg,
+				Item: &arg,
 			}
 			t.seen[k] = append(t.seen[k], need)
 			t.Needs = append(t.Needs, need)
@@ -61,4 +63,37 @@ toplevel:
 			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))
 		}
 	}
+}
+
+func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev *resolve.Def) {
+	for {
+		if rt.Kind() != reflect.Ptr {
+			break
+		}
+		rt = rt.Elem()
+	}
+
+	k := rt
+	var target *Need
+	for _, need := range t.seen[k] {
+		if need.Name == name {
+			target = need
+			break
+		}
+	}
+	if target == nil {
+		target = &Need{
+			rt: k,
+			Item: &resolve.Item{
+				Kind:  resolve.KindComponent,
+				Name:  name,
+				Shape: def.Shape.Returns.Values[0], // xxx:
+			},
+		}
+		t.seen[k] = append(t.seen[k], target)
+		t.Needs = append(t.Needs, target)
+	}
+	prev = target.overrideDef
+	target.overrideDef = def
+	return prev
 }
