@@ -30,8 +30,7 @@ func (c *Code) EmitImports(w io.Writer) error {
 
 	io.WriteString(w, "import (\n")
 	for _, impkg := range impkgs {
-		io.WriteString(w, "\t")
-		impkg.Emit(w)
+		fmt.Fprintf(w, "\t%s\n", tinypkg.ToImportPackageString(impkg))
 	}
 	io.WriteString(w, ")\n")
 	return nil
