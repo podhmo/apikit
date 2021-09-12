@@ -3,6 +3,7 @@ package translate
 import (
 	"bytes"
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -29,11 +30,13 @@ func TestWriteRunner(t *testing.T) {
 	resolver := resolve.NewResolver()
 
 	cases := []struct {
-		name      string
-		input     interface{}
-		here      *tinypkg.Package
-		want      string
-		wantError error
+		name  string
+		input interface{}
+		here  *tinypkg.Package
+		want  string
+
+		wantError     error
+		modifyTracker func(t *Tracker)
 	}{
 		{
 			name:  "RunAddTodo",
@@ -70,12 +73,42 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 	return translate.AddTodoWithContext(ctx, session, title, done)
 }`,
 		},
+		{
+			name:  "RunAddTodoWithOverride",
+			input: AddTodo,
+			here:  main,
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(AddTodo).In(0)
+				def := resolver.Def(func() (*Session, error) { return nil, nil })
+				tracker.Override(rt, "session", def)
+			},
+			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunAddTodoWithOverride(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	var session *translate.Session
+	{
+		var err error
+		session, err = provider.Session()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return translate.AddTodo(session, title, done)
+}`,
+		},
 	}
 
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
 			translator := NewTranslator(resolver)
+			if c.modifyTracker != nil {
+				c.modifyTracker(translator.Tracker)
+			}
+
 			def := resolver.Def(c.input)
 
 			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
