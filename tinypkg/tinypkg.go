@@ -90,12 +90,12 @@ func (im *ImportedSymbol) Qualifier() string {
 	return im.pkg.pkg.Name
 }
 
-func (im *ImportedSymbol) Symbol() *Symbol {
-	return im.sym
-}
-
 func (im *ImportedSymbol) String() string {
 	return ToRelativeTypeString(im.pkg.here, im)
+}
+
+func (im *ImportedSymbol) onWalk(use func(*Symbol) error) error {
+	return use(im.sym)
 }
 
 func (p *Package) NewSymbol(name string) *Symbol {
@@ -121,9 +121,6 @@ type Symbol struct {
 	Package *Package
 }
 
-func (s *Symbol) Symbol() *Symbol {
-	return s
-}
 func (s *Symbol) String() string {
 	return s.Name
 }
@@ -132,6 +129,9 @@ func (s *Symbol) GoString() string {
 		return s.Name
 	}
 	return s.Package.Path + "." + s.Name
+}
+func (s *Symbol) onWalk(use func(*Symbol) error) error {
+	return use(s)
 }
 
 type Pointer struct {
@@ -142,14 +142,8 @@ type Pointer struct {
 func (c *Pointer) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Pointer) Symbol() *Symbol {
-	return c.V.Symbol()
-}
 func (c *Pointer) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walkerNode); ok {
-		return v.onWalk(use)
-	}
-	return use(c.Symbol())
+	return c.V.onWalk(use)
 }
 
 type Map struct {
@@ -160,44 +154,23 @@ type Map struct {
 func (c *Map) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Map) Symbol() *Symbol {
-	k := c.K.Symbol()
-	if k != nil {
-		return k // TODO: return K and V
-	}
-	return c.V.Symbol()
-}
+
 func (c *Map) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.K.(walkerNode); ok {
-		if err := v.onWalk(use); err != nil {
-			return err
-		}
-	} else {
-		if err := use(c.K.Symbol()); err != nil {
-			return err
-		}
+	if err := c.K.onWalk(use); err != nil {
+		return err
 	}
-	if v, ok := c.V.(walkerNode); ok {
-		return v.onWalk(use)
-	}
-	return use(c.V.Symbol())
+	return c.V.onWalk(use)
 }
 
 type Slice struct {
 	V Symboler
 }
 
-func (c *Slice) Symbol() *Symbol {
-	return c.V.Symbol()
-}
 func (c *Slice) String() string {
 	return ToRelativeTypeString(nil, c)
 }
 func (c *Slice) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walkerNode); ok {
-		return v.onWalk(use)
-	}
-	return use(c.Symbol())
+	return c.V.onWalk(use)
 }
 
 type Array struct {
@@ -208,14 +181,8 @@ type Array struct {
 func (c *Array) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Array) Symbol() *Symbol {
-	return c.V.Symbol()
-}
 func (c *Array) onWalk(use func(*Symbol) error) error {
-	if v, ok := c.V.(walkerNode); ok {
-		return v.onWalk(use)
-	}
-	return use(c.Symbol())
+	return c.V.onWalk(use)
 }
 
 type Func struct {
@@ -224,29 +191,14 @@ type Func struct {
 	Returns []*Var
 }
 
-func (f *Func) Symbol() *Symbol {
-	return nil // TODO: this is broken.
-}
 func (f *Func) onWalk(use func(*Symbol) error) error {
 	for _, x := range f.Params {
-		if v, ok := x.Symboler.(walkerNode); ok {
-			if err := v.onWalk(use); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := use(x.Symbol()); err != nil {
+		if err := x.Symboler.onWalk(use); err != nil {
 			return err
 		}
 	}
 	for _, x := range f.Returns {
-		if v, ok := x.Symboler.(walkerNode); ok {
-			if err := v.onWalk(use); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := use(x.Symbol()); err != nil {
+		if err := x.Symboler.onWalk(use); err != nil {
 			return err
 		}
 	}

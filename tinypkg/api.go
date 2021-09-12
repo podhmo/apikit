@@ -12,11 +12,5 @@ func NewSymbol(name string) *Symbol {
 }
 
 func Walk(x Symboler, use func(*Symbol) error) error {
-	if v, ok := x.(walkerNode); ok {
-		if err := v.onWalk(use); err != nil {
-			return err
-		}
-		return nil
-	}
-	return use(x.Symbol())
+	return x.onWalk(use)
 }
