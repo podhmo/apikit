@@ -24,6 +24,9 @@ func AddTodo(session *Session, title string, done bool) (*Todo, error) {
 func AddTodoWithContext(ctx context.Context, session *Session, title string, done bool) (*Todo, error) {
 	return nil, nil
 }
+func MustAddTodo(session *Session, title string, done bool) *Todo {
+	return nil
+}
 
 func TestWriteRunner(t *testing.T) {
 	main := tinypkg.NewPackage("main", "")
@@ -155,6 +158,37 @@ func RunAddTodoWithOverride3(provider component.Provider, title string, done boo
 	return translate.AddTodo(session, title, done)
 }`,
 		},
+		{
+			name:  "RunMustAddTodoWithOverride3", // func()(<T>, func(), error)
+			input: MustAddTodo,
+			here:  main,
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(AddTodo).In(0)
+				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
+				tracker.Override(rt, "session", def)
+			},
+			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunMustAddTodoWithOverride3(provider component.Provider, title string, done bool) *translate.Todo {
+	var session *translate.Session
+	{
+		var teardown func()
+		var err error
+		session, teardown, err = provider.Session()
+		if err != nil {
+			return nil
+		}
+		if teardown != nil {
+			defer teardown()
+		}
+	}
+	return translate.MustAddTodo(session, title, done)
+}`,
+		},
+		// TODO: support consume function that returning zero value
 	}
 
 	for _, c := range cases {
