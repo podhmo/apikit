@@ -111,16 +111,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 			//   <component> = <provider>.<method>()
 			// }
 			if len(components) > 0 {
-				returnErrorPosition := -1
-				if len(returns) > 0 {
-					retType := def.Shape.GetReflectType()
-					for i := 0; i < len(returns); i++ {
-						if retType.Out(i) == reflectErrorTypeValue {
-							returnErrorPosition = i
-							break
-						}
-					}
-				}
+				isConsumeFuncReturnsError := len(returns) > 0 && def.Shape.GetReflectType().Out(len(returns)-1) == reflectErrorTypeValue
 
 				for _, x := range components {
 					shape := x.Shape
@@ -166,14 +157,14 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
 								}
 							}
-						case 3: // x, err, teardown := provide()
+						case 3: // x, teardown, err := provide()
 							hasError = true
 							hasTeardown = true
-							fmt.Fprintln(w, "\t\tvar err error")
 							fmt.Fprintf(w, "\t\tvar teardown %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
-							fmt.Fprintf(w, "\t\t%s, err, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
-							if _, ok := provided.Returns[2].Node.(*tinypkg.Func); !ok {
-								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
+							fmt.Fprintln(w, "\t\tvar err error")
+							fmt.Fprintf(w, "\t\t%s, teardown, err = %s.%s()\n", x.Name, provider.Name, methodName)
+							if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
+								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, func(), error). got=%s", provided)
 							}
 						default:
 							return fmt.Errorf("unexpected provider function for %s, %+v", x.Name, shape)
@@ -194,8 +185,8 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 							// return <>, func()
 							// return <>, error, func()
 							values := []string{"nil", "nil", "nil"}
-							if returnErrorPosition >= 0 {
-								values[returnErrorPosition] = "err"
+							if isConsumeFuncReturnsError {
+								values[len(returns)-1] = "err"
 							}
 							fmt.Fprintf(w, "\t\t\treturn %s\n", strings.Join(values[:len(returns)], ", "))
 						default:
