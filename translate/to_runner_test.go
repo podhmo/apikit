@@ -74,7 +74,7 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 }`,
 		},
 		{
-			name:  "RunAddTodoWithOverride",
+			name:  "RunAddTodoWithOverride1", // func()<T, error>
 			input: AddTodo,
 			here:  main,
 			modifyTracker: func(tracker *Tracker) {
@@ -87,13 +87,39 @@ import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
-func RunAddTodoWithOverride(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+func RunAddTodoWithOverride1(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
 		var err error
 		session, err = provider.Session()
 		if err != nil {
 			return nil, err
+		}
+	}
+	return translate.AddTodo(session, title, done)
+}`,
+		},
+		{
+			name:  "RunAddTodoWithOverride2", // func()(<T>, func())
+			input: AddTodo,
+			here:  main,
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(AddTodo).In(0)
+				def := resolver.Def(func() (*Session, func()) { return nil, nil })
+				tracker.Override(rt, "session", def)
+			},
+			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunAddTodoWithOverride2(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	var session *translate.Session
+	{
+		var teardown func()
+		session, teardown = provider.Session()
+		if teardown != nil {
+			defer teardown()
 		}
 	}
 	return translate.AddTodo(session, title, done)
