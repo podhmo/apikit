@@ -3,6 +3,7 @@ package translate
 import (
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/tinypkg"
@@ -27,6 +28,14 @@ func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
 		Resolver: resolver,
 		EmitFunc: defaultEmitFunc,
 	}
+}
+
+func (t *Translator) Override(name string, providerFunc interface{}) (prev *resolve.Def, err error) {
+	rt := reflect.TypeOf(providerFunc)
+	if rt.Kind() != reflect.Func {
+		return nil, fmt.Errorf("unexpected providerFunc, only function %v", rt)
+	}
+	return t.Tracker.Override(rt.Out(0), name, t.Resolver.Def(providerFunc)), nil
 }
 
 type Emitter interface {
