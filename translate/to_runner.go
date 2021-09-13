@@ -160,7 +160,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 								fmt.Fprintf(w, "\t\t%s, err = %s.%s()\n", x.Name, provider.Name, methodName)
 							} else {
 								hasTeardown = true
-								fmt.Fprintf(w, "\t\tvar teardown %s", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+								fmt.Fprintf(w, "\t\tvar teardown %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
 								fmt.Fprintf(w, "\t\t%s, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
 								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
 									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
@@ -170,7 +170,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 							hasError = true
 							hasTeardown = true
 							fmt.Fprintln(w, "\t\tvar err error")
-							fmt.Fprintf(w, "\t\tvar teardown %s", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+							fmt.Fprintf(w, "\t\tvar teardown %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
 							fmt.Fprintf(w, "\t\t%s, err, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
 							if _, ok := provided.Returns[2].Node.(*tinypkg.Func); !ok {
 								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
@@ -204,7 +204,9 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 						fmt.Fprintln(w, "\t\t}")
 					}
 					if hasTeardown {
-						fmt.Fprintln(w, "defer teardown()") // TODO: support Close() error
+						fmt.Fprintln(w, "\t\tif teardown != nil {")
+						fmt.Fprintln(w, "\t\t\tdefer teardown()") // TODO: support Close() error
+						fmt.Fprintln(w, "\t\t}")
 					}
 					// }
 					fmt.Fprintln(w, "\t}")

@@ -47,10 +47,14 @@ func ToRelativeTypeString(here *Package, node Node) string {
 			returns[i] = ToRelativeTypeString(here, x)
 		}
 
-		if len(returns) == 1 {
+		switch len(returns) {
+		case 0:
+			return fmt.Sprintf("func(%s)", strings.Join(args, ", "))
+		case 1:
 			return fmt.Sprintf("func(%s) %s", strings.Join(args, ", "), returns[0])
+		default:
+			return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 		}
-		return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 	case *Symbol:
 		if x.Package.Name == "" {
 			return x.Name
@@ -91,10 +95,14 @@ func ToInterfaceMethodString(here *Package, name string, node Node) string {
 			returns[i] = ToRelativeTypeString(here, x)
 		}
 
-		if len(returns) == 1 {
+		switch len(returns) {
+		case 0:
+			return fmt.Sprintf("%s(%s)", name, strings.Join(args, ", "))
+		case 1:
 			return fmt.Sprintf("%s(%s) %s", name, strings.Join(args, ", "), returns[0])
+		default:
+			return fmt.Sprintf("%s(%s) (%s)", name, strings.Join(args, ", "), strings.Join(returns, ", "))
 		}
-		return fmt.Sprintf("%s(%s) (%s)", name, strings.Join(args, ", "), strings.Join(returns, ", "))
 	default:
 		return fmt.Sprintf("%s() %s", name, ToRelativeTypeString(here, node))
 	}
