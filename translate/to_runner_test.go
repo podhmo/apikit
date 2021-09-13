@@ -90,8 +90,7 @@ import (
 func RunAddTodoWithOverride(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
-		var err error
-		session, err = provider.Session()
+		session, err := provider.Session()
 		if err != nil {
 			return nil, err
 		}
