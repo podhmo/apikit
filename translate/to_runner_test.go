@@ -189,6 +189,29 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 }`,
 		},
 		// TODO: support consume function that returning zero value
+
+		// // TODO: validation
+		// // NG...
+		// {
+		// 	name:  "ngProviderPosision",
+		// 	input: MustAddTodo,
+		// 	here:  main,
+		// 	modifyTracker: func(tracker *Tracker) {
+		// 		rt := reflect.TypeOf(AddTodo).In(0)
+		// 		def := resolver.Def(func() (*Session, error, func()) { return nil, nil, nil }) // not func()(<T>, func(), error)
+		// 		tracker.Override(rt, "session", def)
+		// 	},
+		// },
+		// {
+		// 	name:  "ngProviderType",
+		// 	input: MustAddTodo,
+		// 	here:  main,
+		// 	modifyTracker: func(tracker *Tracker) {
+		// 		rt := reflect.TypeOf(AddTodo).In(0)
+		// 		def := resolver.Def(func() (int, func(), error) { return 0, nil, nil }) // not *Session
+		// 		tracker.Override(rt, "session", def)
+		// 	},
+		// },
 	}
 
 	for _, c := range cases {
