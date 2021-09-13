@@ -151,31 +151,32 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					switch provided := sym.(type) {
 					case *tinypkg.Func:
 						switch len(provided.Returns) {
-						case 1:
-							// x = provide()
+						case 1: // x := provide()
 							fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
-						case 2:
-							// x, err := provide()
+						case 2: // x, err := provide()
 							if provided.Returns[1].Node.String() == "error" {
 								hasError = true
-								fmt.Fprintf(w, "\t\t%s, err := %s.%s()\n", x.Name, provider.Name, methodName)
-							} else { //  x, teardown := provide()
+								fmt.Fprintln(w, "\t\tvar err error")
+								fmt.Fprintf(w, "\t\t%s, err = %s.%s()\n", x.Name, provider.Name, methodName)
+							} else {
 								hasTeardown = true
-								fmt.Fprintf(w, "\t\t%s, teardown := %s.%s()\n", x.Name, provider.Name, methodName)
+								fmt.Fprintf(w, "\t\tvar teardown %s", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+								fmt.Fprintf(w, "\t\t%s, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
 								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
 									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
 								}
 							}
-						case 3:
-							// x, err, teardown := provide()
+						case 3: // x, err, teardown := provide()
 							hasError = true
 							hasTeardown = true
-							fmt.Fprintf(w, "\t\t%s, err, teardown := %s.%s()\n", x.Name, provider.Name, methodName)
+							fmt.Fprintln(w, "\t\tvar err error")
+							fmt.Fprintf(w, "\t\tvar teardown %s", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+							fmt.Fprintf(w, "\t\t%s, err, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
 							if _, ok := provided.Returns[2].Node.(*tinypkg.Func); !ok {
 								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
 							}
 						default:
-							return fmt.Errorf("something wrong in provider function of %s: %+v", x.Name, shape)
+							return fmt.Errorf("unexpected provider function for %s, %+v", x.Name, shape)
 						}
 					default:
 						fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
