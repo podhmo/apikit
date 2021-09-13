@@ -23,7 +23,9 @@ func main() {
 
 func run() error {
 	resolver := resolve.NewResolver()
+
 	translator := translate.NewTranslator(resolver, design.ListUser)
+	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
 
 	here := tinypkg.NewPackage("m/00simple/component", "")
 
@@ -40,6 +42,16 @@ func run() error {
 	{
 		pkg := tinypkg.NewPackage("m/00simple/runner", "")
 		def := resolver.Def(design.ListUser)
+		code := translator.TranslateToRunner(pkg, def, "", nil)
+		var buf bytes.Buffer
+		if err := code.Emit(&buf, code); err != nil {
+			return nil
+		}
+		writeFile(fmt.Sprintf("./00simple/runner/%s.go", def.Name), buf.Bytes())
+	}
+	{
+		pkg := tinypkg.NewPackage("m/00simple/runner", "")
+		def := resolver.Def(design.SendMessage)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
