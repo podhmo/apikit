@@ -3,6 +3,7 @@ package translate
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/resolve"
@@ -110,14 +111,101 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 			//   <component> = <provider>.<method>()
 			// }
 			if len(components) > 0 {
+				returnErrorPosition := -1
+				if len(returns) > 0 {
+					retType := def.Shape.GetReflectType()
+					for i := 0; i < len(returns); i++ {
+						if retType.Out(i) == reflectErrorTypeValue {
+							returnErrorPosition = i
+							break
+						}
+					}
+				}
+
 				for _, x := range components {
-					// TODO: communicate with write_interface.go's functions
-					sym := resolver.Symbol(here, x.Shape)
+					shape := x.Shape
+					for _, need := range tracker.seen[x.Shape.GetReflectType()] {
+						if need.Name == x.Name {
+							if need.overrideDef != nil {
+								shape = need.overrideDef.Shape
+							}
+							break
+						}
+					}
+
+					sym := resolver.Symbol(here, shape)
 					methodName := x.Shape.GetReflectType().Name()
 
-					fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+					// var x <X>
+					if f, ok := sym.(*tinypkg.Func); ok {
+						fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, f.Returns[0]))
+					} else {
+						fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+					}
+
+					// {
 					fmt.Fprintln(w, "\t{")
-					fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
+
+					hasError := false
+					hasTeardown := false
+					switch provided := sym.(type) {
+					case *tinypkg.Func:
+						switch len(provided.Returns) {
+						case 1:
+							// x = provide()
+							fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
+						case 2:
+							// x, err := provide()
+							if provided.Returns[1].Node.String() == "error" {
+								hasError = true
+								fmt.Fprintf(w, "\t\t%s, err := %s.%s()\n", x.Name, provider.Name, methodName)
+							} else { //  x, teardown := provide()
+								hasTeardown = true
+								fmt.Fprintf(w, "\t\t%s, teardown := %s.%s()\n", x.Name, provider.Name, methodName)
+								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
+									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
+								}
+							}
+						case 3:
+							// x, err, teardown := provide()
+							hasError = true
+							hasTeardown = true
+							fmt.Fprintf(w, "\t\t%s, err, teardown := %s.%s()\n", x.Name, provider.Name, methodName)
+							if _, ok := provided.Returns[2].Node.(*tinypkg.Func); !ok {
+								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
+							}
+						default:
+							return fmt.Errorf("something wrong in provider function of %s: %+v", x.Name, shape)
+						}
+					default:
+						fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
+					}
+
+					if hasError {
+						fmt.Fprintf(w, "\t\tif err != nil {\n")
+						switch len(returns) {
+						case 0:
+							fmt.Fprintln(w, "\t\t\treturn")
+						case 1, 2, 3:
+							// return <>
+							// return error
+							// return <>, error
+							// return <>, func()
+							// return <>, error, func()
+							values := []string{"nil", "nil", "nil"}
+							if returnErrorPosition >= 0 {
+								values[returnErrorPosition] = "err"
+							}
+							fmt.Fprintf(w, "\t\t\treturn %s\n", strings.Join(values[:len(returns)], ", "))
+						default:
+							return fmt.Errorf("unsupported consume function: %s", def.Symbol)
+						}
+						fmt.Fprintln(w, "\t\t}")
+					}
+					if hasTeardown {
+						fmt.Fprintln(w, "defer teardown()") // TODO: support Close() error
+					}
+					// }
 					fmt.Fprintln(w, "\t}")
 				}
 			}
@@ -131,3 +219,5 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		},
 	)
 }
+
+var reflectErrorTypeValue = reflect.TypeOf(func() error { return nil }).Out(0)
