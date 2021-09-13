@@ -125,6 +125,36 @@ func RunAddTodoWithOverride2(provider component.Provider, title string, done boo
 	return translate.AddTodo(session, title, done)
 }`,
 		},
+		{
+			name:  "RunAddTodoWithOverride3", // func()(<T>, func(), error)
+			input: AddTodo,
+			here:  main,
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(AddTodo).In(0)
+				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
+				tracker.Override(rt, "session", def)
+			},
+			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunAddTodoWithOverride3(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	var session *translate.Session
+	{
+		var teardown func()
+		var err error
+		session, teardown, err = provider.Session()
+		if err != nil {
+			return nil, err
+		}
+		if teardown != nil {
+			defer teardown()
+		}
+	}
+	return translate.AddTodo(session, title, done)
+}`,
+		},
 	}
 
 	for _, c := range cases {
