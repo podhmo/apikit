@@ -119,10 +119,10 @@ import (
 func RunAddTodoWithOverride2(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
-		var teardown func()
-		session, teardown = provider.Session()
-		if teardown != nil {
-			defer teardown()
+		var cleanup func()
+		session, cleanup = provider.Session()
+		if cleanup != nil {
+			defer cleanup()
 		}
 	}
 	return translate.AddTodo(session, title, done)
@@ -145,14 +145,14 @@ import (
 func RunAddTodoWithOverride3(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
-		var teardown func()
+		var cleanup func()
 		var err error
-		session, teardown, err = provider.Session()
+		session, cleanup, err = provider.Session()
+		if cleanup != nil {
+			defer cleanup()
+		}
 		if err != nil {
 			return nil, err
-		}
-		if teardown != nil {
-			defer teardown()
 		}
 	}
 	return translate.AddTodo(session, title, done)
@@ -175,14 +175,14 @@ import (
 func RunMustAddTodoWithOverride3(provider component.Provider, title string, done bool) *translate.Todo {
 	var session *translate.Session
 	{
-		var teardown func()
+		var cleanup func()
 		var err error
-		session, teardown, err = provider.Session()
+		session, cleanup, err = provider.Session()
+		if cleanup != nil {
+			defer cleanup()
+		}
 		if err != nil {
 			return nil
-		}
-		if teardown != nil {
-			defer teardown()
 		}
 	}
 	return translate.MustAddTodo(session, title, done)
