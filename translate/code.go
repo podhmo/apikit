@@ -13,8 +13,7 @@ type Code struct {
 
 	ImportPackages func() ([]*tinypkg.ImportedPackage, error)
 	EmitCode       func(w io.Writer) error
-
-	EmitFunc
+	emitFunc       func(w io.Writer, code *Code) error
 }
 
 var ErrNoImports = fmt.Errorf("no imports")
@@ -36,4 +35,7 @@ func (c *Code) EmitImports(w io.Writer) error {
 	return nil
 }
 
-var _ Emitter = &Code{}
+// for pkg/emitfile.Emitter
+func (c *Code) Emit(w io.Writer) error {
+	return c.emitFunc(w, c)
+}

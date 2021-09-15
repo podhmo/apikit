@@ -24,7 +24,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, 
 	return &Code{
 		Name:     name,
 		Here:     here,
-		EmitFunc: t.EmitFunc,
+		emitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			return collectImportsForRunner(here, t.Resolver, def, provider)
 		},

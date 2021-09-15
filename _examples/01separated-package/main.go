@@ -1,13 +1,12 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 
 	"m/01separated-package/design"
-	"m/fileutil"
 
+	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/translate"
@@ -19,43 +18,37 @@ func main() {
 	}
 }
 
-func run() error {
-	resolver := resolve.NewResolver()
-
-	translator := translate.NewTranslator(resolver, design.ListUser)
-	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
-
-	here := tinypkg.NewPackage("m/01separated-package/component", "")
-
-	{
-		code := translator.TranslateToInterface(here, "Component")
-		var buf bytes.Buffer
-		if err := code.Emit(&buf, code); err != nil {
-			return nil
+func run() (retErr error) {
+	rootdir := "./01separated-package"
+	emitter := emitfile.New(rootdir)
+	defer func() {
+		if err := emitter.Emit(); err != nil {
+			retErr = err
 		}
-		fileutil.WriteOrCreateFile("./01separated-package/component/component.go", buf.Bytes())
-	}
+	}()
 
-	// TODO: detect provider name after emit code
+	resolver := resolve.NewResolver()
+	translator := translate.NewTranslator(resolver, design.ListUser)
+	dst := tinypkg.NewPackage("m/01separated-package/runner", "")
+
 	{
-		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
+		here := tinypkg.NewPackage("m/01separated-package/component", "")
+		code := translator.TranslateToInterface(here, "Component")
+		emitter.Register("/component/component.go", code)
+	}
+	{
+		pkg := dst
 		def := resolver.Def(design.ListUser)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
-		var buf bytes.Buffer
-		if err := code.Emit(&buf, code); err != nil {
-			return nil
-		}
-		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
+		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
 	}
 	{
-		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
+		pkg := dst
 		def := resolver.Def(design.SendMessage)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
-		var buf bytes.Buffer
-		if err := code.Emit(&buf, code); err != nil {
-			return nil
-		}
-		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
+		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
 	}
+
+	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
 	return nil
 }

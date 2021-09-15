@@ -1,20 +1,11 @@
-package fileutil
+package emitfile
 
 import (
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 )
-
-var DEBUG = false
-
-func init() {
-	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
-		DEBUG = v
-	}
-}
 
 var mkdirSentinelMap = map[string]bool{}
 
