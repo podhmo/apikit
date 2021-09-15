@@ -1,10 +1,13 @@
 package emitfile
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -17,14 +20,65 @@ func init() {
 	}
 }
 
-type Emitter struct {
+type Executor struct {
 	PathResolver *PathResolver
+	Actions      []*EmitAction
+	// TODO: permission
+	// TODO: sort by priority
+}
+type EmitAction struct {
+	Name     string
+	Path     string
+	Priority int
+	Target   Emitter
+}
+type EmitFunc func(w io.Writer) error
+
+func (f EmitFunc) Emit(w io.Writer) error {
+	return f(w)
 }
 
-func NewEmitter(rootdir string) *Emitter {
-	return &Emitter{
+type Emitter interface {
+	Emit(w io.Writer) error
+}
+
+func New(rootdir string) *Executor {
+	return &Executor{
 		PathResolver: newPathResolver(rootdir),
 	}
+}
+
+func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
+	action := &EmitAction{
+		Path:   path,
+		Target: emitter,
+	}
+	if impl, ok := emitter.(interface{ Name() string }); ok {
+		action.Name = impl.Name()
+	}
+	e.Actions = append(e.Actions, action)
+	return action
+}
+
+func (e *Executor) Emit() error {
+	// TODO: strategy (failfast, runall)
+	// TODO: run once
+	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
+	for _, action := range e.Actions {
+		fpath, err := e.PathResolver.ResolvePath(action.Path)
+		if err != nil {
+			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
+		}
+		var buf bytes.Buffer
+		if err := action.Target.Emit(&buf); err != nil {
+			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
+		}
+		// TODO: format
+		if err := WriteOrCreateFile(fpath, buf.Bytes()); err != nil {
+			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
+		}
+	}
+	return nil
 }
 
 type PathResolver struct {
