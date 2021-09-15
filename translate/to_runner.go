@@ -173,6 +173,11 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 						fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
 					}
 
+					if hasTeardown {
+						fmt.Fprintln(w, "\t\tif cleanup != nil {")
+						fmt.Fprintln(w, "\t\t\tdefer cleanup()") // TODO: support Close() error
+						fmt.Fprintln(w, "\t\t}")
+					}
 					if hasError {
 						fmt.Fprintf(w, "\t\tif err != nil {\n")
 						switch len(returns) {
@@ -192,11 +197,6 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 						default:
 							return fmt.Errorf("unsupported consume function: %s", def.Symbol)
 						}
-						fmt.Fprintln(w, "\t\t}")
-					}
-					if hasTeardown {
-						fmt.Fprintln(w, "\t\tif cleanup != nil {")
-						fmt.Fprintln(w, "\t\t\tdefer cleanup()") // TODO: support Close() error
 						fmt.Fprintln(w, "\t\t}")
 					}
 					// }
