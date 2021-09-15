@@ -138,7 +138,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					fmt.Fprintln(w, "\t{")
 
 					hasError := false
-					hasTeardown := false
+					hasCleanup := false
 					switch provided := sym.(type) {
 					case *tinypkg.Func:
 						switch len(provided.Returns) {
@@ -150,7 +150,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 								fmt.Fprintln(w, "\t\tvar err error")
 								fmt.Fprintf(w, "\t\t%s, err = %s.%s()\n", x.Name, provider.Name, methodName)
 							} else {
-								hasTeardown = true
+								hasCleanup = true
 								fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
 								fmt.Fprintf(w, "\t\t%s, cleanup = %s.%s()\n", x.Name, provider.Name, methodName)
 								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
@@ -159,7 +159,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 							}
 						case 3: // x, cleanup, err := provide()
 							hasError = true
-							hasTeardown = true
+							hasCleanup = true
 							fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
 							fmt.Fprintln(w, "\t\tvar err error")
 							fmt.Fprintf(w, "\t\t%s, cleanup, err = %s.%s()\n", x.Name, provider.Name, methodName)
@@ -173,7 +173,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 						fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
 					}
 
-					if hasTeardown {
+					if hasCleanup {
 						fmt.Fprintln(w, "\t\tif cleanup != nil {")
 						fmt.Fprintln(w, "\t\t\tdefer cleanup()") // TODO: support Close() error
 						fmt.Fprintln(w, "\t\t}")
