@@ -56,7 +56,7 @@ func TestPathResolver(t *testing.T) {
 			pkgpath: "/foo/bar",
 			want:    filepath.Join("/go/foo", "bar"),
 			modify: func(r *PathResolver) {
-				r.Add("/foo/bar", "/go/foo/bar")
+				r.AddRoot("/foo/bar", "/go/foo/bar")
 			},
 		},
 		{
@@ -64,7 +64,7 @@ func TestPathResolver(t *testing.T) {
 			pkgpath: "/foo/bar",
 			want:    filepath.Join("/go/foo", "bar"),
 			modify: func(r *PathResolver) {
-				r.Add("/foo", "/go/foo")
+				r.AddRoot("/foo", "/go/foo")
 			},
 		},
 		{
@@ -72,8 +72,8 @@ func TestPathResolver(t *testing.T) {
 			pkgpath: "/foo/bee/boo",
 			want:    filepath.Join("/go/foo", "bee/boo"),
 			modify: func(r *PathResolver) {
-				r.Add("/foo", "/go/foo") // use-this
-				r.Add("/foo/bar", "/go/bar")
+				r.AddRoot("/foo", "/go/foo") // use-this
+				r.AddRoot("/foo/bar", "/go/bar")
 			},
 		},
 		{
@@ -81,8 +81,8 @@ func TestPathResolver(t *testing.T) {
 			pkgpath: "/foo/bar/boo",
 			want:    filepath.Join("/go/bar", "boo"),
 			modify: func(r *PathResolver) {
-				r.Add("/foo", "/go/foo")
-				r.Add("/foo/bar", "/go/bar") // use-this
+				r.AddRoot("/foo", "/go/foo")
+				r.AddRoot("/foo/bar", "/go/bar") // use-this
 			},
 		},
 	}
@@ -93,7 +93,7 @@ func TestPathResolver(t *testing.T) {
 			if c.modify != nil {
 				c.modify(r)
 			}
-			got, err := r.Resolve(c.pkgpath)
+			got, err := r.ResolvePath(c.pkgpath)
 			if c.hasError && err == nil {
 				t.Fatalf("need error, but return nil")
 			} else if err != nil {

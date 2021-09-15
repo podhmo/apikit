@@ -37,7 +37,8 @@ func newPathResolver(rootdir string) *PathResolver {
 	}
 }
 
-func (r *PathResolver) Add(pkgpath string, rootdir string) error {
+// AddRoot adds another rootdir.
+func (r *PathResolver) AddRoot(pkgpath string, rootdir string) error {
 	if !strings.HasPrefix(pkgpath, "/") {
 		return ErrInvalidPath
 	}
@@ -45,7 +46,8 @@ func (r *PathResolver) Add(pkgpath string, rootdir string) error {
 	return nil
 }
 
-func (r *PathResolver) Resolve(pkgpath string) (string, error) {
+// ResolvePath resolves file path from package path.
+func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 	if pkgpath == "/" || !strings.HasPrefix(pkgpath, "/") {
 		fpath := filepath.Join(r.RootDirs["/"], pkgpath)
 		if DEBUG {
