@@ -4,7 +4,7 @@
 package component
 
 import (
-	"m/00simple/design"
+	"m/01separated-package/design"
 )
 
 type Component interface {

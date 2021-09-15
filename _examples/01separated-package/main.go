@@ -3,12 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os"
-	"path/filepath"
 
-	"m/00simple/design"
+	"m/01separated-package/design"
+	"m/fileutil"
 
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/tinypkg"
@@ -27,7 +25,7 @@ func run() error {
 	translator := translate.NewTranslator(resolver, design.ListUser)
 	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
 
-	here := tinypkg.NewPackage("m/00simple/component", "")
+	here := tinypkg.NewPackage("m/01separated-package/component", "")
 
 	{
 		code := translator.TranslateToInterface(here, "Component")
@@ -35,49 +33,29 @@ func run() error {
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		writeFile("./00simple/component/component.go", buf.Bytes())
+		fileutil.WriteOrCreateFile("./01separated-package/component/component.go", buf.Bytes())
 	}
 
 	// TODO: detect provider name after emit code
 	{
-		pkg := tinypkg.NewPackage("m/00simple/runner", "")
+		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
 		def := resolver.Def(design.ListUser)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		writeFile(fmt.Sprintf("./00simple/runner/%s.go", def.Name), buf.Bytes())
+		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
 	}
 	{
-		pkg := tinypkg.NewPackage("m/00simple/runner", "")
+		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
 		def := resolver.Def(design.SendMessage)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		writeFile(fmt.Sprintf("./00simple/runner/%s.go", def.Name), buf.Bytes())
-	}
-	return nil
-}
-
-var mkdirSentinelMap = map[string]bool{}
-
-func writeFile(path string, b []byte) error {
-	if err := ioutil.WriteFile(path, b, 0666); err != nil {
-		dirpath := filepath.Dir(path)
-		if _, ok := mkdirSentinelMap[dirpath]; ok {
-			return err
-		}
-
-		mkdirSentinelMap[dirpath] = true
-		log.Printf("INFO: directory is not found, try to create %s", dirpath)
-		if err := os.MkdirAll(dirpath, 0744); err != nil {
-			log.Printf("ERROR: %s", err)
-			return err
-		}
-		return ioutil.WriteFile(path, b, 0666)
+		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
 	}
 	return nil
 }

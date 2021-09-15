@@ -4,8 +4,8 @@
 package runner
 
 import (
-	"m/00simple/design"
-	"m/00simple/component"
+	"m/01separated-package/design"
+	"m/01separated-package/component"
 )
 
 func ListUser(component component.Component) ([]*design.User, error) {
