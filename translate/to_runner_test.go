@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/podhmo/apikit/difftest"
+	"github.com/podhmo/apikit/pkg/difftest"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 )
