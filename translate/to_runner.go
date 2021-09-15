@@ -151,18 +151,18 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 								fmt.Fprintf(w, "\t\t%s, err = %s.%s()\n", x.Name, provider.Name, methodName)
 							} else {
 								hasTeardown = true
-								fmt.Fprintf(w, "\t\tvar teardown %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
-								fmt.Fprintf(w, "\t\t%s, teardown = %s.%s()\n", x.Name, provider.Name, methodName)
+								fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+								fmt.Fprintf(w, "\t\t%s, cleanup = %s.%s()\n", x.Name, provider.Name, methodName)
 								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
 									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
 								}
 							}
-						case 3: // x, teardown, err := provide()
+						case 3: // x, cleanup, err := provide()
 							hasError = true
 							hasTeardown = true
-							fmt.Fprintf(w, "\t\tvar teardown %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
+							fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
 							fmt.Fprintln(w, "\t\tvar err error")
-							fmt.Fprintf(w, "\t\t%s, teardown, err = %s.%s()\n", x.Name, provider.Name, methodName)
+							fmt.Fprintf(w, "\t\t%s, cleanup, err = %s.%s()\n", x.Name, provider.Name, methodName)
 							if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
 								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, func(), error). got=%s", provided)
 							}
@@ -195,8 +195,8 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 						fmt.Fprintln(w, "\t\t}")
 					}
 					if hasTeardown {
-						fmt.Fprintln(w, "\t\tif teardown != nil {")
-						fmt.Fprintln(w, "\t\t\tdefer teardown()") // TODO: support Close() error
+						fmt.Fprintln(w, "\t\tif cleanup != nil {")
+						fmt.Fprintln(w, "\t\t\tdefer cleanup()") // TODO: support Close() error
 						fmt.Fprintln(w, "\t\t}")
 					}
 					// }
