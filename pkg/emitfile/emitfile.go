@@ -81,6 +81,7 @@ func (r *PathResolver) Resolve(pkgpath string) (string, error) {
 			return fpath, nil
 		}
 	}
+
 	if DEBUG {
 		saved := make([]string, 0, len(r.RootDirs))
 		for k := range r.RootDirs {

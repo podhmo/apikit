@@ -29,6 +29,12 @@ func TestPathResolver(t *testing.T) {
 			pkgpath: "../bar",
 			want:    filepath.Join("/go/src", "bar"),
 		},
+		{
+			rootdir:  "/go/src/my-project",
+			pkgpath:  "xxx/yyy/not-found",
+			hasError: false,
+			want:     filepath.Join("/go/src/my-project", "xxx/yyy/not-found"), // always use rootdir
+		},
 		{ // absolute
 			rootdir: "/go/src/my-project",
 			pkgpath: "/",
@@ -38,6 +44,12 @@ func TestPathResolver(t *testing.T) {
 			rootdir: "/go/src/my-project",
 			pkgpath: "/foo/bar",
 			want:    filepath.Join("/go/src/my-project", "foo/bar"),
+		},
+		{
+			rootdir:  "/go/src/my-project",
+			pkgpath:  "/xxx/yyy/not-found",
+			hasError: false,
+			want:     filepath.Join("/go/src/my-project", "xxx/yyy/not-found"), // always use rootdir
 		},
 		{ // with modify
 			rootdir: "/go/src/my-project/with-child",
@@ -82,7 +94,9 @@ func TestPathResolver(t *testing.T) {
 				c.modify(r)
 			}
 			got, err := r.Resolve(c.pkgpath)
-			if err != nil {
+			if c.hasError && err == nil {
+				t.Fatalf("need error, but return nil")
+			} else if err != nil {
 				t.Fatalf("unexpected error %+v", err)
 			}
 			if want := c.want; want != got {
