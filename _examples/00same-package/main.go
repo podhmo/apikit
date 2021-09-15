@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"m/01separated-package/design"
+	"m/00same-package/design"
 	"m/fileutil"
 
 	"github.com/podhmo/apikit/resolve"
@@ -24,38 +24,38 @@ func run() error {
 
 	translator := translate.NewTranslator(resolver, design.ListUser)
 	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
-
-	here := tinypkg.NewPackage("m/01separated-package/component", "")
+	dst := tinypkg.NewPackage("m/00same-package/runner", "")
 
 	{
+		here := dst
 		code := translator.TranslateToInterface(here, "Component")
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		fileutil.WriteOrCreateFile("./01separated-package/component/component.go", buf.Bytes())
+		fileutil.WriteOrCreateFile("./00same-package/runner/component.go", buf.Bytes())
 	}
 
 	// TODO: detect provider name after emit code
 	{
-		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
+		pkg := dst
 		def := resolver.Def(design.ListUser)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
+		fileutil.WriteOrCreateFile(fmt.Sprintf("./00same-package/runner/%s.go", def.Name), buf.Bytes())
 	}
 	{
-		pkg := tinypkg.NewPackage("m/01separated-package/runner", "")
+		pkg := dst
 		def := resolver.Def(design.SendMessage)
 		code := translator.TranslateToRunner(pkg, def, "", nil)
 		var buf bytes.Buffer
 		if err := code.Emit(&buf, code); err != nil {
 			return nil
 		}
-		fileutil.WriteOrCreateFile(fmt.Sprintf("./01separated-package/runner/%s.go", def.Name), buf.Bytes())
+		fileutil.WriteOrCreateFile(fmt.Sprintf("./00same-package/runner/%s.go", def.Name), buf.Bytes())
 	}
 	return nil
 }

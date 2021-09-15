@@ -4,11 +4,10 @@
 package runner
 
 import (
-	"m/01separated-package/design"
-	"m/01separated-package/component"
+	"m/00same-package/design"
 )
 
-func ListUser(component component.Component) ([]*design.User, error) {
+func ListUser(component Component) ([]*design.User, error) {
 	var db *design.DB
 	{
 		db = component.DB()

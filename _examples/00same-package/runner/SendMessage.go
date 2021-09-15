@@ -4,11 +4,10 @@
 package runner
 
 import (
-	"m/01separated-package/design"
-	"m/01separated-package/component"
+	"m/00same-package/design"
 )
 
-func SendMessage(component component.Component, title string) error {
+func SendMessage(component Component, title string) error {
 	var m *design.Messenger
 	{
 		var err error
