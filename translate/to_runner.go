@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/tinypkg"
 )
 
 // TODO: omit provider arguments

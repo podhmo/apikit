@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/podhmo/apikit/tinypkg"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	reflectshape "github.com/podhmo/reflect-shape"
 	"github.com/podhmo/reflect-shape/arglist"
 )

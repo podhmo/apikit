@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/podhmo/apikit/tinypkg"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
 func TestResolveSymbol(t *testing.T) {

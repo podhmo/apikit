@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/podhmo/apikit/difftest"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/tinypkg"
 )
 
 type DB struct{}

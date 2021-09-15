@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/podhmo/apikit/tinypkg"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
 type Code struct {
