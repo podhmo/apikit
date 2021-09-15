@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/podhmo/apikit/difftest"
+	"github.com/podhmo/apikit/pkg/difftest"
 )
 
 func TestWalk(t *testing.T) {
