@@ -148,11 +148,11 @@ func RunAddTodoWithOverride3(provider component.Provider, title string, done boo
 		var cleanup func()
 		var err error
 		session, cleanup, err = provider.Session()
-		if err != nil {
-			return nil, err
-		}
 		if cleanup != nil {
 			defer cleanup()
+		}
+		if err != nil {
+			return nil, err
 		}
 	}
 	return translate.AddTodo(session, title, done)
@@ -178,11 +178,11 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 		var cleanup func()
 		var err error
 		session, cleanup, err = provider.Session()
-		if err != nil {
-			return nil
-		}
 		if cleanup != nil {
 			defer cleanup()
+		}
+		if err != nil {
+			return nil
 		}
 	}
 	return translate.MustAddTodo(session, title, done)
