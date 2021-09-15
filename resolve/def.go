@@ -1,7 +1,7 @@
 package resolve
 
 import (
-	"github.com/podhmo/apikit/tinypkg"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 

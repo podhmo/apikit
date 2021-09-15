@@ -5,8 +5,8 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/tinypkg"
 )
 
 type Translator struct {

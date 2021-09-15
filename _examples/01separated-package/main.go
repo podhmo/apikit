@@ -8,8 +8,8 @@ import (
 	"m/01separated-package/design"
 	"m/fileutil"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/tinypkg"
 	"github.com/podhmo/apikit/translate"
 )
 

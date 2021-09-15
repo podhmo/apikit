@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/tinypkg"
 )
 
 func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *Code {
