@@ -105,14 +105,14 @@ func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 	if pkgpath == "/" || !strings.HasPrefix(pkgpath, "/") {
 		fpath := filepath.Join(r.RootDirs["/"], pkgpath)
 		if DEBUG {
-			log.Printf("input pkgpath=%s -> resolve filepath=%q", pkgpath, fpath)
+			log.Printf("\tresolve filepath %q -> %q", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
 
 	if fpath, ok := r.RootDirs[pkgpath]; ok {
 		if DEBUG {
-			log.Printf("input pkgpath=%s -> resolve filepath=%q (cached)", pkgpath, fpath)
+			log.Printf("\tresolve filepath %q -> %q (cached)", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
@@ -126,13 +126,13 @@ func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 
 		parent, ok := r.RootDirs[prefix]
 		if DEBUG {
-			log.Printf("\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
+			log.Printf("\t\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
 		}
 		if ok {
 			fpath := filepath.Join(parent, strings.Join(parts[i:], "/"))
 			r.RootDirs[pkgpath] = fpath
 			if DEBUG {
-				log.Printf("input pkgpath=%s -> resolve filepath=%q (saved)", pkgpath, fpath)
+				log.Printf("\tresolve filepath %q -> %q (registered)", pkgpath, fpath)
 			}
 			return fpath, nil
 		}
@@ -143,7 +143,7 @@ func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 		for k := range r.RootDirs {
 			saved = append(saved, k)
 		}
-		log.Printf("error, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
+		log.Printf("\terror, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
 	}
 	return "", ErrNotFound
 }
