@@ -30,7 +30,9 @@ type EmitAction struct {
 	Name     string
 	Path     string
 	Priority int
-	Target   Emitter
+
+	Target     Emitter
+	FormatFunc func([]byte) ([]byte, error)
 }
 type EmitFunc func(w io.Writer) error
 
@@ -59,6 +61,9 @@ func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
 	if impl, ok := emitter.(interface{ Priority() int }); ok {
 		action.Priority = impl.Priority()
 	}
+	if impl, ok := emitter.(interface{ FormatBytes([]byte) ([]byte, error) }); ok {
+		action.FormatFunc = impl.FormatBytes
+	}
 	e.Actions = append(e.Actions, action)
 	return action
 }
@@ -72,12 +77,18 @@ func (e *Executor) Emit() error {
 		if err != nil {
 			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
 		}
-		var buf bytes.Buffer
-		if err := action.Target.Emit(&buf); err != nil {
+		buf := new(bytes.Buffer)
+		if err := action.Target.Emit(buf); err != nil {
 			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
 		}
-		// TODO: format
-		if err := WriteOrCreateFile(fpath, buf.Bytes()); err != nil {
+		b := buf.Bytes()
+		if action.FormatFunc != nil {
+			b, err = action.FormatFunc(b)
+			if err != nil {
+				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+			}
+		}
+		if err := WriteOrCreateFile(fpath, b); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
 	}
