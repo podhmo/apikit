@@ -21,6 +21,9 @@ type Todo struct {
 func AddTodo(session *Session, title string, done bool) (*Todo, error) {
 	return nil, nil
 }
+func AddAlsoAnotherTodo(session *Session, anotherSession *Session, title string, done bool) (*Todo, error) {
+	return nil, nil
+}
 func AddTodoWithContext(ctx context.Context, session *Session, title string, done bool) (*Todo, error) {
 	return nil, nil
 }
@@ -56,6 +59,27 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 		session = provider.Session()
 	}
 	return translate.AddTodo(session, title, done)
+}`,
+		},
+		{
+			name:  "RunAddAlsoAnotherTodo",
+			input: AddAlsoAnotherTodo,
+			here:  main,
+			want: `
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunAddAlsoAnotherTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	var session *translate.Session
+	{
+		session = provider.Session()
+	}
+	var anotherSession *translate.Session
+	{
+		anotherSession = provider.AnotherSession()
+	}
+	return translate.AddAlsoAnotherTodo(session, anotherSession, title, done)
 }`,
 		},
 		{
