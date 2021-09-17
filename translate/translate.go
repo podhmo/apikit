@@ -9,6 +9,12 @@ import (
 	"github.com/podhmo/apikit/resolve"
 )
 
+const (
+	priorityFirst   = -10
+	prioritySecond  = -1
+	priorityDefault = 0
+)
+
 type Translator struct {
 	Tracker  *Tracker
 	Resolver *resolve.Resolver

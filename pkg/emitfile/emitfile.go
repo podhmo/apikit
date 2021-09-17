@@ -56,6 +56,9 @@ func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
 	if impl, ok := emitter.(interface{ Name() string }); ok {
 		action.Name = impl.Name()
 	}
+	if impl, ok := emitter.(interface{ Priority() int }); ok {
+		action.Priority = impl.Priority()
+	}
 	e.Actions = append(e.Actions, action)
 	return action
 }
