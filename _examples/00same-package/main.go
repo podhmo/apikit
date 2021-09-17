@@ -28,7 +28,7 @@ func run() (retErr error) {
 	}()
 
 	resolver := resolve.NewResolver()
-	translator := translate.NewTranslator(resolver, design.ListUser)
+	translator := translate.NewTranslator(resolver)
 	dst := tinypkg.NewPackage("m/00same-package/runner", "")
 	{
 		pkg := dst
