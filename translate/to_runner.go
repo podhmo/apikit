@@ -171,7 +171,11 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					shape := x.Shape
 					sym := resolver.Symbol(here, shape)
 
-					methodName := x.Item.Shape.GetReflectType().Name() // TODO: support anotherDB
+					rt := x.Item.Shape.GetReflectType()
+					methodName := rt.Name()
+					if len(tracker.seen[rt]) > 1 {
+						methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
+					}
 					methodArgs := make([]string, 0, len(x.Args))
 					for _, xarg := range x.Args {
 						methodArgs = append(methodArgs, xarg.Name)
