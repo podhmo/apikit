@@ -16,19 +16,22 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, 
 	if name == "" {
 		name = def.Name
 	}
-	if provider == nil {
-		provider = t.providerVar
-	}
-
 	t.Tracker.Track(def)
 	return &Code{
 		Name:     name,
 		Here:     here,
+		priority: prioritySecond,
 		emitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+			if provider == nil {
+				provider = t.providerVar
+			}
 			return collectImportsForRunner(here, t.Resolver, def, provider)
 		},
 		EmitCode: func(w io.Writer) error {
+			if provider == nil {
+				provider = t.providerVar
+			}
 			return writeRunner(w, here, t.Resolver, t.Tracker, def, provider, name)
 		},
 	}

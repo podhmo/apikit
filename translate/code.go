@@ -7,16 +7,22 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
+var ErrNoImports = fmt.Errorf("no imports")
+
 type Code struct {
 	Name string
 	Here *tinypkg.Package
 
 	ImportPackages func() ([]*tinypkg.ImportedPackage, error)
 	EmitCode       func(w io.Writer) error
-	emitFunc       func(w io.Writer, code *Code) error
+
+	priority int
+	emitFunc func(w io.Writer, code *Code) error
 }
 
-var ErrNoImports = fmt.Errorf("no imports")
+func (c *Code) Priority() int {
+	return c.priority
+}
 
 func (c *Code) EmitImports(w io.Writer) error {
 	impkgs, err := c.ImportPackages()

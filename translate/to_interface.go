@@ -16,6 +16,7 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *C
 	return &Code{
 		Name:     name,
 		Here:     here,
+		priority: priorityFirst,
 		emitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			return collectImportsForInterface(here, t.Resolver, t.Tracker)
