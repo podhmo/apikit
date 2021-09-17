@@ -2,6 +2,7 @@ package translate
 
 import (
 	"fmt"
+	"go/format"
 	"io"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
@@ -22,6 +23,10 @@ type Code struct {
 
 func (c *Code) Priority() int {
 	return c.priority
+}
+
+func (c *Code) FormatBytes(b []byte) ([]byte, error) {
+	return format.Source(b) // TODO: speed-up
 }
 
 func (c *Code) EmitImports(w io.Writer) error {
