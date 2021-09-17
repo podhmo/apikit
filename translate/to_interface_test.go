@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -96,6 +97,24 @@ import (
 )
 type Component interface {
 	DB() (*translate.DB, error)
+}`,
+		},
+		{
+			msg:   "with override, with context",
+			here:  main,
+			input: []interface{}{ListUser},
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(ListUser).In(0)
+				def := resolver.Def(func(ctx context.Context) (*DB, error) { return nil, nil })
+				tracker.Override(rt, "db", def)
+			},
+			want: `
+import (
+	"context"
+	"github.com/podhmo/apikit/translate"
+)
+type Component interface {
+	DB(args0 context.Context) (*translate.DB, error)
 }`,
 		},
 	}
