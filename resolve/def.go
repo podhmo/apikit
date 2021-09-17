@@ -13,7 +13,7 @@ func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, f
 
 	for i, name := range sfn.Params.Keys {
 		s := sfn.Params.Values[i]
-		kind := detectKind(s)
+		kind := DetectKind(s)
 		args = append(args, Item{
 			Kind:  kind,
 			Name:  name,
@@ -22,7 +22,7 @@ func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, f
 	}
 	for i, name := range sfn.Returns.Keys {
 		s := sfn.Returns.Values[i]
-		kind := detectKind(s)
+		kind := DetectKind(s)
 		returns = append(returns, Item{
 			Kind:  kind,
 			Name:  name,
@@ -61,7 +61,7 @@ const (
 	KindUnsupported Kind = "unsupported" // slice, map
 )
 
-func detectKind(s reflectshape.Shape) Kind {
+func DetectKind(s reflectshape.Shape) Kind {
 	if s.GetLv() > 0 {
 		// TODO: if the pointer of primitive passed, treated as optional value? (not yet)
 		return KindComponent

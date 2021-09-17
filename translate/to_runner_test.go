@@ -188,6 +188,37 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 	return translate.MustAddTodo(session, title, done)
 }`,
 		},
+		{
+			name:  "RunAddTodoWithOverride4", // func(context.Context)(<T>, func(), error)
+			input: AddTodo,
+			here:  main,
+			modifyTracker: func(tracker *Tracker) {
+				rt := reflect.TypeOf(AddTodo).In(0)
+				def := resolver.Def(func(ctx context.Context) (*Session, func(), error) { return nil, nil, nil })
+				tracker.Override(rt, "session", def)
+			},
+			want: `
+import (
+	"context"
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
+	var session *translate.Session
+	{
+		var cleanup func()
+		var err error
+		session, cleanup, err = provider.Session(ctx)
+		if cleanup != nil {
+			defer cleanup()
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	return translate.AddTodo(session, title, done)
+}`,
+		},
 		// TODO: support consume function that returning zero value
 
 		// // TODO: validation
