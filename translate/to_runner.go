@@ -13,7 +13,8 @@ import (
 
 // TODO: omit provider arguments
 
-func (t *Translator) TranslateToRunner(here *tinypkg.Package, def *resolve.Def, name string, provider *tinypkg.Var) *Code {
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *Code {
+	def := t.Resolver.Def(fn)
 	if name == "" {
 		name = def.Name
 	}
