@@ -32,15 +32,13 @@ func run() (retErr error) {
 	dst := tinypkg.NewPackage("m/00same-package/runner", "")
 	{
 		pkg := dst
-		def := resolver.Def(design.ListUser)
-		code := translator.TranslateToRunner(pkg, def, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
+		code := translator.TranslateToRunner(pkg, design.ListUser, "", nil)
+		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
 	}
 	{
 		pkg := dst
-		def := resolver.Def(design.SendMessage)
-		code := translator.TranslateToRunner(pkg, def, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
+		code := translator.TranslateToRunner(pkg, design.SendMessage, "", nil)
+		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
 	}
 	{
 		here := dst
