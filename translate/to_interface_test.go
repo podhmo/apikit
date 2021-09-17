@@ -121,7 +121,11 @@ type Component interface {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			translator := NewTranslator(resolver, c.input...)
+			translator := NewTranslator(resolver)
+			for _, useFn := range c.input {
+				def := resolver.Def(useFn)
+				translator.Tracker.Track(def)
+			}
 			if c.modifyTracker != nil {
 				c.modifyTracker(translator.Tracker)
 			}
