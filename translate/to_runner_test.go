@@ -277,12 +277,10 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 				c.modifyTracker(translator.Tracker)
 			}
 
-			def := resolver.Def(c.input)
-
 			providerSymbol := tinypkg.NewPackage("m/component", "").NewSymbol("Provider")
 			provider := &tinypkg.Var{Name: "provider", Node: providerSymbol}
 
-			code := translator.TranslateToRunner(c.here, def, c.name, provider)
+			code := translator.TranslateToRunner(c.here, c.input, c.name, provider)
 			var buf bytes.Buffer
 
 			if err := code.EmitImports(&buf); err != nil {

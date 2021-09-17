@@ -28,7 +28,7 @@ func run() (retErr error) {
 	}()
 
 	resolver := resolve.NewResolver()
-	translator := translate.NewTranslator(resolver, design.ListUser)
+	translator := translate.NewTranslator(resolver)
 	dst := tinypkg.NewPackage("m/01separated-package/runner", "")
 
 	{
@@ -38,15 +38,13 @@ func run() (retErr error) {
 	}
 	{
 		pkg := dst
-		def := resolver.Def(design.ListUser)
-		code := translator.TranslateToRunner(pkg, def, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
+		code := translator.TranslateToRunner(pkg, design.ListUser, "", nil)
+		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
 	}
 	{
 		pkg := dst
-		def := resolver.Def(design.SendMessage)
-		code := translator.TranslateToRunner(pkg, def, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", def.Name), code)
+		code := translator.TranslateToRunner(pkg, design.SendMessage, "", nil)
+		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
 	}
 
 	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })

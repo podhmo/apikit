@@ -23,12 +23,8 @@ type Translator struct {
 	providerVar *tinypkg.Var
 }
 
-func NewTranslator(resolver *resolve.Resolver, fns ...interface{}) *Translator {
+func NewTranslator(resolver *resolve.Resolver) *Translator {
 	tracker := NewTracker()
-	for _, fn := range fns {
-		def := resolver.Def(fn)
-		tracker.Track(def)
-	}
 	return &Translator{
 		Tracker:  tracker,
 		Resolver: resolver,
