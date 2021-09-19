@@ -45,6 +45,7 @@ toplevel:
 		case resolve.KindComponent:
 			k := arg.Shape.GetReflectType()
 			needs := t.seen[k]
+
 			for _, n := range needs {
 				if n.Name == arg.Name {
 					continue toplevel
@@ -82,7 +83,7 @@ func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev
 	}
 	if target == nil {
 		if name == "" && len(t.seen[k]) == 1 {
-			target = t.seen[k][00]
+			target = t.seen[k][0]
 		} else {
 			target = &Need{
 				rt: k,
