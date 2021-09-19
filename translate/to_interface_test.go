@@ -114,7 +114,7 @@ import (
 	"github.com/podhmo/apikit/translate"
 )
 type Component interface {
-	DB(args0 context.Context) (*translate.DB, error)
+	DB(ctx context.Context) (*translate.DB, error)
 }`,
 		},
 	}
