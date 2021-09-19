@@ -1,6 +1,7 @@
 package tinypkg
 
 import (
+	"path"
 	"strings"
 	"sync"
 )
@@ -10,31 +11,31 @@ type Universe struct {
 	mu       sync.Mutex
 }
 
-func (u *Universe) Lookup(path string) *Package {
+func (u *Universe) Lookup(pkgpath string) *Package {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	return u.packages[path]
+	return u.packages[pkgpath]
 }
 
-func (u *Universe) NewPackage(path, name string) *Package {
+func (u *Universe) NewPackage(pkgpath, name string) *Package {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	pkg, ok := u.packages[path]
+	pkg, ok := u.packages[pkgpath]
 	if ok {
 		return pkg
 	}
 	if name == "" {
-		parts := strings.Split(path, "/")
+		parts := strings.Split(pkgpath, "/")
 		name = parts[len(parts)-1]
 	}
 
 	pkg = &Package{
-		Path:     path,
+		Path:     pkgpath,
 		Name:     name,
 		symbols:  map[string]*Symbol{},
 		universe: u,
 	}
-	u.packages[path] = pkg
+	u.packages[pkgpath] = pkg
 	return pkg
 }
 
@@ -49,6 +50,11 @@ type Package struct {
 	universe *Universe
 	symbols  map[string]*Symbol
 	mu       sync.Mutex
+}
+
+func (p *Package) Relative(pkgpath string, name string) *Package {
+	fullpath := path.Join(p.Path, pkgpath)
+	return p.universe.NewPackage(fullpath, name)
 }
 
 func (p *Package) Import(pkg *Package) *ImportedPackage {
