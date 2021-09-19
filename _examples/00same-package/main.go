@@ -17,7 +17,7 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewEmitterFromRelativePath(design.ListUser, "..")
+	emitter := emitgo.NewFromRelativePath(design.ListUser, "..")
 	defer emitter.EmitWith(&err)
 
 	resolver := resolve.NewResolver() // todo: remove
