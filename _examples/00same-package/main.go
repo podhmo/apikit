@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"m/00same-package/design"
 
-	"github.com/podhmo/apikit/pkg/emitfile"
-	"github.com/podhmo/apikit/pkg/tinypkg"
+	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/translate"
 )
@@ -18,32 +16,29 @@ func main() {
 	}
 }
 
-func run() (retErr error) {
-	rootdir := emitfile.DefinedDir(main)
-	emitter := emitfile.New(rootdir)
-	defer func() {
-		if err := emitter.Emit(); err != nil {
-			retErr = err
-		}
-	}()
+func run() (err error) {
+	emitter := emitgo.NewEmitterFromRelativePath(design.ListUser, "..")
+	defer emitter.EmitWith(&err)
 
-	resolver := resolve.NewResolver()
+	resolver := resolve.NewResolver() // todo: remove
 	translator := translate.NewTranslator(resolver)
-	dst := tinypkg.NewPackage("m/00same-package/runner", "")
+
+	rootpkg := emitter.RootPkg
+	dst := rootpkg.Relative("runner", "")
 	{
 		pkg := dst
 		code := translator.TranslateToRunner(pkg, design.ListUser, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
+		emitter.Register(pkg, code.Name, code)
 	}
 	{
 		pkg := dst
 		code := translator.TranslateToRunner(pkg, design.SendMessage, "", nil)
-		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
+		emitter.Register(pkg, code.Name, code)
 	}
 	{
 		here := dst
 		code := translator.TranslateToInterface(here, "Component")
-		emitter.Register("/runner/component.go", code)
+		emitter.Register(here, "component.go", code)
 	}
 
 	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
