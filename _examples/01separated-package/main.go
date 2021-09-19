@@ -47,6 +47,6 @@ func run() (retErr error) {
 		emitter.Register(fmt.Sprintf("/runner/%s.go", code.Name), code)
 	}
 
-	translator.Override("m", func() (*design.Messenger, error) { return nil, nil })
+	translator.Override("", func() (*design.Messenger, error) { return nil, nil })
 	return nil
 }
