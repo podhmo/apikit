@@ -82,16 +82,20 @@ func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev
 		}
 	}
 	if target == nil {
-		target = &Need{
-			rt: k,
-			Item: &resolve.Item{
-				Kind:  resolve.KindComponent,
-				Name:  name,
-				Shape: def.Shape.Returns.Values[0], // xxx:
-			},
+		if name == "" && len(t.seen[k]) == 1 {
+			target = t.seen[k][0]
+		} else {
+			target = &Need{
+				rt: k,
+				Item: &resolve.Item{
+					Kind:  resolve.KindComponent,
+					Name:  name,
+					Shape: def.Shape.Returns.Values[0], // xxx:
+				},
+			}
+			t.seen[k] = append(t.seen[k], target)
+			t.Needs = append(t.Needs, target)
 		}
-		t.seen[k] = append(t.seen[k], target)
-		t.Needs = append(t.Needs, target)
 	}
 	prev = target.overrideDef
 	target.overrideDef = def
