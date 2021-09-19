@@ -29,10 +29,10 @@ func run() (retErr error) {
 
 	resolver := resolve.NewResolver()
 	translator := translate.NewTranslator(resolver)
-	dst := tinypkg.NewPackage("m/01separated-package/runner", "")
-
+	rootpkg := tinypkg.NewPackage("m/01separated-package", "")
+	dst := rootpkg.Relative("runner", "")
 	{
-		here := tinypkg.NewPackage("m/01separated-package/component", "")
+		here := rootpkg.Relative("component", "")
 		code := translator.TranslateToInterface(here, "Component")
 		emitter.Register("/component/component.go", code)
 	}
