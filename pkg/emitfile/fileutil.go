@@ -5,18 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 )
-
-func DefinedDir(fn interface{}) string {
-	return filepath.Dir(DefinedFile(fn))
-}
-func DefinedFile(fn interface{}) string {
-	rfunc := runtime.FuncForPC(reflect.ValueOf(fn).Pointer())
-	fpath, _ := rfunc.FileLine(rfunc.Entry())
-	return fpath
-}
 
 var mkdirSentinelMap = map[string]bool{}
 
