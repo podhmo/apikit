@@ -19,7 +19,7 @@ func main() {
 }
 
 func run() (retErr error) {
-	rootdir := "./01separated-package"
+	rootdir := emitfile.DefinedDir(main)
 	emitter := emitfile.New(rootdir)
 	defer func() {
 		if err := emitter.Emit(); err != nil {
