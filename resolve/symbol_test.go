@@ -83,11 +83,11 @@ func TestResolveSymbol(t *testing.T) {
 			output: "func(db *resolve.DB, input resolve.GetUserInput) (*resolve.User, error)",
 		},
 		{
-			// TODO: anonymous function is not supported completely, yet
+			// OK: support anonymous function
 			msg:    "improted func type",
 			here:   main,
 			input:  func(db *DB) (*User, error) { return nil, nil },
-			output: "func(args0 *resolve.DB) (*resolve.User, error)",
+			output: "func(db *resolve.DB) (*resolve.User, error)",
 		},
 	}
 
