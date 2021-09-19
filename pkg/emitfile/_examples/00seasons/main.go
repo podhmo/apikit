@@ -18,7 +18,7 @@ func main() {
 	emitter.Register("docs/spring.md", &Content{Text: "# 春"})
 	emitter.Register("docs/summer.md", &Content{Text: "# 夏"})
 	emitter.Register("docs/fall.md", &Content{Text: "# 秋"})
-	emitter.Register("docs/winter.md", &Content{Text: "# 夏"})
+	emitter.Register("docs/winter.md", &Content{Text: "# 冬"})
 }
 
 type Content struct {
