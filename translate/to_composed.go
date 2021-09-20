@@ -20,11 +20,9 @@ func writeComposed(
 	var args []*tinypkg.Var
 	var returns []*tinypkg.Var
 	symbols := map[reflectshape.Identity]*tinypkg.Symbol{}
-	i := 0
-	for _, p := range providers {
+	for i, p := range providers {
 		k := p.Returns[0].Shape.GetIdentity()
 		symbols[k] = here.NewSymbol(fmt.Sprintf("v%d", i))
-		i++
 	}
 	for _, p := range providers {
 		for _, x := range p.Args {
@@ -47,9 +45,8 @@ func writeComposed(
 	}
 	return tinypkg.WriteFunc(w, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
-			var retK reflectshape.Identity
-			for _, p := range providers {
-				retK = p.Returns[0].Shape.GetIdentity()
+			for i, p := range providers {
+				retK := p.Returns[0].Shape.GetIdentity()
 				lhs := symbols[retK] // TODO: handling, multiple values
 
 				args := make([]string, 0, len(p.Args))
@@ -59,10 +56,13 @@ func writeComposed(
 					args = append(args, v.Name)
 				}
 				rhs := fmt.Sprintf("%s(%s)", tinypkg.ToRelativeTypeString(here, p.Symbol), strings.Join(args, ", "))
-				fmt.Fprintf(w, "\t%s := %s\n", lhs, rhs)
-				i++
+
+				if i == len(providers)-1 {
+					fmt.Fprintf(w, "\treturn %s\n", rhs)
+				} else {
+					fmt.Fprintf(w, "\t%s := %s\n", lhs, rhs)
+				}
 			}
-			fmt.Fprintf(w, "\treturn %s\n", symbols[retK].Name)
 			return nil
 		})
 }
