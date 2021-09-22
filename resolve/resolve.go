@@ -32,6 +32,10 @@ func NewResolver() *Resolver {
 	}
 }
 
+func (r *Resolver) Shape(fn interface{}) reflectshape.Shape {
+	return r.extractor.Extract(fn)
+}
+
 func (r *Resolver) Def(fn interface{}) *Def {
 	r.mu.RLock()
 	k := reflect.ValueOf(fn).Pointer()

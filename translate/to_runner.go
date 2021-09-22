@@ -23,7 +23,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 		Name:     name,
 		Here:     here,
 		priority: prioritySecond,
-		emitFunc: t.EmitFunc,
+		EmitFunc: t.EmitFunc,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			if provider == nil {
 				provider = t.providerVar

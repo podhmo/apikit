@@ -20,9 +20,24 @@ func init() {
 	}
 }
 
+type Config struct {
+	KeepGoingIfFormatIsFailed bool
+}
+
+func DefaultConfig() *Config {
+	cfg := &Config{
+		KeepGoingIfFormatIsFailed: false,
+	}
+	if DEBUG {
+		cfg.KeepGoingIfFormatIsFailed = true
+	}
+	return cfg
+}
+
 type Executor struct {
 	PathResolver *PathResolver
 	Actions      []*EmitAction
+	Config       *Config
 	// TODO: permission
 	// TODO: sort by priority
 }
@@ -47,6 +62,7 @@ type Emitter interface {
 func New(rootdir string) *Executor {
 	return &Executor{
 		PathResolver: newPathResolver(rootdir),
+		Config:       DefaultConfig(),
 	}
 }
 
@@ -83,9 +99,14 @@ func (e *Executor) Emit() error {
 		}
 		b := buf.Bytes()
 		if action.FormatFunc != nil {
-			b, err = action.FormatFunc(b)
+			formatted, err := action.FormatFunc(b)
 			if err != nil {
-				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+				if !e.Config.KeepGoingIfFormatIsFailed {
+					return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+				}
+				log.Printf("format-func is failed in action=%q: %+v", action.Name, err)
+			} else {
+				b = formatted
 			}
 		}
 		if err := WriteOrCreateFile(fpath, b); err != nil {

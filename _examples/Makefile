@@ -6,6 +6,10 @@ default: 00 01
 01:
 	go run $(shell echo $@*/)main.go
 
+10:
+	go run $(shell echo $@*/)main.go
+
 check:
 	go install -v ./$(shell echo 00*/)/...
 	go install -v ./$(shell echo 01*/)/...
+	go install -v ./$(shell echo 10*/)/...
