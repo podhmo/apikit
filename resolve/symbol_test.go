@@ -97,13 +97,13 @@ func TestResolveSymbol(t *testing.T) {
 			input:  func() interface{} { return nil },
 			output: "func() interface{}",
 		},
-		// {
-		// 	// NAG: support anonymous interface
-		// 	msg:    "anonymous interface",
-		// 	here:   main,
-		// 	input:  func() interface{ Open() *DB } { return nil },
-		// 	output: "func() interface{ Open() *resolve.DB }}",
-		// },
+		{
+			// OK: support anonymous interface
+			msg:    "anonymous interface",
+			here:   main,
+			input:  func() interface{ Open() *DB } { return nil },
+			output: "func() interface {Open() *resolve.DB}",
+		},
 		{
 			// OK: support named interface
 			msg:    "named interface",
