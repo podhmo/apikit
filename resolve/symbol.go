@@ -20,8 +20,15 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	switch s := s.(type) {
 	case reflectshape.Primitive, reflectshape.Interface, reflectshape.Struct:
 		if s.GetPackage() == "" { // e.g. string, bool, error
-			return tinypkg.NewSymbol(s.GetName())
+			name := s.GetName()
+			if name == "" {
+				if _, ok := s.(reflectshape.Interface); ok {
+					name = "interface{}"
+				}
+			}
+			return tinypkg.NewSymbol(name)
 		}
+
 		pkg := tinypkg.NewPackage(s.GetPackage(), "")
 		sym := pkg.NewSymbol(s.GetName())
 		return here.Import(pkg).Lookup(sym)
