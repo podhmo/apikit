@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -88,6 +89,27 @@ func TestResolveSymbol(t *testing.T) {
 			here:   main,
 			input:  func(db *DB) (*User, error) { return nil, nil },
 			output: "func(db *resolve.DB) (*resolve.User, error)",
+		},
+		{
+			// OK: support empty interface
+			msg:    "empty interface",
+			here:   main,
+			input:  func() interface{} { return nil },
+			output: "func() interface{}",
+		},
+		{
+			// OK: support anonymous interface
+			msg:    "anonymous interface",
+			here:   main,
+			input:  func() interface{ Open() *DB } { return nil },
+			output: "func() interface {Open() *resolve.DB}",
+		},
+		{
+			// OK: support named interface
+			msg:    "named interface",
+			here:   main,
+			input:  func() context.Context { return nil },
+			output: "func() context.Context",
 		},
 	}
 

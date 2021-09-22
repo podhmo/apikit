@@ -18,13 +18,40 @@ func ExtractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 
 func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	switch s := s.(type) {
-	case reflectshape.Primitive, reflectshape.Interface, reflectshape.Struct:
-		if s.GetPackage() == "" { // e.g. string, bool, error
+	case reflectshape.Primitive, reflectshape.Struct:
+		if s.GetPackage() == "" { // e.g. string, bool
 			return tinypkg.NewSymbol(s.GetName())
 		}
+
 		pkg := tinypkg.NewPackage(s.GetPackage(), "")
 		sym := pkg.NewSymbol(s.GetName())
 		return here.Import(pkg).Lookup(sym)
+
+	case reflectshape.Interface:
+		name := s.GetName()
+		if name != "" {
+			if s.GetPackage() == "" { // e.g. error
+				return tinypkg.NewSymbol(s.GetName())
+			}
+
+			pkg := tinypkg.NewPackage(s.GetPackage(), "")
+			sym := pkg.NewSymbol(s.GetName())
+			return here.Import(pkg).Lookup(sym)
+		}
+
+		methods := make([]*tinypkg.Func, len(s.Methods.Keys))
+		for i, methodName := range s.Methods.Keys {
+			m := s.Methods.Values[i]
+			sym := ExtractSymbol(here, m)
+			fn, ok := sym.(*tinypkg.Func)
+			if !ok {
+				panic(fmt.Sprintf("unexpected method members, %s: %T", methodName, sym))
+			}
+			fn.Name = methodName
+			methods[i] = fn
+		}
+		return &tinypkg.Interface{Name: name, Methods: methods}
+
 	case reflectshape.Container: // slice, map
 		name := s.GetName()
 		switch name {

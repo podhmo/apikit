@@ -22,6 +22,7 @@ func ToImportPackageString(ip *ImportedPackage) string {
 // - map[string]*foo.Foo
 // - []*foo.Foo
 // - func() (*foo.Foo, error)
+// - interface { String() string; Validate() error }
 func ToRelativeTypeString(here *Package, node Node) string {
 	switch x := node.(type) {
 	case *Var:
@@ -55,6 +56,19 @@ func ToRelativeTypeString(here *Package, node Node) string {
 		default:
 			return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 		}
+	case *Interface:
+		if x.Name != "" {
+			return x.Name
+		}
+		size := len(x.Methods)
+		if size == 0 {
+			return "interface{}"
+		}
+		methods := make([]string, size)
+		for i, method := range x.Methods {
+			methods[i] = ToInterfaceMethodString(here, method.Name, method)
+		}
+		return fmt.Sprintf("interface {%s}", strings.Join(methods, "; "))
 	case *Symbol:
 		if x.Package.Name == "" {
 			return x.Name

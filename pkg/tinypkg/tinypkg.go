@@ -206,6 +206,24 @@ func (f *Func) String() string {
 	return ToRelativeTypeString(nil, f)
 }
 
+type Interface struct {
+	Name    string
+	Methods []*Func
+}
+
+func (i *Interface) onWalk(use func(*Symbol) error) error {
+	for _, x := range i.Methods {
+		if err := x.onWalk(use); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (i *Interface) String() string {
+	return ToRelativeTypeString(nil, i)
+}
+
 type Var struct {
 	Name string
 	Node
