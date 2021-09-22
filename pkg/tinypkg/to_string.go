@@ -57,6 +57,9 @@ func ToRelativeTypeString(here *Package, node Node) string {
 			return fmt.Sprintf("func(%s) (%s)", strings.Join(args, ", "), strings.Join(returns, ", "))
 		}
 	case *Interface:
+		if x.Name != "" {
+			return x.Name
+		}
 		size := len(x.Methods)
 		if size == 0 {
 			return "interface{}"

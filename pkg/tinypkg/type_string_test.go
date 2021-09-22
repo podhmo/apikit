@@ -51,8 +51,16 @@ func TestTypeRepr(t *testing.T) {
 					Name:    "Foo",
 					Returns: []*Var{{Node: pkg.NewSymbol("Foo")}, {Node: NewSymbol("error")}},
 				},
+				{
+					Name:    "Foo2",
+					Returns: []*Var{{Node: &Pointer{Lv: 1, V: pkg.NewSymbol("Foo")}}, {Node: &Interface{Name: "error"}}},
+				},
+				{
+					Name:    "Bar",
+					Returns: []*Var{{Node: &Interface{Name: "Bar"}}},
+				},
 			}},
-			want: "interface {String() string; Foo() (foo.Foo, error)}",
+			want: "interface {String() string; Foo() (foo.Foo, error); Foo2() (*foo.Foo, error); Bar() Bar}",
 		},
 		// TODO: more tests
 	}
