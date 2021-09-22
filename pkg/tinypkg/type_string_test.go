@@ -33,6 +33,27 @@ func TestTypeRepr(t *testing.T) {
 			input: &Map{K: builtins.NewSymbol("string"), V: &Pointer{Lv: 1, V: pkg.NewSymbol("Foo")}},
 			want:  "map[string]*foo.Foo",
 		},
+		{
+			msg:   "interface, empty",
+			here:  main,
+			input: &Interface{},
+			want:  "interface{}",
+		},
+		{
+			msg:  "interface, anonymous",
+			here: main,
+			input: &Interface{Methods: []*Func{
+				{
+					Name:    "String",
+					Returns: []*Var{{Node: NewSymbol("string")}},
+				},
+				{
+					Name:    "Foo",
+					Returns: []*Var{{Node: pkg.NewSymbol("Foo")}, {Node: NewSymbol("error")}},
+				},
+			}},
+			want: "interface {String() string; Foo() (foo.Foo, error)}",
+		},
 		// TODO: more tests
 	}
 
