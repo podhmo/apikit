@@ -6,7 +6,6 @@ import (
 	"m/01separated-package/design"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
-	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/translate"
 )
 
@@ -20,8 +19,8 @@ func run() (err error) {
 	emitter := emitgo.NewFromRelativePath(design.ListUser, "..")
 	defer emitter.EmitWith(&err)
 
-	resolver := resolve.NewResolver() // todo: remove
-	translator := translate.NewTranslator(resolver)
+	config := translate.DefaultConfig()
+	translator := translate.NewTranslator(config)
 
 	rootpkg := emitter.RootPkg
 	dst := rootpkg.Relative("runner", "")
