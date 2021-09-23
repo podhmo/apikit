@@ -20,6 +20,7 @@ type Code struct {
 
 	priority int
 	Config   *Config
+	Depends  []tinypkg.Node
 }
 
 func (c *Code) Priority() int {
@@ -34,20 +35,36 @@ func (c *Code) FormatBytes(b []byte) ([]byte, error) {
 }
 
 func (c *Code) EmitImports(w io.Writer) error {
-	if c.ImportPackages == nil {
+	if c.Depends == nil && c.ImportPackages == nil {
 		return nil
 	}
 
-	impkgs, err := c.ImportPackages()
-	if err != nil {
-		return err
+	var imports []*tinypkg.ImportedPackage
+	if c.ImportPackages != nil {
+		impkgs, err := c.ImportPackages()
+		if err != nil {
+			return err
+		}
+		if len(impkgs) == 0 {
+			return ErrNoImports
+		}
+		imports = append(imports, impkgs...)
 	}
-	if len(impkgs) == 0 {
-		return ErrNoImports
+	if c.Depends != nil {
+		collector := tinypkg.NewImportCollector(c.Here)
+		if err := collector.Merge(imports); err != nil {
+			return fmt.Errorf("emit import in code %q : %w", c.Name, err)
+		}
+		for _, dep := range c.Depends {
+			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
+				return fmt.Errorf("emit import in code %q, in walk : %w", c.Name, err)
+			}
+		}
+		imports = collector.Imports
 	}
 
 	io.WriteString(w, "import (\n")
-	for _, impkg := range impkgs {
+	for _, impkg := range imports {
 		fmt.Fprintf(w, "\t%s\n", tinypkg.ToImportPackageString(impkg))
 	}
 	io.WriteString(w, ")\n")
