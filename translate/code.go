@@ -30,6 +30,10 @@ func (c *Code) FormatBytes(b []byte) ([]byte, error) {
 }
 
 func (c *Code) EmitImports(w io.Writer) error {
+	if c.ImportPackages == nil {
+		return nil
+	}
+
 	impkgs, err := c.ImportPackages()
 	if err != nil {
 		return err
