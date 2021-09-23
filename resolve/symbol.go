@@ -29,12 +29,12 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 
 	case reflectshape.Interface:
 		name := s.GetName()
+		pkg := tinypkg.NewPackage(s.GetPackage(), "")
 		if name != "" {
 			if s.GetPackage() == "" { // e.g. error
 				return tinypkg.NewSymbol(s.GetName())
 			}
 
-			pkg := tinypkg.NewPackage(s.GetPackage(), "")
 			sym := pkg.NewSymbol(s.GetName())
 			return here.Import(pkg).Lookup(sym)
 		}
@@ -50,7 +50,7 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 			fn.Name = methodName
 			methods[i] = fn
 		}
-		return &tinypkg.Interface{Name: name, Methods: methods}
+		return &tinypkg.Interface{Name: name, Package: pkg, Methods: methods}
 
 	case reflectshape.Container: // slice, map
 		name := s.GetName()
@@ -101,8 +101,10 @@ func extractSymbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 				returns = append(returns, &tinypkg.Var{Name: name, Node: ExtractSymbol(here, arg)})
 			}
 		}
+		pkg := tinypkg.NewPackage(s.GetPackage(), "")
 		return &tinypkg.Func{
 			Name:    s.GetName(),
+			Package: pkg,
 			Args:    args,
 			Returns: returns,
 		}

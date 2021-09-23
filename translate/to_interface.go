@@ -1,9 +1,7 @@
 package translate
 
 import (
-	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
@@ -58,28 +56,6 @@ func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolve
 }
 
 func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker, name string) error {
-	fmt.Fprintf(w, "type %s interface {\n", name)
-	defer io.WriteString(w, "}\n")
-
-	usedNames := map[string]bool{}
-	for _, need := range t.Needs {
-		k := need.rt
-
-		methodName := need.rt.Name()
-		if len(t.seen[k]) > 1 {
-			methodName = strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
-		}
-		shape := need.Shape
-		if need.overrideDef != nil {
-			shape = need.overrideDef.Shape
-		}
-
-		methodExpr := tinypkg.ToInterfaceMethodString(here, methodName, resolver.Symbol(here, shape))
-		fmt.Fprintf(w, "\t%s\n", methodExpr)
-		if _, duplicated := usedNames[methodName]; duplicated {
-			log.Printf("WARN: method name %s is duplicated", methodName)
-		}
-		usedNames[methodName] = true
-	}
-	return nil
+	iface := t.extractInterface(here, resolver, name)
+	return tinypkg.WriteInterface(w, here, name, iface)
 }
