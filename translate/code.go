@@ -18,7 +18,7 @@ type Code struct {
 	EmitCode       func(w io.Writer) error
 
 	priority int
-	emitFunc func(w io.Writer, code *Code) error
+	Config   *Config
 }
 
 func (c *Code) Priority() int {
@@ -26,10 +26,17 @@ func (c *Code) Priority() int {
 }
 
 func (c *Code) FormatBytes(b []byte) ([]byte, error) {
+	if c.Config.DisableFormat {
+		return b, nil
+	}
 	return format.Source(b) // TODO: speed-up
 }
 
 func (c *Code) EmitImports(w io.Writer) error {
+	if c.ImportPackages == nil {
+		return nil
+	}
+
 	impkgs, err := c.ImportPackages()
 	if err != nil {
 		return err
@@ -48,5 +55,5 @@ func (c *Code) EmitImports(w io.Writer) error {
 
 // for pkg/emitfile.Emitter
 func (c *Code) Emit(w io.Writer) error {
-	return c.emitFunc(w, c)
+	return c.Config.EmitCodeFunc(w, c)
 }
