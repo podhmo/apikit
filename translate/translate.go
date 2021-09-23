@@ -18,16 +18,18 @@ const (
 type EmitCodeFunc func(w io.Writer, code *Code) error
 
 type Config struct {
-	Header       string
-	EmitCodeFunc EmitCodeFunc
+	Header        string
+	DisableFormat bool
 
-	Resolver *resolve.Resolver
+	EmitCodeFunc EmitCodeFunc
+	Resolver     *resolve.Resolver
 }
 
 func DefaultConfig() *Config {
 	c := &Config{
-		Header:   Header,
-		Resolver: resolve.NewResolver(),
+		Header:        Header,
+		DisableFormat: false,
+		Resolver:      resolve.NewResolver(),
 	}
 	c.EmitCodeFunc = c.defaultEmitCodeFunc
 	return c

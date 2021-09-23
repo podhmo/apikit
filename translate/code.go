@@ -26,6 +26,9 @@ func (c *Code) Priority() int {
 }
 
 func (c *Code) FormatBytes(b []byte) ([]byte, error) {
+	if c.Config.DisableFormat {
+		return b, nil
+	}
 	return format.Source(b) // TODO: speed-up
 }
 
