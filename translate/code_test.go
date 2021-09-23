@@ -59,6 +59,22 @@ import (
 
 func Hello(ctx context.Context) string { return "hello" }`,
 		},
+		{
+			msg: "without-header",
+			code: func() *Code {
+				c := DefaultConfig()
+				c.Header = ""
+				return c.NewCode(pkg, "", func(w io.Writer) error {
+					fmt.Fprintln(w, `func Hello() string { return "hello" }`)
+					return nil
+				})
+			}(),
+			want: `
+package foo
+
+
+func Hello() string { return "hello" }`,
+		},
 	}
 
 	for _, c := range cases {
