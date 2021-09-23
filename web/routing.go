@@ -3,7 +3,6 @@ package web
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/podhmo/apikit/web/pathpattern"
 )
@@ -15,7 +14,9 @@ type Router struct {
 	ErrorHandler func(error)
 
 	Parent *Router // []*Router?
-	Prefix string
+
+	FullPrefix string
+	prefix     string
 }
 
 func NewRouter() *Router {
@@ -28,26 +29,7 @@ func NewRouter() *Router {
 }
 
 func (r *Router) Method(method, pattern string, fn T) *Node {
-	var prefix string
-	if r.Parent != nil || r.Prefix != "" {
-		this := r
-		var s []string
-		for {
-			if this.Prefix != "" {
-				s = append(s, this.Prefix)
-			}
-			if this.Parent == nil {
-				break
-			}
-			this = this.Parent
-		}
-		for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-			s[i], s[j] = s[j], s[i]
-		}
-		prefix = strings.Join(s, "")
-	}
-
-	path := fmt.Sprintf("%s %s%s", method, prefix, pattern)
+	path := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
 	node, err := r.Root.CreateNode(path, nil)
 	if err != nil {
 		r.ErrorHandler(err)
@@ -58,7 +40,8 @@ func (r *Router) Method(method, pattern string, fn T) *Node {
 }
 
 func (r *Router) Group(pattern string, use func(*Router)) *Router {
-	child := &Router{Root: r.Root, ErrorHandler: r.ErrorHandler, Parent: r, Prefix: pattern}
+	fullprefix := r.FullPrefix + pattern
+	child := &Router{Root: r.Root, ErrorHandler: r.ErrorHandler, Parent: r, prefix: pattern, FullPrefix: fullprefix}
 	use(child)
 	return child
 }
