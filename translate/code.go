@@ -5,6 +5,7 @@ import (
 	"go/format"
 	"io"
 
+	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
@@ -53,7 +54,25 @@ func (c *Code) EmitImports(w io.Writer) error {
 	return nil
 }
 
-// for pkg/emitfile.Emitter
+// Emit for pkg/emitfile.Emitter
 func (c *Code) Emit(w io.Writer) error {
 	return c.Config.EmitCodeFunc(w, c)
 }
+
+// String for pkg/tinypkg.Node
+func (c *Code) String() string {
+	return tinypkg.ToRelativeTypeString(c.Here, c.Here.NewSymbol(c.Name))
+}
+
+// OnWalk for pkg/tinypkg.Node
+func (c *Code) OnWalk(use func(*tinypkg.Symbol) error) error {
+	return use(c.Here.NewSymbol(c.Name))
+}
+
+// String for pkg/tinypkg 's internal interface
+func (c *Code) RelativeTypeString(here *tinypkg.Package) string {
+	return tinypkg.ToRelativeTypeString(here, c.Here.NewSymbol(c.Name))
+}
+
+var _ emitfile.Emitter = &Code{}
+var _ tinypkg.Node = &Code{}

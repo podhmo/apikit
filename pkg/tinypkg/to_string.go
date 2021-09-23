@@ -86,6 +86,8 @@ func ToRelativeTypeString(here *Package, node Node) string {
 			return x.sym.Name
 		}
 		return x.Qualifier() + "." + x.sym.Name
+	case interface{ RelativeTypeString(*Package) string }:
+		return x.RelativeTypeString(here)
 	default:
 		panic(fmt.Sprintf("unsupported type %T", node))
 	}

@@ -14,10 +14,10 @@ func NewSymbol(name string) *Symbol {
 }
 
 func Walk(x Node, use func(*Symbol) error) error {
-	return x.onWalk(use)
+	return x.OnWalk(use)
 }
 
 type Node interface {
 	fmt.Stringer
-	onWalk(use func(*Symbol) error) error
+	OnWalk(use func(*Symbol) error) error
 }
