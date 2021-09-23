@@ -64,6 +64,26 @@ func (p *Package) ImportAs(pkg *Package, name string) *ImportedPackage {
 	return &ImportedPackage{here: p, pkg: pkg, qualifier: name}
 }
 
+func (p *Package) NewFunc(name string, args []*Var, returns []*Var) *Func {
+	return &Func{
+		Name:    name,
+		Package: p,
+		Args:    args,
+		Returns: returns,
+	}
+}
+func (p *Package) NewInterface(name string, fns []*Func) *Interface {
+	methods := make([]*Func, len(fns))
+	for i, fn := range fns {
+		methods[i] = p.NewFunc(fn.Name, fn.Args, fn.Returns)
+	}
+	return &Interface{
+		Name:    name,
+		Package: p,
+		Methods: methods,
+	}
+}
+
 type ImportedPackage struct {
 	here      *Package
 	pkg       *Package
@@ -184,6 +204,8 @@ func (c *Array) onWalk(use func(*Symbol) error) error {
 
 type Func struct {
 	Name    string
+	Recv    string
+	Package *Package
 	Args    []*Var
 	Returns []*Var
 }
@@ -208,6 +230,7 @@ func (f *Func) String() string {
 
 type Interface struct {
 	Name    string
+	Package *Package
 	Methods []*Func
 }
 
@@ -241,5 +264,6 @@ var (
 	_ Node = &Array{}
 	_ Node = &Map{}
 	_ Node = &Func{}
+	_ Node = &Interface{}
 	_ Node = &Var{}
 )

@@ -58,7 +58,10 @@ func ToRelativeTypeString(here *Package, node Node) string {
 		}
 	case *Interface:
 		if x.Name != "" {
-			return x.Name
+			if x.Package.Name == "" || here == nil || here == x.Package {
+				return x.Name
+			}
+			return x.Package.Name + "." + x.Name
 		}
 		size := len(x.Methods)
 		if size == 0 {
@@ -70,13 +73,7 @@ func ToRelativeTypeString(here *Package, node Node) string {
 		}
 		return fmt.Sprintf("interface {%s}", strings.Join(methods, "; "))
 	case *Symbol:
-		if x.Package.Name == "" {
-			return x.Name
-		}
-		if here == nil {
-			return x.Name
-		}
-		if here == x.Package {
+		if x.Package.Name == "" || here == nil || here == x.Package {
 			return x.Name
 		}
 		return x.Package.Name + "." + x.Name
