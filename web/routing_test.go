@@ -2,9 +2,11 @@ package web_test
 
 import (
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
+	"github.com/podhmo/apikit/pkg/difftest"
 	"github.com/podhmo/apikit/web"
 )
 
@@ -26,11 +28,13 @@ func TestRouting(t *testing.T) {
 
 	want := []string{
 		"GET /articles/{articleId}",
-		"GET /articles/{articleId}/{articleId}",
-		"GET /articles/{articleId}/{articleId}/{commentId}",
+		"GET /articles/{articleId}/comments",
+		"GET /articles/{articleId}/comments/{commentId}",
 	}
 
 	if got := paths; !reflect.DeepEqual(want, got) {
-		t.Errorf("want paths:\n\t%s\nbut got:\n\t%s", want, got)
+		sort.Strings(want)
+		sort.Strings(got)
+		difftest.LogDiffGotStringAndWantString(t, strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
