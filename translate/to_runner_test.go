@@ -286,7 +286,11 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 			code := translator.TranslateToRunner(c.here, c.input, c.name, provider)
 			var buf bytes.Buffer
 
-			if err := code.EmitImports(&buf); err != nil {
+			imports, err := code.CollectImports(c.here)
+			if err != nil && c.wantError == nil || c.wantError != err {
+				t.Fatalf("unexpected error, collect imports %+v", err)
+			}
+			if err := code.EmitImports(&buf, imports); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, import %+v", err)
 				}
