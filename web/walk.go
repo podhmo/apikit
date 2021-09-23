@@ -1,14 +1,18 @@
-package pathpattern
+package web
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/podhmo/apikit/web/pathpattern"
+)
 
 // added by me
 
-func Walk(node *Node, use func(*WalkerNode) error) error {
-	return walk(node, use, nil)
+func Walk(r *Router, use func(*WalkerNode) error) error {
+	return walk(r.Root, use, nil)
 }
 
-func walk(node *Node, use func(*WalkerNode) error, history []Suffix) error {
+func walk(node *Node, use func(*WalkerNode) error, history []pathpattern.Suffix) error {
 	if node.Value != nil {
 		if err := use(&WalkerNode{Node: node, History: history}); err != nil {
 			return err
@@ -24,7 +28,7 @@ func walk(node *Node, use func(*WalkerNode) error, history []Suffix) error {
 
 type WalkerNode struct {
 	Node    *Node
-	History []Suffix
+	History []pathpattern.Suffix
 }
 
 func (n *WalkerNode) Path() []string {
