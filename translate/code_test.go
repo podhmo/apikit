@@ -12,7 +12,7 @@ import (
 
 func TestCode(t *testing.T) {
 	pkg := tinypkg.NewPackage("foo", "")
-
+	config := DefaultConfig()
 	cases := []struct {
 		msg  string
 		code *Code
@@ -20,7 +20,7 @@ func TestCode(t *testing.T) {
 	}{
 		{
 			msg: "no-import",
-			code: NewCode(pkg, "", func(w io.Writer) error {
+			code: config.NewCode(pkg, "", func(w io.Writer) error {
 				fmt.Fprintln(w, `func Hello() string { return "hello" }`)
 				return nil
 			}),
@@ -36,7 +36,7 @@ func Hello() string { return "hello" }`,
 		{
 			msg: "with-import",
 			code: func() *Code {
-				code := NewCode(pkg, "", func(w io.Writer) error {
+				code := config.NewCode(pkg, "", func(w io.Writer) error {
 					fmt.Fprintln(w, `func Hello(ctx context.Context) string { return "hello" }`)
 					return nil
 				})

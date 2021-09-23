@@ -18,20 +18,7 @@ type Code struct {
 	EmitCode       func(w io.Writer) error
 
 	priority int
-	emitFunc func(w io.Writer, code *Code) error
-}
-
-func NewCode(
-	here *tinypkg.Package,
-	name string,
-	emitCode func(w io.Writer) error,
-) *Code {
-	return &Code{
-		Name:     name,
-		Here:     here,
-		EmitCode: emitCode,
-		emitFunc: defaultEmitFunc,
-	}
+	Config   *Config
 }
 
 func (c *Code) Priority() int {
@@ -65,5 +52,5 @@ func (c *Code) EmitImports(w io.Writer) error {
 
 // for pkg/emitfile.Emitter
 func (c *Code) Emit(w io.Writer) error {
-	return c.emitFunc(w, c)
+	return c.Config.EmitCodeFunc(w, c)
 }

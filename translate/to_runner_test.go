@@ -35,6 +35,9 @@ func TestWriteRunner(t *testing.T) {
 	main := tinypkg.NewPackage("main", "")
 	resolver := resolve.NewResolver()
 
+	config := DefaultConfig()
+	config.Resolver = resolver
+
 	cases := []struct {
 		name  string
 		input interface{}
@@ -272,7 +275,7 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 	for _, c := range cases {
 		c := c
 		t.Run(c.name, func(t *testing.T) {
-			translator := NewTranslator(resolver)
+			translator := NewTranslator(config)
 			if c.modifyTracker != nil {
 				c.modifyTracker(translator.Tracker)
 			}
