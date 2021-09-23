@@ -69,5 +69,10 @@ func (c *Code) OnWalk(use func(*tinypkg.Symbol) error) error {
 	return use(c.Here.NewSymbol(c.Name))
 }
 
+// String for pkg/tinypkg 's internal interface
+func (c *Code) RelativeTypeString(here *tinypkg.Package) string {
+	return tinypkg.ToRelativeTypeString(here, c.Here.NewSymbol(c.Name))
+}
+
 var _ emitfile.Emitter = &Code{}
 var _ tinypkg.Node = &Code{}

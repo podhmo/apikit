@@ -3,6 +3,7 @@ package translate
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-func TestCode(t *testing.T) {
+func TestCodeEmitCode(t *testing.T) {
 	pkg := tinypkg.NewPackage("foo", "")
 	config := DefaultConfig()
 	cases := []struct {
@@ -85,6 +86,65 @@ func Hello() string { return "hello" }`,
 			}
 			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
 				difftest.LogDiffGotStringAndWantString(t, got, want)
+			}
+		})
+	}
+}
+
+func TestCodeUseAsSymbol(t *testing.T) {
+	pkg := tinypkg.NewPackage("foo", "")
+	main := tinypkg.NewPackage("main", "")
+	config := DefaultConfig()
+
+	cases := []struct {
+		msg  string
+		here *tinypkg.Package
+		code *Code
+
+		want        string
+		wantImports []*tinypkg.ImportedPackage
+	}{
+		{
+			msg:  "same package",
+			here: pkg,
+			code: config.NewCode(pkg, "Foo", func(w io.Writer) error {
+				fmt.Fprintln(w, "func Foo() string")
+				return nil
+			}),
+			want: "Foo",
+		},
+		{
+			msg:  "another package",
+			here: main,
+			code: config.NewCode(pkg, "Foo", func(w io.Writer) error {
+				fmt.Fprintln(w, "func Foo() string")
+				return nil
+			}),
+			want:        "foo.Foo",
+			wantImports: []*tinypkg.ImportedPackage{main.Import(pkg)},
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.msg, func(t *testing.T) {
+			// symbol
+			{
+				got := tinypkg.ToRelativeTypeString(c.here, c.code)
+				if want := c.want; want != got {
+					t.Errorf("want type string:\n\t%q\nbug got:\n\t%q", want, got)
+				}
+			}
+
+			// imports
+			{
+				collector := tinypkg.NewImportCollector(c.here)
+				if err := tinypkg.Walk(c.code, collector.Collect); err != nil {
+					t.Errorf("unexpected error for collect import")
+				}
+				if want, got := c.wantImports, collector.Imports; !reflect.DeepEqual(want, got) {
+					t.Errorf("want imports:\n\t%+v\nbug got:\n\t%+v", want, got)
+				}
 			}
 		})
 	}
