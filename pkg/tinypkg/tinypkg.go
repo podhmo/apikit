@@ -115,7 +115,7 @@ func (im *ImportedSymbol) String() string {
 	return ToRelativeTypeString(im.pkg.here, im)
 }
 
-func (im *ImportedSymbol) onWalk(use func(*Symbol) error) error {
+func (im *ImportedSymbol) OnWalk(use func(*Symbol) error) error {
 	return use(im.sym)
 }
 
@@ -151,7 +151,7 @@ func (s *Symbol) GoString() string {
 	}
 	return s.Package.Path + "." + s.Name
 }
-func (s *Symbol) onWalk(use func(*Symbol) error) error {
+func (s *Symbol) OnWalk(use func(*Symbol) error) error {
 	return use(s)
 }
 
@@ -163,8 +163,8 @@ type Pointer struct {
 func (c *Pointer) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Pointer) onWalk(use func(*Symbol) error) error {
-	return c.V.onWalk(use)
+func (c *Pointer) OnWalk(use func(*Symbol) error) error {
+	return c.V.OnWalk(use)
 }
 
 type Map struct {
@@ -176,11 +176,11 @@ func (c *Map) String() string {
 	return ToRelativeTypeString(nil, c)
 }
 
-func (c *Map) onWalk(use func(*Symbol) error) error {
-	if err := c.K.onWalk(use); err != nil {
+func (c *Map) OnWalk(use func(*Symbol) error) error {
+	if err := c.K.OnWalk(use); err != nil {
 		return err
 	}
-	return c.V.onWalk(use)
+	return c.V.OnWalk(use)
 }
 
 type Slice struct {
@@ -190,8 +190,8 @@ type Slice struct {
 func (c *Slice) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Slice) onWalk(use func(*Symbol) error) error {
-	return c.V.onWalk(use)
+func (c *Slice) OnWalk(use func(*Symbol) error) error {
+	return c.V.OnWalk(use)
 }
 
 type Array struct {
@@ -202,8 +202,8 @@ type Array struct {
 func (c *Array) String() string {
 	return ToRelativeTypeString(nil, c)
 }
-func (c *Array) onWalk(use func(*Symbol) error) error {
-	return c.V.onWalk(use)
+func (c *Array) OnWalk(use func(*Symbol) error) error {
+	return c.V.OnWalk(use)
 }
 
 type Func struct {
@@ -214,14 +214,14 @@ type Func struct {
 	Returns []*Var
 }
 
-func (f *Func) onWalk(use func(*Symbol) error) error {
+func (f *Func) OnWalk(use func(*Symbol) error) error {
 	for _, x := range f.Args {
-		if err := x.Node.onWalk(use); err != nil {
+		if err := x.Node.OnWalk(use); err != nil {
 			return err
 		}
 	}
 	for _, x := range f.Returns {
-		if err := x.Node.onWalk(use); err != nil {
+		if err := x.Node.OnWalk(use); err != nil {
 			return err
 		}
 	}
@@ -238,9 +238,9 @@ type Interface struct {
 	Methods []*Func
 }
 
-func (i *Interface) onWalk(use func(*Symbol) error) error {
+func (i *Interface) OnWalk(use func(*Symbol) error) error {
 	for _, x := range i.Methods {
-		if err := x.onWalk(use); err != nil {
+		if err := x.OnWalk(use); err != nil {
 			return err
 		}
 	}
