@@ -123,6 +123,33 @@ func TestCodeUseAsSymbol(t *testing.T) {
 			want:        "foo.Foo",
 			wantImports: []*tinypkg.ImportedPackage{main.Import(pkg)},
 		},
+		{
+			msg:  "depends",
+			here: main,
+			code: func() *Code {
+				// foo.Foo, main.Bar is defined
+				// and define main.Use() function.
+				fooCode := config.NewCode(pkg, "Foo", func(w io.Writer) error {
+					fmt.Fprintln(w, "type Foo struct {}")
+					return nil
+				})
+				barCode := config.NewCode(main, "Bar", func(w io.Writer) error {
+					fmt.Fprintln(w, "type Bar struct {}")
+					return nil
+				})
+				useCode := config.NewCode(main, "Use", func(w io.Writer) error {
+					fmt.Fprintf(w, "func Use(foo %s, bar %s) error { return nil }\n",
+						tinypkg.ToRelativeTypeString(main, fooCode),
+						tinypkg.ToRelativeTypeString(main, barCode),
+					)
+					return nil
+				})
+				useCode.Depends = append(useCode.Depends, fooCode, barCode) // this is important!
+				return useCode
+			}(),
+			want:        "Use",
+			wantImports: []*tinypkg.ImportedPackage{main.Import(pkg)},
+		},
 	}
 
 	for _, c := range cases {
@@ -138,11 +165,11 @@ func TestCodeUseAsSymbol(t *testing.T) {
 
 			// imports
 			{
-				collector := tinypkg.NewImportCollector(c.here)
-				if err := tinypkg.Walk(c.code, collector.Collect); err != nil {
+				imports, err := c.code.CollectImports(c.here)
+				if err != nil {
 					t.Errorf("unexpected error for collect import")
 				}
-				if want, got := c.wantImports, collector.Imports; !reflect.DeepEqual(want, got) {
+				if want, got := c.wantImports, imports; !reflect.DeepEqual(want, got) {
 					t.Errorf("want imports:\n\t%+v\nbug got:\n\t%+v", want, got)
 				}
 			}

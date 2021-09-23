@@ -135,7 +135,11 @@ type Component interface {
 
 			code := translator.TranslateToInterface(c.here, "Component")
 			var buf strings.Builder
-			if err := code.EmitImports(&buf); err != nil {
+			imports, err := code.CollectImports(c.here)
+			if err != nil && c.wantError == nil || c.wantError != err {
+				t.Fatalf("unexpected error, collect imports %+v", err)
+			}
+			if err := code.EmitImports(&buf, imports); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, import %+v", err)
 				}

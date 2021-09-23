@@ -34,33 +34,43 @@ func (c *Code) FormatBytes(b []byte) ([]byte, error) {
 	return format.Source(b) // TODO: speed-up
 }
 
-func (c *Code) EmitImports(w io.Writer) error {
+func (c *Code) CollectImports(here *tinypkg.Package) ([]*tinypkg.ImportedPackage, error) {
+	var imports []*tinypkg.ImportedPackage
+	if c.Here != here {
+		imports = append(imports, here.Import(c.Here))
+	}
 	if c.Depends == nil && c.ImportPackages == nil {
-		return nil
+		return imports, nil
 	}
 
-	var imports []*tinypkg.ImportedPackage
 	if c.ImportPackages != nil {
 		impkgs, err := c.ImportPackages()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if len(impkgs) == 0 {
-			return ErrNoImports
+			return nil, ErrNoImports
 		}
 		imports = append(imports, impkgs...)
 	}
 	if c.Depends != nil {
 		collector := tinypkg.NewImportCollector(c.Here)
 		if err := collector.Merge(imports); err != nil {
-			return fmt.Errorf("emit import in code %q : %w", c.Name, err)
+			return nil, fmt.Errorf("collect import in code %q : %w", c.Name, err)
 		}
 		for _, dep := range c.Depends {
 			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
-				return fmt.Errorf("emit import in code %q, in walk : %w", c.Name, err)
+				return nil, fmt.Errorf("collect import in code %q, in walk : %w", c.Name, err)
 			}
 		}
 		imports = collector.Imports
+	}
+	return imports, nil
+}
+
+func (c *Code) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackage) error {
+	if imports == nil {
+		return nil
 	}
 
 	io.WriteString(w, "import (\n")
