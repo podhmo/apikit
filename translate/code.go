@@ -21,6 +21,19 @@ type Code struct {
 	emitFunc func(w io.Writer, code *Code) error
 }
 
+func NewCode(
+	here *tinypkg.Package,
+	name string,
+	emitCode func(w io.Writer) error,
+) *Code {
+	return &Code{
+		Name:     name,
+		Here:     here,
+		EmitCode: emitCode,
+		emitFunc: defaultEmitFunc,
+	}
+}
+
 func (c *Code) Priority() int {
 	return c.priority
 }
