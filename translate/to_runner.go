@@ -40,23 +40,8 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 }
 
 func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
-	imports := make([]*tinypkg.ImportedPackage, 0, len(def.Args)+len(def.Returns))
-	seen := map[*tinypkg.Package]bool{}
-	use := func(sym *tinypkg.Symbol) error {
-		if sym.Package.Path == "" {
-			return nil // bultins type (e.g. string, bool, ...)
-		}
-		if _, ok := seen[sym.Package]; ok {
-			return nil
-		}
-		seen[sym.Package] = true
-		if here == sym.Package {
-			return nil
-		}
-		imports = append(imports, here.Import(sym.Package))
-		return nil
-	}
-
+	collector := tinypkg.NewImportCollector(here)
+	use := collector.Collect
 	for _, x := range def.Args {
 		shape := x.Shape
 		if x.Kind == resolve.KindComponent {
@@ -81,7 +66,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 	if err := tinypkg.Walk(provider, use); err != nil {
 		return nil, err
 	}
-	return imports, nil
+	return collector.Imports, nil
 }
 
 func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
