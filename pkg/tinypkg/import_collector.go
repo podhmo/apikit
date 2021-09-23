@@ -1,5 +1,7 @@
 package tinypkg
 
+import "fmt"
+
 func NewImportCollector(here *Package) *ImportCollector {
 	return &ImportCollector{
 		Here: here,
@@ -11,6 +13,20 @@ type ImportCollector struct {
 	Here    *Package
 	Imports []*ImportedPackage
 	seen    map[*Package]bool
+}
+
+func (c *ImportCollector) Merge(imports []*ImportedPackage) error {
+	for _, im := range imports {
+		if _, ok := c.seen[im.pkg]; ok {
+			continue
+		}
+		if im.here != c.Here {
+			return fmt.Errorf("imported package is mismatched (here is %q, but imported is %q)", c.Here.Path, im.here.Path)
+		}
+		c.seen[im.pkg] = true
+		c.Imports = append(c.Imports, im)
+	}
+	return nil
 }
 
 func (c *ImportCollector) Collect(sym *Symbol) error {
