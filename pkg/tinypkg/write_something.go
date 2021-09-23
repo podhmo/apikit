@@ -6,19 +6,19 @@ import (
 	"strings"
 )
 
-func WriteFunc(w io.Writer, name string, f *Func, body func() error) error {
+func WriteFunc(w io.Writer, here *Package, name string, f *Func, body func() error) error {
 	if name == "" {
 		name = f.Name
 	}
 
 	args := make([]string, 0, len(f.Args))
 	for _, x := range f.Args {
-		args = append(args, x.String())
+		args = append(args, ToRelativeTypeString(here, x))
 	}
 
 	returns := make([]string, 0, len(f.Returns))
 	for _, x := range f.Returns {
-		returns = append(returns, x.String())
+		returns = append(returns, ToRelativeTypeString(here, x))
 	}
 
 	// func <name>(<args>...) (<returns>) {

@@ -75,7 +75,11 @@ func (p *Package) NewFunc(name string, args []*Var, returns []*Var) *Func {
 func (p *Package) NewInterface(name string, fns []*Func) *Interface {
 	methods := make([]*Func, len(fns))
 	for i, fn := range fns {
-		methods[i] = p.NewFunc(fn.Name, fn.Args, fn.Returns)
+		if fn.Package == p {
+			methods[i] = fn
+		} else {
+			methods[i] = p.NewFunc(fn.Name, fn.Args, fn.Returns)
+		}
 	}
 	return &Interface{
 		Name:    name,

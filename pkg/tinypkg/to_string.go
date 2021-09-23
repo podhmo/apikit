@@ -58,7 +58,7 @@ func ToRelativeTypeString(here *Package, node Node) string {
 		}
 	case *Interface:
 		if x.Name != "" {
-			if x.Package.Name == "" || here == nil || here == x.Package {
+			if x.Package == nil || x.Package.Name == "" || here == nil || here == x.Package {
 				return x.Name
 			}
 			return x.Package.Name + "." + x.Name
