@@ -26,22 +26,8 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *C
 }
 
 func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
-	imports := make([]*tinypkg.ImportedPackage, 0, len(t.Needs))
-	seen := map[*tinypkg.Package]bool{}
-	use := func(sym *tinypkg.Symbol) error {
-		if sym.Package.Path == "" {
-			return nil // bultins type (e.g. string, bool, ...)
-		}
-		if _, ok := seen[sym.Package]; ok {
-			return nil
-		}
-		seen[sym.Package] = true
-		if here == sym.Package {
-			return nil
-		}
-		imports = append(imports, here.Import(sym.Package))
-		return nil
-	}
+	collector := tinypkg.NewImportCollector(here)
+	use := collector.Collect
 	for _, need := range t.Needs {
 		shape := need.Shape
 		if need.overrideDef != nil {
@@ -52,7 +38,7 @@ func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolve
 			return nil, err
 		}
 	}
-	return imports, nil
+	return collector.Imports, nil
 }
 
 func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker, name string) error {
