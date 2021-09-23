@@ -2,8 +2,11 @@ package translate
 
 import (
 	"fmt"
+	"log"
 	"reflect"
+	"strings"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 )
 
@@ -100,4 +103,35 @@ func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev
 	prev = target.overrideDef
 	target.overrideDef = def
 	return prev
+}
+
+func (t *Tracker) extractInterface(here *tinypkg.Package, resolver *resolve.Resolver, name string) *tinypkg.Interface {
+	usedNames := map[string]bool{}
+	methods := make([]*tinypkg.Func, 0, len(t.Needs))
+	for _, need := range t.Needs {
+		k := need.rt
+
+		methodName := need.rt.Name()
+		if len(t.seen[k]) > 1 {
+			methodName = strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
+		}
+		shape := need.Shape
+		if need.overrideDef != nil {
+			shape = need.overrideDef.Shape
+		}
+
+		sym := resolver.Symbol(here, shape)
+		m, ok := sym.(*tinypkg.Func)
+		if !ok {
+			m = here.NewFunc(methodName, nil, []*tinypkg.Var{{Node: sym}})
+		}
+		m.Name = methodName
+
+		if _, duplicated := usedNames[methodName]; duplicated {
+			log.Printf("WARN: method name %s is duplicated", methodName)
+		}
+		usedNames[methodName] = true
+		methods = append(methods, m)
+	}
+	return here.NewInterface(name, methods)
 }
