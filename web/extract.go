@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/podhmo/apikit/resolve"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
@@ -24,24 +25,26 @@ var (
 	ErrMismatchNumberOfVariables = fmt.Errorf("mismatch-number-of-variables")
 )
 
-func ExtractPathInfo(variableNames []string, shape reflectshape.Shape) (*PathInfo, error) {
-	sfn, ok := shape.(reflectshape.Function)
-	if !ok {
-		return nil, fmt.Errorf("extracted shape of %q is not function : %w", shape, ErrUnexpectedType)
+func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error) {
+	if len(def.Args) < len(variableNames) {
+		varCandidates := make([]string, 0, len(def.Args))
+		for _, item := range def.Args {
+			varCandidates = append(varCandidates, item.Name)
+		}
+		return nil, fmt.Errorf("variable candidates are %v, but want variables are %v (in def %s): %w", varCandidates, variableNames, def, ErrMismatchNumberOfVariables)
 	}
 
-	if sfn.Params.Len() < len(variableNames) {
-		varCandidates := make([]string, 0, sfn.Params.Len())
-		for _, argname := range sfn.Params.Keys {
-			varCandidates = append(varCandidates, argname)
-		}
-		return nil, fmt.Errorf("extracted shape of %q 's variable candidates are %v, but want variables are %v : %w", shape, varCandidates, variableNames, ErrMismatchNumberOfVariables)
-	}
+	sfn := def.Shape
 
 	vars := make([]PathVar, 0, len(variableNames))
 	idx := 0
-	for i, argname := range sfn.Params.Keys {
+	for _, item := range def.Args {
+		if item.Kind != resolve.KindPrimitive {
+			continue
+		}
+
 		var regex string
+		argname := item.Name
 		if strings.Contains(argname, ":") {
 			nameAndRegex := strings.SplitN(argname, ":", 2)
 			argname = nameAndRegex[0]
@@ -50,7 +53,7 @@ func ExtractPathInfo(variableNames []string, shape reflectshape.Shape) (*PathInf
 		if argname != variableNames[idx] {
 			continue
 		}
-		vars = append(vars, PathVar{Name: argname, Regex: regex, Shape: sfn.Params.Values[i]})
+		vars = append(vars, PathVar{Name: argname, Regex: regex, Shape: item.Shape})
 		idx++
 	}
 
@@ -59,7 +62,7 @@ func ExtractPathInfo(variableNames []string, shape reflectshape.Shape) (*PathInf
 		for _, v := range vars {
 			got = append(got, v.Name)
 		}
-		return nil, fmt.Errorf("extracted shape of %q 's variables are %v, but want variables are %v : %w", shape, got, variableNames, ErrMismatchNumberOfVariables)
+		return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 	}
 	return &PathInfo{
 		Name:      sfn.Name,

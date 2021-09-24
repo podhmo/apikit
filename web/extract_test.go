@@ -5,9 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
-	reflectshape "github.com/podhmo/reflect-shape"
-	"github.com/podhmo/reflect-shape/arglist"
 )
 
 type Bar struct{}
@@ -17,12 +16,10 @@ func getFooBar(ctx context.Context, fooId string, barId int) (*Bar, error) {
 }
 
 func TestExtractPathInfo(t *testing.T) {
-	extractor := reflectshape.NewExtractor()
-	extractor.ArglistLookup = arglist.NewLookup()
-
+	resolver := resolve.NewResolver()
 	cases := []struct {
 		msg           string
-		shape         reflectshape.Shape
+		fn            interface{}
 		variableNames []string
 
 		wantName     string
@@ -31,7 +28,7 @@ func TestExtractPathInfo(t *testing.T) {
 	}{
 		{
 			msg:           "ok",
-			shape:         extractor.Extract(getFooBar),
+			fn:            getFooBar,
 			variableNames: []string{"fooId", "barId"},
 			wantName:      "getFooBar",
 			wantArgTypes:  []string{"string", "int"},
@@ -41,7 +38,8 @@ func TestExtractPathInfo(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			got, err := web.ExtractPathInfo(c.variableNames, c.shape)
+			def := resolver.Def(c.fn)
+			got, err := web.ExtractPathInfo(c.variableNames, def)
 			if err != nil {
 				t.Fatalf("unexpected error %+v", err)
 			}
