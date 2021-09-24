@@ -2,7 +2,6 @@ package web_test
 
 import (
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 
@@ -12,9 +11,10 @@ import (
 
 func TestRouting(t *testing.T) {
 	cases := []struct {
-		msg    string
-		router *web.Router
-		want   []string
+		msg           string
+		router        *web.Router
+		want          []string
+		wantVariables []string
 	}{
 		{
 			msg: "one",
@@ -25,6 +25,9 @@ func TestRouting(t *testing.T) {
 			}(),
 			want: []string{
 				"GET /articles/{articleId}",
+			},
+			wantVariables: []string{
+				"articleId",
 			},
 		},
 		{
@@ -43,6 +46,25 @@ func TestRouting(t *testing.T) {
 				"GET /articles/{articleId}/comments",
 				"GET /articles/{articleId}/comments/{commentId}",
 			},
+			wantVariables: []string{
+				"articleId",
+				"articleId",
+				"articleId, commentId",
+			},
+		},
+		{
+			msg: "regex",
+			router: func() *web.Router {
+				r := web.NewRouter()
+				r.Get("/{ articleSlug:[a-z-]+}", "getArticleBySlug")
+				return r
+			}(),
+			want: []string{
+				"GET /{articleSlug:[a-z-]+}",
+			},
+			wantVariables: []string{
+				"articleSlug:[a-z-]+",
+			},
 		},
 	}
 
@@ -50,16 +72,20 @@ func TestRouting(t *testing.T) {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			var paths []string
+			var variables []string
 			if err := web.Walk(c.router, func(n *web.WalkerNode) error {
 				paths = append(paths, strings.Join(n.Path(), ""))
+				variables = append(variables, strings.Join(n.Node.VariableNames, ", "))
 				return nil
 			}); err != nil {
 				t.Fatalf("unexpected error %+v", err)
 			}
 
 			if want, got := c.want, paths; !reflect.DeepEqual(want, got) {
-				sort.Strings(want)
-				sort.Strings(got)
+				difftest.LogDiffGotStringAndWantString(t, strings.Join(got, "\n"), strings.Join(want, "\n"))
+			}
+
+			if want, got := c.wantVariables, variables; !reflect.DeepEqual(want, got) {
 				difftest.LogDiffGotStringAndWantString(t, strings.Join(got, "\n"), strings.Join(want, "\n"))
 			}
 		})

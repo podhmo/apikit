@@ -73,3 +73,4 @@ func (r *Router) Put(pattern string, fn T) *Node {
 func (r *Router) Trace(pattern string, fn T) *Node {
 	return r.Method("TRACE", pattern, fn)
 }
+
