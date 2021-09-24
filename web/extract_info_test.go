@@ -1,6 +1,7 @@
 package web_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 
 type Bar struct{}
 
-func getFooBar(fooId string, barId int) (*Bar, error) {
+func getFooBar(ctx context.Context, fooId string, barId int) (*Bar, error) {
 	return nil, nil
 }
 

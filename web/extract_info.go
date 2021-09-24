@@ -30,7 +30,7 @@ func ExtractPathInfo(variableNames []string, shape reflectshape.Shape) (*PathInf
 		return nil, fmt.Errorf("extracted shape of %q is not function : %w", shape, ErrUnexpectedType)
 	}
 
-	if sfn.Params.Len() > len(variableNames) {
+	if sfn.Params.Len() < len(variableNames) {
 		varCandidates := make([]string, 0, sfn.Params.Len())
 		for _, argname := range sfn.Params.Keys {
 			varCandidates = append(varCandidates, argname)
