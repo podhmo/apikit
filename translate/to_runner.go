@@ -3,7 +3,6 @@ package translate
 import (
 	"fmt"
 	"io"
-	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
@@ -146,101 +145,36 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 
 	return tinypkg.WriteFunc(w, here, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
+
 			// var <component> <type>
 			// {
 			//   <component> = <provider>.<method>()
 			// }
 			if len(components) > 0 {
-				isConsumeFuncReturnsError := len(returns) > 0 && def.Shape.GetReflectType().Out(len(returns)-1) == reflectErrorTypeValue
-
+				indent := "\t"
 				for _, x := range components {
-					shape := x.Shape
-					sym := resolver.Symbol(here, shape)
+					sym := resolver.Symbol(here, x.Shape)
+					factory, ok := sym.(*tinypkg.Func)
+					if !ok {
+						// func() <component>
+						factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
+					}
+
+					binding, err := tinypkg.NewBinding(x.Name, factory)
+					if err != nil {
+						return err
+					}
 
 					rt := x.Item.Shape.GetReflectType()
 					methodName := rt.Name()
 					if len(tracker.seen[rt]) > 1 {
 						methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
 					}
-					methodArgs := make([]string, 0, len(x.Args))
-					for _, xarg := range x.Args {
-						methodArgs = append(methodArgs, xarg.Name)
-					}
+					binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
-					// var x <X>
-					if f, ok := sym.(*tinypkg.Func); ok {
-						fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, f.Returns[0]))
-					} else {
-						fmt.Fprintf(w, "\tvar %s %s\n", x.Name, tinypkg.ToRelativeTypeString(here, sym))
+					if err := binding.WriteWithCallbackAndError(w, here, indent, returns); err != nil {
+						return err
 					}
-
-					// {
-					fmt.Fprintln(w, "\t{")
-
-					hasError := false
-					hasCleanup := false
-					switch provided := sym.(type) {
-					case *tinypkg.Func:
-						switch len(provided.Returns) {
-						case 1: // x := provide()
-							fmt.Fprintf(w, "\t\t%s = %s.%s(%s)\n", x.Name, provider.Name, methodName, strings.Join(methodArgs, ", "))
-						case 2: // x, err := provide()
-							if provided.Returns[1].Node.String() == "error" {
-								hasError = true
-								fmt.Fprintln(w, "\t\tvar err error")
-								fmt.Fprintf(w, "\t\t%s, err = %s.%s(%s)\n", x.Name, provider.Name, methodName, strings.Join(methodArgs, ", "))
-							} else {
-								hasCleanup = true
-								fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
-								fmt.Fprintf(w, "\t\t%s, cleanup = %s.%s(%s)\n", x.Name, provider.Name, methodName, strings.Join(methodArgs, ", "))
-								if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
-									return fmt.Errorf("unsupported provide function, only support func(...)(<T>, error) or func(...)(<T>, func()). got=%s", provided)
-								}
-							}
-						case 3: // x, cleanup, err := provide()
-							hasError = true
-							hasCleanup = true
-							fmt.Fprintf(w, "\t\tvar cleanup %s\n", tinypkg.ToRelativeTypeString(here, provided.Returns[1]))
-							fmt.Fprintln(w, "\t\tvar err error")
-							fmt.Fprintf(w, "\t\t%s, cleanup, err = %s.%s(%s)\n", x.Name, provider.Name, methodName, strings.Join(methodArgs, ", "))
-							if _, ok := provided.Returns[1].Node.(*tinypkg.Func); !ok {
-								return fmt.Errorf("unsupported provide function, only support func(...)(<T>, func(), error). got=%s", provided)
-							}
-						default:
-							return fmt.Errorf("unexpected provider function for %s, %+v", x.Name, shape)
-						}
-					default:
-						fmt.Fprintf(w, "\t\t%s = %s.%s()\n", x.Name, provider.Name, methodName)
-					}
-
-					if hasCleanup {
-						fmt.Fprintln(w, "\t\tif cleanup != nil {")
-						fmt.Fprintln(w, "\t\t\tdefer cleanup()") // TODO: support Close() error
-						fmt.Fprintln(w, "\t\t}")
-					}
-					if hasError {
-						fmt.Fprintf(w, "\t\tif err != nil {\n")
-						switch len(returns) {
-						case 0:
-							fmt.Fprintln(w, "\t\t\treturn")
-						case 1, 2, 3:
-							// return <>
-							// return error
-							// return <>, error
-							// return <>, func()
-							// return <>, error, func()
-							values := []string{"nil", "nil", "nil"}
-							if isConsumeFuncReturnsError {
-								values[len(returns)-1] = "err"
-							}
-							fmt.Fprintf(w, "\t\t\treturn %s\n", strings.Join(values[:len(returns)], ", "))
-						default:
-							return fmt.Errorf("unsupported consume function: %s", def.Symbol)
-						}
-						fmt.Fprintln(w, "\t\t}")
-					}
-					// }
-					fmt.Fprintln(w, "\t}")
 				}
 			}
 
@@ -253,5 +187,3 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		},
 	)
 }
-
-var reflectErrorTypeValue = reflect.TypeOf(func() error { return nil }).Out(0)
