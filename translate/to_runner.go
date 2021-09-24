@@ -69,12 +69,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 }
 
 func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
-	type componentItem struct {
-		resolve.Item
-		Shape reflectshape.Shape
-		Args  []*tinypkg.Var
-	}
-	var components []*componentItem
+	var componentBindings []*tinypkg.Binding
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
 
@@ -89,6 +84,12 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 		shape := x.Shape
 		sym := resolver.Symbol(here, shape)
 		switch x.Kind {
+		case resolve.KindIgnored: // e.g. context.Context
+			k := x.Shape.GetIdentity()
+			if _, ok := seen[k]; !ok {
+				seen[k] = true
+				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
+			}
 		case resolve.KindComponent:
 			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
 				if need.Name == x.Name && need.overrideDef != nil {
@@ -97,32 +98,41 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				}
 			}
 
-			var xargs []*tinypkg.Var
 			if v, ok := shape.(reflectshape.Function); ok {
 				for i, p := range v.Params.Values {
 					switch resolve.DetectKind(p) {
 					case resolve.KindIgnored: // e.g. context.Context
-						xname := v.Params.Keys[i]
-						sym := resolver.Symbol(here, p)
-						arg := &tinypkg.Var{Name: xname, Node: sym}
-
 						k := p.GetIdentity()
 						if _, ok := seen[k]; !ok {
 							seen[k] = true
-							ignored = append(ignored, arg)
+							xname := v.Params.Keys[i]
+							sym := resolver.Symbol(here, p)
+							ignored = append(ignored, &tinypkg.Var{Name: xname, Node: sym})
 						}
-						xargs = append(xargs, arg)
 					}
 				}
 			}
 
-			components = append(components, &componentItem{Shape: shape, Item: x, Args: xargs})
-		case resolve.KindIgnored: // e.g. context.Context
-			k := x.Shape.GetIdentity()
-			if _, ok := seen[k]; !ok {
-				seen[k] = true
-				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
+			sym := resolver.Symbol(here, shape)
+			factory, ok := sym.(*tinypkg.Func)
+			if !ok {
+				// func() <component>
+				factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
 			}
+
+			binding, err := tinypkg.NewBinding(x.Name, factory)
+			if err != nil {
+				return err
+			}
+
+			rt := x.Shape.GetReflectType()
+			methodName := rt.Name()
+			if len(tracker.seen[rt]) > 1 {
+				methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
+			}
+			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
+
+			componentBindings = append(componentBindings, binding)
 		default:
 			args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
 		}
@@ -145,28 +155,9 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 			// {
 			//   <component> = <provider>.<method>()
 			// }
-			if len(components) > 0 {
+			if len(componentBindings) > 0 {
 				indent := "\t"
-				for _, x := range components {
-					sym := resolver.Symbol(here, x.Shape)
-					factory, ok := sym.(*tinypkg.Func)
-					if !ok {
-						// func() <component>
-						factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
-					}
-
-					binding, err := tinypkg.NewBinding(x.Name, factory)
-					if err != nil {
-						return err
-					}
-
-					rt := x.Item.Shape.GetReflectType()
-					methodName := rt.Name()
-					if len(tracker.seen[rt]) > 1 {
-						methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
-					}
-					binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
-
+				for _, binding := range componentBindings {
 					if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
 						return err
 					}
