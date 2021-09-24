@@ -103,10 +103,6 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					case resolve.KindIgnored: // e.g. context.Context
 						xname := v.Params.Keys[i]
 						sym := resolver.Symbol(here, p)
-						if sym.String() == "context.Context" {
-							xname = "ctx"
-						}
-
 						arg := &tinypkg.Var{Name: xname, Node: sym}
 
 						k := p.GetIdentity()
