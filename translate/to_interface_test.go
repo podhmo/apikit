@@ -21,9 +21,10 @@ func ListUserWithError(db *DB) ([]User, error) { return nil, nil }
 func ListUserFromAnotherDB(anotherDb *DB) []User { return nil }
 
 func TestInterface(t *testing.T) {
-	main := tinypkg.NewPackage("main", "main")
-	pkg := tinypkg.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
 	resolver := resolve.NewResolver()
+
+	main := resolver.NewPackage("main", "main")
+	pkg := resolver.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
 
 	config := DefaultConfig()
 	config.Resolver = resolver
