@@ -98,7 +98,7 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 // TODO: support non-pointer zero value
 // TODO: name-check (when calling provider function)
 
-func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, indent string, returns []*Var) error {
+func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent string, returns []*Var) error {
 	if 3 < len(returns) {
 		return fmt.Errorf("sorry the maximum value of supported number-of-return-value is 3, but %s is passed, %w", returns, ErrUnexpectedExternalReturnType)
 	}

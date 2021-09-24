@@ -172,7 +172,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					}
 					binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
-					if err := binding.WriteWithCallbackAndError(w, here, indent, returns); err != nil {
+					if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
 						return err
 					}
 				}
