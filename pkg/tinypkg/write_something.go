@@ -93,7 +93,8 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 	return b, nil
 }
 
-// TODO: support not-pointer zero value
+// TODO: support non-pointer zero value
+// TODO: name-check (when calling provider function)
 
 func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, indent string, returns []*Var) error {
 	if 3 < len(returns) {
