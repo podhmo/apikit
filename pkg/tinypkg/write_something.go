@@ -52,8 +52,6 @@ func WriteInterface(w io.Writer, here *Package, name string, iface *Interface) e
 }
 
 type Binding struct {
-	Indent string
-
 	Name     string
 	Provider *Func
 
@@ -64,22 +62,53 @@ type Binding struct {
 var ErrUnexpectedReturnType = fmt.Errorf("unexpected-return-type")
 var ErrUnexpectedExternalReturnType = fmt.Errorf("unexpected-external-return-type")
 
+func NewBinding(name string, provider *Func) (*Binding, error) {
+	b := &Binding{Name: name, Provider: provider}
+	switch len(provider.Returns) {
+	case 1:
+		// noop
+	case 2:
+		if provider.Returns[1].Node.String() == "error" {
+			b.HasError = true
+		} else if _, ok := provider.Returns[1].Node.(*Func); ok {
+			// TODO: validation
+			b.HasCleanup = true
+		} else {
+			return nil, fmt.Errorf("invalid signature(2) %s, supported return type are (<T>, error) and (<T>, func(), %w", provider, ErrUnexpectedReturnType)
+		}
+	case 3:
+		if provider.Returns[2].Node.String() == "error" {
+			b.HasError = true
+		}
+		if _, ok := provider.Returns[1].Node.(*Func); ok {
+			// TODO: validation
+			b.HasCleanup = true
+		}
+		if !(b.HasError && b.HasCleanup) {
+			return nil, fmt.Errorf("invalid signature(3) %s, supported return type are (<T>, func(), error), %w", b.Provider, ErrUnexpectedReturnType)
+		}
+	default:
+		return nil, fmt.Errorf("invalid signature(N) %s, %w", provider, ErrUnexpectedReturnType)
+	}
+	return b, nil
+}
+
 // TODO: support not-pointer zero value
 
-func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, returns []*Var) error {
+func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, indent string, returns []*Var) error {
 	if 3 < len(returns) {
 		return fmt.Errorf("sorry the maximum value of supported number-of-return-value is 3, but %s is passed, %w", returns, ErrUnexpectedExternalReturnType)
 	}
 
-	fmt.Fprintf(w, "%svar %s %s\n", b.Indent, b.Name, ToRelativeTypeString(here, b.Provider.Returns[0].Node))
-	fmt.Fprintf(w, "%s{\n", b.Indent)
-	defer fmt.Fprintf(w, "%s}\n", b.Indent)
+	fmt.Fprintf(w, "%svar %s %s\n", indent, b.Name, ToRelativeTypeString(here, b.Provider.Returns[0].Node))
+	fmt.Fprintf(w, "%s{\n", indent)
+	defer fmt.Fprintf(w, "%s}\n", indent)
 	{
 		if b.HasCleanup {
-			fmt.Fprintf(w, "%s\tvar cleanup func()\n", b.Indent)
+			fmt.Fprintf(w, "%s\tvar cleanup func()\n", indent)
 		}
 		if b.HasError {
-			fmt.Fprintf(w, "%s\tvar err error\n", b.Indent)
+			fmt.Fprintf(w, "%s\tvar err error\n", indent)
 		}
 
 		var callRHS string
@@ -97,18 +126,18 @@ func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, returns 
 
 		switch len(b.Provider.Returns) {
 		case 1:
-			fmt.Fprintf(w, "%s\t%s = %s\n", b.Indent, b.Name, callRHS)
+			fmt.Fprintf(w, "%s\t%s = %s\n", indent, b.Name, callRHS)
 		case 2:
 			if b.HasError {
-				fmt.Fprintf(w, "%s\t%s, err = %s\n", b.Indent, b.Name, callRHS)
+				fmt.Fprintf(w, "%s\t%s, err = %s\n", indent, b.Name, callRHS)
 			} else if b.HasCleanup {
-				fmt.Fprintf(w, "%s\t%s, cleanup = %s\n", b.Indent, b.Name, callRHS)
+				fmt.Fprintf(w, "%s\t%s, cleanup = %s\n", indent, b.Name, callRHS)
 			} else {
 				return fmt.Errorf("invalid signature(2) %s, supported return type are (<T>, error) and (<T>, func(), %w", b.Provider, ErrUnexpectedReturnType)
 			}
 		case 3:
 			if b.HasError && b.HasCleanup {
-				fmt.Fprintf(w, "%s\t%s, cleanup, err = %s\n", b.Indent, b.Name, callRHS)
+				fmt.Fprintf(w, "%s\t%s, cleanup, err = %s\n", indent, b.Name, callRHS)
 			} else {
 				return fmt.Errorf("invalid signature(3) %s, supported return type are (<T>, func(), error), %w", b.Provider, ErrUnexpectedReturnType)
 			}
@@ -117,9 +146,9 @@ func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, returns 
 		}
 
 		if b.HasCleanup {
-			fmt.Fprintf(w, "%s\tif cleanup != nil {\n", b.Indent)
-			fmt.Fprintf(w, "%s\t\tdefer cleanup()\n", b.Indent)
-			fmt.Fprintf(w, "%s\t}\n", b.Indent)
+			fmt.Fprintf(w, "%s\tif cleanup != nil {\n", indent)
+			fmt.Fprintf(w, "%s\t\tdefer cleanup()\n", indent)
+			fmt.Fprintf(w, "%s\t}\n", indent)
 		}
 		if b.HasError { // TODO: support zero-value
 			var returnRHS string
@@ -133,9 +162,9 @@ func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, returns 
 				returnRHS = "return " + strings.Join(values[:len(returns)], ", ")
 			}
 
-			fmt.Fprintf(w, "%s\tif err != nil {\n", b.Indent)
-			fmt.Fprintf(w, "%s\t\t%s\n", b.Indent, returnRHS)
-			fmt.Fprintf(w, "%s\t}\n", b.Indent)
+			fmt.Fprintf(w, "%s\tif err != nil {\n", indent)
+			fmt.Fprintf(w, "%s\t\t%s\n", indent, returnRHS)
+			fmt.Fprintf(w, "%s\t}\n", indent)
 		}
 	}
 	return nil
