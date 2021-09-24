@@ -26,16 +26,6 @@ var (
 )
 
 func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error) {
-	if len(def.Args) < len(variableNames) {
-		varCandidates := make([]string, 0, len(def.Args))
-		for _, item := range def.Args {
-			varCandidates = append(varCandidates, item.Name)
-		}
-		return nil, fmt.Errorf("variable candidates are %v, but want variables are %v (in def %s): %w", varCandidates, variableNames, def, ErrMismatchNumberOfVariables)
-	}
-
-	sfn := def.Shape
-
 	vars := make([]PathVar, 0, len(variableNames))
 	idx := 0
 	for _, item := range def.Args {
@@ -49,6 +39,14 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 			nameAndRegex := strings.SplitN(argname, ":", 2)
 			argname = nameAndRegex[0]
 			regex = nameAndRegex[1]
+		}
+
+		if len(variableNames) <= idx {
+			got := make([]string, 0, len(vars))
+			for _, v := range vars {
+				got = append(got, v.Name)
+			}
+			return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 		}
 		if argname != variableNames[idx] {
 			continue
@@ -65,8 +63,8 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 		return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 	}
 	return &PathInfo{
-		Name:      sfn.Name,
-		Shape:     sfn,
+		Name:      def.Shape.Name,
+		Shape:     def.Shape,
 		Variables: vars,
 	}, nil
 }
