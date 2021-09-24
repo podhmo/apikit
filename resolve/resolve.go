@@ -19,13 +19,15 @@ type Resolver struct {
 }
 
 func NewResolver() *Resolver {
-	e := &reflectshape.Extractor{
+	lookup := arglist.NewLookup()
+	lookup.DisableDefaultName = true
+	extractor := &reflectshape.Extractor{
 		Seen:           map[reflect.Type]reflectshape.Shape{},
-		ArglistLookup:  arglist.NewLookup(),
+		ArglistLookup:  lookup,
 		RevisitArglist: true,
 	}
 	return &Resolver{
-		extractor:    e,
+		extractor:    extractor,
 		universe:     tinypkg.NewUniverse(),
 		symbolsCache: map[reflectshape.Identity][]*symbolCacheItem{},
 		defCache:     map[uintptr]*Def{},
