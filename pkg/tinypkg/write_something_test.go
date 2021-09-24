@@ -117,3 +117,51 @@ type Handler interface {
 		})
 	}
 }
+
+func TestWriteBinding(t *testing.T) {
+	main := NewPackage("main", "")
+
+	cases := []struct {
+		msg     string
+		here    *Package
+		binding *Binding
+		returns []*Var
+		want    string
+	}{
+		{
+			msg:  "provider-return-1--external-return-1",
+			here: main,
+			binding: &Binding{ // func(ctx context.Context) *DB { ... }
+				Name: "db",
+				Provider: main.NewFunc(
+					"NewDB",
+					[]*Var{{Name: "ctx", Node: NewPackage("context", "").NewSymbol("Context")}},
+					[]*Var{{Node: &Pointer{Lv: 1, V: main.NewSymbol("Foo")}}},
+				),
+			},
+			returns: []*Var{
+				{Node: &Pointer{Lv: 1, V: main.NewSymbol("Foo")}},
+			},
+			want: `
+var db *Foo
+{
+	db = NewDB(ctx)
+}
+`,
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.msg, func(t *testing.T) {
+			buf := new(strings.Builder)
+			if err := c.binding.WriteWithCallbackAndError(buf, c.here, c.returns); err != nil {
+				t.Fatalf("unexpected error %+v", err)
+			}
+
+			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
+				difftest.LogDiffGotStringAndWantString(t, got, want)
+			}
+		})
+	}
+}
