@@ -20,6 +20,7 @@ func writeComposed(
 	var args []*tinypkg.Var
 	var returns []*tinypkg.Var
 	symbols := map[reflectshape.Identity]*tinypkg.Symbol{}
+
 	for i, p := range providers {
 		k := p.Returns[0].Shape.GetIdentity()
 		symbols[k] = here.NewSymbol(fmt.Sprintf("v%d", i))
@@ -43,24 +44,37 @@ func writeComposed(
 		}
 		returns = f.Returns
 	}
-	return tinypkg.WriteFunc(w, name, &tinypkg.Func{Args: args, Returns: returns},
+	return tinypkg.WriteFunc(w, here, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
 			for i, p := range providers {
-				retK := p.Returns[0].Shape.GetIdentity()
-				lhs := symbols[retK] // TODO: handling, multiple values
-
-				args := make([]string, 0, len(p.Args))
-				for _, x := range p.Args {
-					k := x.Shape.GetIdentity()
-					v := symbols[k]
-					args = append(args, v.Name)
-				}
-				rhs := fmt.Sprintf("%s(%s)", tinypkg.ToRelativeTypeString(here, p.Symbol), strings.Join(args, ", "))
-
 				if i == len(providers)-1 {
+					args := make([]string, 0, len(p.Args))
+					for _, x := range p.Args {
+						k := x.Shape.GetIdentity()
+						v := symbols[k]
+						args = append(args, v.Name)
+					}
+					rhs := fmt.Sprintf("%s(%s)", tinypkg.ToRelativeTypeString(here, p.Symbol), strings.Join(args, ", "))
 					fmt.Fprintf(w, "\treturn %s\n", rhs)
-				} else {
-					fmt.Fprintf(w, "\t%s := %s\n", lhs, rhs)
+					break
+				}
+
+				retK := p.Returns[0].Shape.GetIdentity()
+				name := symbols[retK].Name
+
+				sym := resolver.Symbol(here, p.Shape)
+				factory, ok := sym.(*tinypkg.Func)
+				if !ok {
+					// func() <component>
+					factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
+				}
+				binding, err := tinypkg.NewBinding(name, factory)
+				if err != nil {
+					return fmt.Errorf("on provider %s, new binding: %w", p.Symbol, err)
+				}
+				indent := "\t"
+				if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
+					return fmt.Errorf("on provider %s, write binding: %w", p.Symbol, err)
 				}
 			}
 			return nil

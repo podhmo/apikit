@@ -15,8 +15,8 @@ type Event struct{}
 func NewMessage(phrase string) *Message {
 	return nil
 }
-func NewGreeter(m Message) *Greeter {
-	return nil
+func NewGreeter(m Message) (*Greeter, error) {
+	return nil, nil
 }
 func NewEvent(g Greeter) (*Event, error) {
 	return nil, nil
