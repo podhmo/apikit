@@ -10,10 +10,11 @@ import (
 
 func TestResolveSymbol(t *testing.T) {
 	resolver := NewResolver()
+	universe := resolver.universe
 	extractShape := resolver.extractor.Extract
 
-	pkg := resolver.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
-	main := resolver.NewPackage("main", "main")
+	pkg := universe.NewPackage(reflect.TypeOf(DB{}).PkgPath(), "")
+	main := universe.NewPackage("main", "main")
 
 	cases := []struct {
 		msg    string
@@ -118,7 +119,7 @@ func TestResolveSymbol(t *testing.T) {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			s := extractShape(c.input)
-			importedSymbol := ExtractSymbol(resolver, c.here, s)
+			importedSymbol := ExtractSymbol(universe, c.here, s)
 			if want, got := c.output, importedSymbol.String(); want != got {
 				t.Errorf("want:\n\t%q\nbut got:\n\t%q\n", want, got)
 			}
