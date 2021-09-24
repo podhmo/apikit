@@ -446,7 +446,7 @@ var db *DB
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			buf := new(strings.Builder)
-			err := c.binding.WriteWithCallbackAndError(buf, c.here, "", c.returns)
+			err := c.binding.WriteWithCleanupAndError(buf, c.here, "", c.returns)
 			if c.wantErr == nil {
 				if err != nil {
 					t.Fatalf("unexpected error: %+v", err)
