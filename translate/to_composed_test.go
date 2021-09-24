@@ -85,6 +85,31 @@ func InitializeEvent(phrase string) (*Event, error) {
 	return NewEvent(v1)
 }`,
 		},
+		{
+			msg:  "another-package--arrange-order",
+			here: main,
+			input: []interface{}{
+				NewEvent,
+				NewGreeter,
+				NewMessage,
+			},
+			want: `
+func InitializeEvent(phrase string) (*translate.Event, error) {
+	var v0 *translate.Message
+	{
+		v0 = NewMessage(phrase)
+	}
+	var v1 *translate.Greeter
+	{
+		var err error
+		v1, err = NewGreeter(m)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return translate.NewEvent(v1)
+}`,
+		},
 	}
 
 	for _, c := range cases {
