@@ -8,28 +8,28 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func ExtractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
+func ExtractSymbol(resolver *Resolver, here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	lv := s.GetLv()
 	if lv == 0 {
-		return extractSymbol(universe, here, s)
+		return extractSymbol(resolver, here, s)
 	}
-	return &tinypkg.Pointer{Lv: lv, V: extractSymbol(universe, here, s)}
+	return &tinypkg.Pointer{Lv: lv, V: extractSymbol(resolver, here, s)}
 }
 
-func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
+func extractSymbol(resolver *Resolver, here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	switch s := s.(type) {
 	case reflectshape.Primitive, reflectshape.Struct:
 		if s.GetPackage() == "" { // e.g. string, bool
 			return tinypkg.NewSymbol(s.GetName())
 		}
 
-		pkg := universe.NewPackage(s.GetPackage(), "")
+		pkg := resolver.NewPackage(s.GetPackage(), "")
 		sym := pkg.NewSymbol(s.GetName())
 		return here.Import(pkg).Lookup(sym)
 
 	case reflectshape.Interface:
 		name := s.GetName()
-		pkg := universe.NewPackage(s.GetPackage(), "")
+		pkg := resolver.NewPackage(s.GetPackage(), "")
 		if name != "" {
 			if s.GetPackage() == "" { // e.g. error
 				return tinypkg.NewSymbol(s.GetName())
@@ -42,7 +42,7 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 		methods := make([]*tinypkg.Func, len(s.Methods.Keys))
 		for i, methodName := range s.Methods.Keys {
 			m := s.Methods.Values[i]
-			sym := ExtractSymbol(universe, here, m)
+			sym := ExtractSymbol(resolver, here, m)
 			fn, ok := sym.(*tinypkg.Func)
 			if !ok {
 				panic(fmt.Sprintf("unexpected method members, %s: %T", methodName, sym))
@@ -56,11 +56,11 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 		name := s.GetName()
 		switch name {
 		case "map":
-			k := ExtractSymbol(universe, here, s.Args[0])
-			v := ExtractSymbol(universe, here, s.Args[1])
+			k := ExtractSymbol(resolver, here, s.Args[0])
+			v := ExtractSymbol(resolver, here, s.Args[1])
 			return &tinypkg.Map{K: k, V: v}
 		case "slice":
-			v := ExtractSymbol(universe, here, s.Args[0])
+			v := ExtractSymbol(resolver, here, s.Args[0])
 			return &tinypkg.Slice{V: v}
 		default:
 			panic(fmt.Sprintf("unsupported container shape %+v", s))
@@ -81,7 +81,7 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 				if !hasName {
 					name = ""
 				}
-				args = append(args, &tinypkg.Var{Name: name, Node: ExtractSymbol(universe, here, arg)})
+				args = append(args, &tinypkg.Var{Name: name, Node: ExtractSymbol(resolver, here, arg)})
 			}
 		}
 		returns := make([]*tinypkg.Var, 0, s.Returns.Len())
@@ -98,10 +98,10 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 				if !hasName {
 					name = ""
 				}
-				returns = append(returns, &tinypkg.Var{Name: name, Node: ExtractSymbol(universe, here, arg)})
+				returns = append(returns, &tinypkg.Var{Name: name, Node: ExtractSymbol(resolver, here, arg)})
 			}
 		}
-		pkg := universe.NewPackage(s.GetPackage(), "")
+		pkg := resolver.NewPackage(s.GetPackage(), "")
 		return &tinypkg.Func{
 			Name:    s.GetName(),
 			Package: pkg,
