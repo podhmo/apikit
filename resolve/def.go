@@ -24,7 +24,7 @@ type Item struct {
 	Shape reflectshape.Shape
 }
 
-func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, fn interface{}) *Def {
+func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, fn interface{}) (*Def, error) {
 	sfn := extractor.Extract(fn).(reflectshape.Function)
 	pkg := universe.NewPackage(sfn.Package, "")
 	args := make([]Item, 0, len(sfn.Params.Keys))
@@ -49,12 +49,16 @@ func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, f
 		})
 	}
 
-	return &Def{
+	def := &Def{
 		Symbol:  pkg.NewSymbol(sfn.Name),
 		Shape:   sfn,
 		Args:    args,
 		Returns: returns,
 	}
+	if err := bindReturnsInfo(def); err != nil {
+		return def, fmt.Errorf("bind return info is failed: %w", err)
+	}
+	return def, nil
 }
 
 var ErrUnexpectedReturnType = fmt.Errorf("unexpected-return-type")
@@ -86,14 +90,14 @@ func bindReturnsInfo(def *Def) error {
 			// TODO: validation
 			return nil
 		} else {
-			return fmt.Errorf("returns[2] signature invalid (%s): %w", def.Symbol, ErrUnexpectedReturnType)
+			return fmt.Errorf("returns[2] signature invalid (%s): %w", def.Shape, ErrUnexpectedReturnType)
 		}
 	case 3: // (<T>, func(), error)
 		lastValueType := returns[2].Shape.GetReflectType()
 		if lastValueType == reflectErrorTypeValue { // (<T>, error)
 			def.HasError = true
 		} else {
-			return fmt.Errorf("returns[3] signature invalid (%s): %w", def.Symbol, ErrUnexpectedReturnType)
+			return fmt.Errorf("returns[3] signature invalid (%s): %w", def.Shape, ErrUnexpectedReturnType)
 		}
 
 		sndValueTypeKind := returns[1].Shape.GetReflectKind()
@@ -101,11 +105,11 @@ func bindReturnsInfo(def *Def) error {
 			def.HasCleanup = true
 			// TODO: validation
 		} else {
-			return fmt.Errorf("returns[3] signature invalid (%s): %w", def.Symbol, ErrUnexpectedReturnType)
+			return fmt.Errorf("returns[3] signature invalid (%s): %w", def.Shape, ErrUnexpectedReturnType)
 		}
 		return nil
 	default:
-		return fmt.Errorf("returns[%d] signature invalid (%s): %w", len(returns), def.Symbol, ErrUnexpectedReturnType)
+		return fmt.Errorf("returns[N] signature invalid (%s): %w", def.Shape, ErrUnexpectedReturnType)
 	}
 }
 

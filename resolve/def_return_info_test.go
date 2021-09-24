@@ -7,6 +7,8 @@ import (
 
 func TestBindReturnInfo(t *testing.T) {
 	resolver := NewResolver()
+	resolver.silent = true
+
 	cases := []struct {
 		msg string
 		fn  interface{}

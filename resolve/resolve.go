@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"log"
 	"reflect"
 	"sync"
 
@@ -16,6 +17,8 @@ type Resolver struct {
 	mu           sync.RWMutex
 	symbolsCache map[reflectshape.Identity][]*symbolCacheItem
 	defCache     map[uintptr]*Def
+
+	silent bool
 }
 
 func NewResolver() *Resolver {
@@ -42,7 +45,10 @@ func (r *Resolver) Def(fn interface{}) *Def {
 		return cached
 	}
 
-	def := ExtractDef(r.universe, r.extractor, fn)
+	def, err := ExtractDef(r.universe, r.extractor, fn)
+	if err != nil && !r.silent {
+		log.Printf("hmm... %+v", err)
+	}
 	r.mu.Lock()
 	r.defCache[k] = def
 	r.mu.Unlock()
