@@ -15,9 +15,9 @@ type PathVar struct {
 }
 
 type PathInfo struct {
-	Name      string
-	Shape     reflectshape.Function
-	Variables []PathVar
+	Def      *resolve.Def
+	VarNames []string
+	Vars     map[string]*PathVar
 }
 
 var (
@@ -26,7 +26,7 @@ var (
 )
 
 func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error) {
-	vars := make([]PathVar, 0, len(variableNames))
+	vars := map[string]*PathVar{}
 	idx := 0
 	for _, item := range def.Args {
 		if item.Kind != resolve.KindPrimitive {
@@ -51,7 +51,7 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 		if argname != variableNames[idx] {
 			continue
 		}
-		vars = append(vars, PathVar{Name: argname, Regex: regex, Shape: item.Shape})
+		vars[argname] = &PathVar{Name: argname, Regex: regex, Shape: item.Shape}
 		idx++
 	}
 
@@ -63,8 +63,8 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 		return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 	}
 	return &PathInfo{
-		Name:      def.Shape.Name,
-		Shape:     def.Shape,
-		Variables: vars,
+		Def:      def,
+		VarNames: variableNames,
+		Vars:     vars,
 	}, nil
 }

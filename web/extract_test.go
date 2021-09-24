@@ -67,12 +67,13 @@ func TestExtractPathInfo(t *testing.T) {
 				return
 			}
 
-			if want, got := c.wantName, got.Name; want != got {
+			if want, got := c.wantName, got.Def.Name; want != got {
 				t.Errorf("want name\n\t%q\nbut got\n%q", want, got)
 			}
 
 			var gotArgTypes []string
-			for _, v := range got.Variables {
+			for _, name := range got.VarNames {
+				v := got.Vars[name]
 				gotArgTypes = append(gotArgTypes, v.Shape.GetName())
 			}
 			if want, got := c.wantArgTypes, gotArgTypes; !reflect.DeepEqual(want, got) {
