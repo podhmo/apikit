@@ -32,6 +32,10 @@ func NewResolver() *Resolver {
 	}
 }
 
+func (r *Resolver) NewPackage(path, name string) *tinypkg.Package {
+	return r.universe.NewPackage(path, name)
+}
+
 func (r *Resolver) Def(fn interface{}) *Def {
 	r.mu.RLock()
 	k := reflect.ValueOf(fn).Pointer()
@@ -69,7 +73,7 @@ func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.N
 			}
 		}
 	}
-	sym := ExtractSymbol(here, s)
+	sym := ExtractSymbol(r.universe, here, s)
 
 	r.mu.Lock()
 	r.symbolsCache[k] = append(cached, &symbolCacheItem{
