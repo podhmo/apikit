@@ -12,10 +12,10 @@ import (
 
 func TestRouting(t *testing.T) {
 	r := web.NewRouter()
-	r.Method("GET", "/articles/{articleId}", "get article")
+	r.Get("/articles/{articleId}", "get article")
 	r.Group("/articles/{articleId}", func(r *web.Router) {
-		r.Method("GET", "/comments", "list comments")
-		r.Method("GET", "/comments/{commentId}/", "get comment")
+		r.Get("/comments", "list comments")
+		r.Get("/comments/{commentId}/", "get comment")
 	})
 
 	var paths []string

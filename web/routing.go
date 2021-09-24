@@ -45,3 +45,31 @@ func (r *Router) Group(pattern string, use func(*Router)) *Router {
 	use(child)
 	return child
 }
+
+func (r *Router) Connect(pattern string, fn T) *Node {
+	return r.Method("CONNECT", pattern, fn)
+}
+func (r *Router) Delete(pattern string, fn T) *Node {
+	return r.Method("DELETE", pattern, fn)
+}
+func (r *Router) Get(pattern string, fn T) *Node {
+	return r.Method("GET", pattern, fn)
+}
+func (r *Router) Head(pattern string, fn T) *Node {
+	return r.Method("HEAD", pattern, fn)
+}
+func (r *Router) Options(pattern string, fn T) *Node {
+	return r.Method("OPTIONS", pattern, fn)
+}
+func (r *Router) Patch(pattern string, fn T) *Node {
+	return r.Method("PATCH", pattern, fn)
+}
+func (r *Router) Post(pattern string, fn T) *Node {
+	return r.Method("POST", pattern, fn)
+}
+func (r *Router) Put(pattern string, fn T) *Node {
+	return r.Method("PUT", pattern, fn)
+}
+func (r *Router) Trace(pattern string, fn T) *Node {
+	return r.Method("TRACE", pattern, fn)
+}
