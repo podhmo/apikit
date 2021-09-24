@@ -86,9 +86,10 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 	}
 	for _, x := range def.Args {
 		argNames = append(argNames, x.Name)
-
-		if x.Kind == resolve.KindComponent {
-			shape := x.Shape
+		shape := x.Shape
+		sym := resolver.Symbol(here, shape)
+		switch x.Kind {
+		case resolve.KindComponent:
 			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
 				if need.Name == x.Name && need.overrideDef != nil {
 					shape = need.overrideDef.Shape
@@ -114,21 +115,19 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 					}
 				}
 			}
-			components = append(components, &componentItem{Shape: shape, Item: x, Args: xargs})
-			continue
-		}
 
-		sym := resolver.Symbol(here, x.Shape)
-		if x.Kind == resolve.KindIgnored { // e.g. context.Context
+			components = append(components, &componentItem{Shape: shape, Item: x, Args: xargs})
+		case resolve.KindIgnored: // e.g. context.Context
 			k := x.Shape.GetIdentity()
-			if _, ok := seen[k]; ok {
-				continue
+			if _, ok := seen[k]; !ok {
+				seen[k] = true
+				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			}
-			ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
-		} else {
+		default:
 			args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
 		}
 	}
+
 	if len(ignored) > 0 {
 		args = append(ignored, args...)
 	}
