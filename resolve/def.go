@@ -5,6 +5,19 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
+type Def struct {
+	*tinypkg.Symbol
+	Shape   reflectshape.Function
+	Args    []Item
+	Returns []Item
+}
+
+type Item struct {
+	Kind  Kind
+	Name  string
+	Shape reflectshape.Shape
+}
+
 func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, fn interface{}) *Def {
 	sfn := extractor.Extract(fn).(reflectshape.Function)
 	pkg := universe.NewPackage(sfn.Package, "")
@@ -36,19 +49,6 @@ func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, f
 		Args:    args,
 		Returns: returns,
 	}
-}
-
-type Def struct {
-	*tinypkg.Symbol
-	Shape   reflectshape.Function
-	Args    []Item
-	Returns []Item
-}
-
-type Item struct {
-	Kind  Kind
-	Name  string
-	Shape reflectshape.Shape
 }
 
 type Kind string
