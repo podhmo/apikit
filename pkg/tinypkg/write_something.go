@@ -52,8 +52,10 @@ func WriteInterface(w io.Writer, here *Package, name string, iface *Interface) e
 }
 
 type Binding struct {
-	Name     string
-	Provider *Func
+	Name string
+
+	Provider      *Func
+	ProviderAlias string
 
 	HasError   bool
 	HasCleanup bool
@@ -119,10 +121,11 @@ func (b *Binding) WriteWithCallbackAndError(w io.Writer, here *Package, indent s
 			for _, x := range provider.Args {
 				args = append(args, x.Name)
 			}
-			callRHS = fmt.Sprintf("%s(%s)", provider.Name, strings.Join(args, ", "))
-			if provider.Recv != "" {
-				callRHS = fmt.Sprintf("%s.%s", provider.Recv, callRHS)
+			providerName := provider.Name
+			if b.ProviderAlias != "" {
+				providerName = b.ProviderAlias
 			}
+			callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
 		}
 
 		switch len(b.Provider.Returns) {

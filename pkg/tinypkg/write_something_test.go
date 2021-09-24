@@ -163,6 +163,27 @@ var db *DB
 `,
 		},
 		{
+			msg:  "ok-provider-return-1--external-return-1--provider-alias",
+			here: main,
+			binding: &Binding{
+				Name: "db",
+				// func(ctx context.Context) *DB { ... }
+				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
+					Returns: []*Var{newDB.Returns[0]},
+				},
+				ProviderAlias: "MustNewDB",
+			},
+			returns: []*Var{
+				{Node: &Pointer{Lv: 1, V: main.NewSymbol("Foo")}},
+			},
+			want: `
+var db *DB
+{
+	db = MustNewDB(ctx)
+}
+`,
+		},
+		{
 			msg:  "ok-provider-return-2-with-error--external-return-1",
 			here: main,
 			binding: &Binding{
