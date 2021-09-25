@@ -36,7 +36,7 @@ func TestInterface(t *testing.T) {
 		want  string
 
 		wantError     error
-		modifyTracker func(t *Tracker)
+		modifyTracker func(t *resolve.Tracker)
 	}{
 		{
 			msg:   "1 component, another package",
@@ -90,7 +90,7 @@ type Component interface {
 			msg:   "with override, another package",
 			here:  main,
 			input: []interface{}{ListUser},
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(ListUser).In(0)
 				def := resolver.Def(func() (*DB, error) { return nil, nil })
 				tracker.Override(rt, "db", def)
@@ -107,7 +107,7 @@ type Component interface {
 			msg:   "with override, with context",
 			here:  main,
 			input: []interface{}{ListUser},
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(ListUser).In(0)
 				def := resolver.Def(func(ctx context.Context) (*DB, error) { return nil, nil })
 				tracker.Override(rt, "db", def)

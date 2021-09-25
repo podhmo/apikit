@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	reflectshape "github.com/podhmo/reflect-shape"
@@ -12,17 +13,17 @@ import (
 
 // TODO: omit provider arguments
 
-func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *Code {
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *code.Code {
 	def := t.Resolver.Def(fn)
 	if name == "" {
 		name = def.Name
 	}
 	t.Tracker.Track(def)
-	return &Code{
-		Name:     name,
-		Here:     here,
-		priority: prioritySecond,
-		Config:   t.Config,
+	return &code.Code{
+		Name: name,
+		Here: here,
+		// priority: code.PrioritySecond,
+		Config: t.Config,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			if provider == nil {
 				provider = t.providerVar
@@ -38,19 +39,11 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 	}
 }
 
-func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
 	collector := tinypkg.NewImportCollector(here)
 	use := collector.Collect
 	for _, x := range def.Args {
-		shape := x.Shape
-		if x.Kind == resolve.KindComponent {
-			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.overrideDef != nil {
-					shape = need.overrideDef.Shape
-					break
-				}
-			}
-		}
+		shape := tracker.ExtractComponentFactoryShape(x)
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return nil, err
@@ -68,7 +61,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 	return collector.Imports, nil
 }
 
-func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
+func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
 	var componentBindings []*tinypkg.Binding
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
@@ -91,12 +84,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			}
 		case resolve.KindComponent:
-			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.overrideDef != nil {
-					shape = need.overrideDef.Shape
-					break
-				}
-			}
+			shape := tracker.ExtractComponentFactoryShape(x)
 
 			if v, ok := shape.(reflectshape.Function); ok {
 				for i, p := range v.Params.Values {
@@ -125,11 +113,8 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				return err
 			}
 
-			rt := x.Shape.GetReflectType()
-			methodName := rt.Name()
-			if len(tracker.seen[rt]) > 1 {
-				methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
-			}
+			rt := x.Shape.GetReflectType() // not shape.GetRefectType()
+			methodName := tracker.ExtractMethodName(rt, x.Name)
 			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
 			componentBindings = append(componentBindings, binding)

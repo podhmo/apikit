@@ -1,4 +1,4 @@
-package translate
+package resolve
 
 import (
 	"fmt"
@@ -7,14 +7,14 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
+	reflectshape "github.com/podhmo/reflect-shape"
 )
 
 type Need struct {
 	rt          reflect.Type
-	overrideDef *resolve.Def
+	OverrideDef *Def
 
-	*resolve.Item
+	*Item
 }
 
 type Tracker struct {
@@ -31,7 +31,7 @@ func NewTracker() *Tracker {
 	}
 }
 
-func (t *Tracker) Track(def *resolve.Def) {
+func (t *Tracker) Track(def *Def) {
 	path := def.Shape.GetFullName()
 	if _, ok := t.visitedDef[path]; ok {
 		return
@@ -41,11 +41,11 @@ toplevel:
 	for _, arg := range def.Args {
 		arg := arg
 		switch arg.Kind {
-		case resolve.KindIgnored, resolve.KindUnsupported:
+		case KindIgnored, KindUnsupported:
 			continue
-		case resolve.KindData:
+		case KindData:
 			continue
-		case resolve.KindComponent:
+		case KindComponent:
 			k := arg.Shape.GetReflectType()
 			needs := t.seen[k]
 
@@ -60,7 +60,7 @@ toplevel:
 			}
 			t.seen[k] = append(t.seen[k], need)
 			t.Needs = append(t.Needs, need)
-		case resolve.KindPrimitive:
+		case KindPrimitive:
 			continue
 		default:
 			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))
@@ -68,7 +68,7 @@ toplevel:
 	}
 }
 
-func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev *resolve.Def) {
+func (t *Tracker) Override(rt reflect.Type, name string, def *Def) (prev *Def) {
 	for {
 		if rt.Kind() != reflect.Ptr {
 			break
@@ -90,8 +90,8 @@ func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev
 		} else {
 			target = &Need{
 				rt: k,
-				Item: &resolve.Item{
-					Kind:  resolve.KindComponent,
+				Item: &Item{
+					Kind:  KindComponent,
 					Name:  name,
 					Shape: def.Shape.Returns.Values[0], // xxx:
 				},
@@ -100,24 +100,19 @@ func (t *Tracker) Override(rt reflect.Type, name string, def *resolve.Def) (prev
 			t.Needs = append(t.Needs, target)
 		}
 	}
-	prev = target.overrideDef
-	target.overrideDef = def
+	prev = target.OverrideDef
+	target.OverrideDef = def
 	return prev
 }
 
-func (t *Tracker) extractInterface(here *tinypkg.Package, resolver *resolve.Resolver, name string) *tinypkg.Interface {
+func (t *Tracker) ExtractInterface(here *tinypkg.Package, resolver *Resolver, name string) *tinypkg.Interface {
 	usedNames := map[string]bool{}
 	methods := make([]*tinypkg.Func, 0, len(t.Needs))
 	for _, need := range t.Needs {
-		k := need.rt
-
-		methodName := need.rt.Name()
-		if len(t.seen[k]) > 1 {
-			methodName = strings.ToUpper(string(need.Name[0])) + need.Name[1:] // TODO: use GoName
-		}
+		methodName := t.ExtractMethodName(need.rt, need.Name)
 		shape := need.Shape
-		if need.overrideDef != nil {
-			shape = need.overrideDef.Shape
+		if need.OverrideDef != nil {
+			shape = need.OverrideDef.Shape
 		}
 
 		sym := resolver.Symbol(here, shape)
@@ -134,4 +129,23 @@ func (t *Tracker) extractInterface(here *tinypkg.Package, resolver *resolve.Reso
 		methods = append(methods, m)
 	}
 	return here.NewInterface(name, methods)
+}
+
+func (t *Tracker) ExtractMethodName(rt reflect.Type, name string) string {
+	methodName := rt.Name()
+	if len(t.seen[rt]) > 1 {
+		methodName = strings.ToUpper(string(name[0])) + name[1:] // TODO: use GoName
+	}
+	return methodName
+}
+
+func (t *Tracker) ExtractComponentFactoryShape(x Item) reflectshape.Shape {
+	shape := x.Shape
+	for _, need := range t.seen[x.Shape.GetReflectType()] {
+		if need.Name == x.Name && need.OverrideDef != nil {
+			shape = need.OverrideDef.Shape
+			break
+		}
+	}
+	return shape
 }
