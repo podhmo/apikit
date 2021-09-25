@@ -43,15 +43,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 	collector := tinypkg.NewImportCollector(here)
 	use := collector.Collect
 	for _, x := range def.Args {
-		shape := x.Shape
-		if x.Kind == resolve.KindComponent {
-			for _, need := range tracker.Seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.OverrideDef != nil {
-					shape = need.OverrideDef.Shape
-					break
-				}
-			}
-		}
+		shape := tracker.ExtractComponentFactoryShape(x)
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return nil, err
@@ -92,12 +84,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			}
 		case resolve.KindComponent:
-			for _, need := range tracker.Seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.OverrideDef != nil {
-					shape = need.OverrideDef.Shape
-					break
-				}
-			}
+			shape := tracker.ExtractComponentFactoryShape(x)
 
 			if v, ok := shape.(reflectshape.Function); ok {
 				for i, p := range v.Params.Values {
@@ -126,11 +113,8 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				return err
 			}
 
-			rt := x.Shape.GetReflectType()
-			methodName := rt.Name()
-			if len(tracker.Seen[rt]) > 1 {
-				methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
-			}
+			rt := x.Shape.GetReflectType() // not shape.GetRefectType()
+			methodName := tracker.ExtractMethodName(rt, x.Name)
 			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
 			componentBindings = append(componentBindings, binding)
