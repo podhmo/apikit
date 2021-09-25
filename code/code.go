@@ -1,4 +1,4 @@
-package translate
+package code
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ type Code struct {
 	Depends  []tinypkg.Node
 }
 
-func (c *Code) Priority() int {
+func (c *Code) Priority(priority *int) int {
 	return c.priority
 }
 

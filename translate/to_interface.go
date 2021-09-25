@@ -4,17 +4,18 @@ import (
 	"io"
 	"strings"
 
+	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 )
 
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.Code {
 	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
-	return &Code{
-		Name:     name,
-		Here:     here,
-		priority: priorityFirst,
-		Config:   t.Config,
+	return &code.Code{
+		Name: name,
+		Here: here,
+		// priority: code.PriorityFirst,
+		Config: t.Config,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			return collectImportsForInterface(here, t.Resolver, t.Tracker)
 		},

@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	reflectshape "github.com/podhmo/reflect-shape"
@@ -12,17 +13,17 @@ import (
 
 // TODO: omit provider arguments
 
-func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *Code {
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *code.Code {
 	def := t.Resolver.Def(fn)
 	if name == "" {
 		name = def.Name
 	}
 	t.Tracker.Track(def)
-	return &Code{
-		Name:     name,
-		Here:     here,
-		priority: prioritySecond,
-		Config:   t.Config,
+	return &code.Code{
+		Name: name,
+		Here: here,
+		// priority: code.PrioritySecond,
+		Config: t.Config,
 		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 			if provider == nil {
 				provider = t.providerVar
