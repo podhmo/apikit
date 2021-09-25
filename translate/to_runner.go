@@ -39,15 +39,15 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 	}
 }
 
-func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
 	collector := tinypkg.NewImportCollector(here)
 	use := collector.Collect
 	for _, x := range def.Args {
 		shape := x.Shape
 		if x.Kind == resolve.KindComponent {
-			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.overrideDef != nil {
-					shape = need.overrideDef.Shape
+			for _, need := range tracker.Seen[x.Shape.GetReflectType()] {
+				if need.Name == x.Name && need.OverrideDef != nil {
+					shape = need.OverrideDef.Shape
 					break
 				}
 			}
@@ -69,7 +69,7 @@ func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, 
 	return collector.Imports, nil
 }
 
-func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
+func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {
 	var componentBindings []*tinypkg.Binding
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
@@ -92,9 +92,9 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			}
 		case resolve.KindComponent:
-			for _, need := range tracker.seen[x.Shape.GetReflectType()] {
-				if need.Name == x.Name && need.overrideDef != nil {
-					shape = need.overrideDef.Shape
+			for _, need := range tracker.Seen[x.Shape.GetReflectType()] {
+				if need.Name == x.Name && need.OverrideDef != nil {
+					shape = need.OverrideDef.Shape
 					break
 				}
 			}
@@ -128,7 +128,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 
 			rt := x.Shape.GetReflectType()
 			methodName := rt.Name()
-			if len(tracker.seen[rt]) > 1 {
+			if len(tracker.Seen[rt]) > 1 {
 				methodName = strings.ToUpper(string(x.Name[0])) + x.Name[1:] // TODO: use GoName
 			}
 			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)

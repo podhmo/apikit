@@ -13,14 +13,14 @@ var ErrNoImports = code.ErrNoImports
 var DefaultConfig = code.DefaultConfig
 
 type Translator struct {
-	Tracker     *Tracker
+	Tracker     *resolve.Tracker
 	Resolver    *resolve.Resolver
 	Config      *code.Config
 	providerVar *tinypkg.Var // TODO: from config
 }
 
 func NewTranslator(config *code.Config) *Translator {
-	tracker := NewTracker()
+	tracker := resolve.NewTracker()
 	return &Translator{
 		Tracker:  tracker,
 		Resolver: config.Resolver,

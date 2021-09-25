@@ -25,13 +25,13 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *c
 	}
 }
 
-func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker) ([]*tinypkg.ImportedPackage, error) {
+func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker) ([]*tinypkg.ImportedPackage, error) {
 	collector := tinypkg.NewImportCollector(here)
 	use := collector.Collect
 	for _, need := range t.Needs {
 		shape := need.Shape
-		if need.overrideDef != nil {
-			shape = need.overrideDef.Shape
+		if need.OverrideDef != nil {
+			shape = need.OverrideDef.Shape
 		}
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
@@ -41,7 +41,7 @@ func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolve
 	return collector.Imports, nil
 }
 
-func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *Tracker, name string) error {
-	iface := t.extractInterface(here, resolver, name)
+func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {
+	iface := t.ExtractInterface(here, resolver, name)
 	return tinypkg.WriteInterface(w, here, name, iface)
 }

@@ -45,7 +45,7 @@ func TestWriteRunner(t *testing.T) {
 		want  string
 
 		wantError     error
-		modifyTracker func(t *Tracker)
+		modifyTracker func(t *resolve.Tracker)
 	}{
 		{
 			name:  "RunAddTodo",
@@ -107,7 +107,7 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 			name:  "RunAddTodoWithOverride1", // func()<T, error>
 			input: AddTodo,
 			here:  main,
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(AddTodo).In(0)
 				def := resolver.Def(func() (*Session, error) { return nil, nil })
 				tracker.Override(rt, "session", def)
@@ -133,7 +133,7 @@ func RunAddTodoWithOverride1(provider component.Provider, title string, done boo
 			name:  "RunAddTodoWithOverride2", // func()(<T>, func())
 			input: AddTodo,
 			here:  main,
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(AddTodo).In(0)
 				def := resolver.Def(func() (*Session, func()) { return nil, nil })
 				tracker.Override(rt, "session", def)
@@ -159,7 +159,7 @@ func RunAddTodoWithOverride2(provider component.Provider, title string, done boo
 			name:  "RunAddTodoWithOverride3", // func()(<T>, func(), error)
 			input: AddTodo,
 			here:  main,
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(AddTodo).In(0)
 				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
@@ -189,7 +189,7 @@ func RunAddTodoWithOverride3(provider component.Provider, title string, done boo
 			name:  "RunMustAddTodoWithOverride3", // func()(<T>, func(), error)
 			input: MustAddTodo,
 			here:  main,
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(AddTodo).In(0)
 				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
@@ -219,7 +219,7 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 			name:  "RunAddTodoWithOverride4", // func(context.Context)(<T>, func(), error)
 			input: AddTodo,
 			here:  main,
-			modifyTracker: func(tracker *Tracker) {
+			modifyTracker: func(tracker *resolve.Tracker) {
 				rt := reflect.TypeOf(AddTodo).In(0)
 				def := resolver.Def(func(ctx context.Context) (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
@@ -254,7 +254,7 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 		// 	name:  "ngProviderPosision",
 		// 	input: MustAddTodo,
 		// 	here:  main,
-		// 	modifyTracker: func(tracker *Tracker) {
+		// 	modifyTracker: func(tracker *resolve.Tracker) {
 		// 		rt := reflect.TypeOf(AddTodo).In(0)
 		// 		def := resolver.Def(func() (*Session, error, func()) { return nil, nil, nil }) // not func()(<T>, func(), error)
 		// 		tracker.Override(rt, "session", def)
@@ -264,7 +264,7 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 		// 	name:  "ngProviderType",
 		// 	input: MustAddTodo,
 		// 	here:  main,
-		// 	modifyTracker: func(tracker *Tracker) {
+		// 	modifyTracker: func(tracker *resolve.Tracker) {
 		// 		rt := reflect.TypeOf(AddTodo).In(0)
 		// 		def := resolver.Def(func() (int, func(), error) { return 0, nil, nil }) // not *Session
 		// 		tracker.Override(rt, "session", def)
