@@ -2,6 +2,8 @@ package resolve
 
 import (
 	"reflect"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
@@ -33,6 +35,26 @@ func NewResolver() *Resolver {
 }
 
 func (r *Resolver) NewPackage(path, name string) *tinypkg.Package {
+	return r.universe.NewPackage(path, name)
+}
+
+func (r *Resolver) NewPackageFromInterface(ob interface{}, name string) *tinypkg.Package {
+	rv := reflect.TypeOf(ob)
+	for {
+		if rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
+		break
+	}
+	path := rv.PkgPath()
+	if path != "" {
+		return r.universe.NewPackage(path, name)
+	}
+
+	// maybe function?
+	rfunc := runtime.FuncForPC(reflect.ValueOf(ob).Pointer())
+	parts := strings.Split(rfunc.Name(), ".") // method is not supported
+	path = strings.Join(parts[:len(parts)-1], ".")
 	return r.universe.NewPackage(path, name)
 }
 
