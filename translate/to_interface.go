@@ -36,12 +36,15 @@ func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolv
 	}
 
 	var methods []*tinypkg.Func
-	methodMap := s.Methods()
-	for _, m := range methodMap.Values {
-		m.Params.Keys = make([]string, len(m.Params.Keys)-1)
-		m.Params.Values = m.Params.Values[1:]
+	fnset := s.Methods()
+	for _, name := range fnset.Names {
+		fn := fnset.Functions[name]
+		
+		// omit recv info
+		fn.Params.Keys = make([]string, len(fn.Params.Keys)-1)
+		fn.Params.Values = fn.Params.Values[1:]
 
-		sym := resolver.Symbol(here, m) // todo: (method support @reflect-shape )
+		sym := resolver.Symbol(here, fn) // todo: (method support @reflect-shape )
 		f, ok := sym.(*tinypkg.Func)
 		if !ok {
 			return fmt.Errorf("%s's %s is not function", shape, sym)
