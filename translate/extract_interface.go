@@ -10,7 +10,7 @@ import (
 	"github.com/podhmo/apikit/resolve"
 )
 
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
+func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
 	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
 	c := &code.Code{
 		Name: name,
@@ -18,16 +18,16 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *c
 		// priority: code.PriorityFirst,
 		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
-			return collectImportsForInterface(collector, t.Resolver, t.Tracker)
+			return collectImportsForProviderInterface(collector, t.Resolver, t.Tracker)
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-			return writeInterface(w, here, t.Resolver, t.Tracker, name)
+			return writeProviderInterface(w, here, t.Resolver, t.Tracker, name)
 		},
 	}
 	return &code.CodeEmitter{Code: c}
 }
 
-func collectImportsForInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {
+func collectImportsForProviderInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {
 	here := collector.Here
 	use := collector.Collect
 	for _, need := range t.Needs {
@@ -43,7 +43,7 @@ func collectImportsForInterface(collector *tinypkg.ImportCollector, resolver *re
 	return nil
 }
 
-func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {
+func writeProviderInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {
 	iface := t.ExtractInterface(here, resolver, name)
 	return tinypkg.WriteInterface(w, here, name, iface)
 }

@@ -30,7 +30,7 @@ func run() (err error) {
 
 	{
 		here := rootpkg.Relative("component", "")
-		code := translator.TranslateToInterface(here, "Component")
+		code := translator.ExtractProviderInterface(here, "Component")
 		emitter.Register(here, "component.go", code)
 	}
 	{

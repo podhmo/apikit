@@ -8,7 +8,7 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
+func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
 	c := &code.Code{
 		Name: name,
 		Here: here,
