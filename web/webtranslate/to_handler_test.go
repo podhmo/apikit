@@ -29,8 +29,10 @@ func TestWriteHandlerFUnc(t *testing.T) {
 
 	config := DefaultConfig()
 	resolver := config.Resolver
+	tracker := resolve.NewTracker()
 
 	def := resolver.Def(node.Node.Value)
+	tracker.Track(def)
 	pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
 	if err != nil {
 		t.Fatalf("unexpected error, extract info, %+v", err)
@@ -40,14 +42,12 @@ func TestWriteHandlerFUnc(t *testing.T) {
 	runtime := resolver.NewPackage("m/runtime", "")
 
 	var buf strings.Builder
-	providerFunc := &tinypkg.Var{
-		Name: "getProvider",
-		Node: main.NewFunc(
-			"getProvider",
-			[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: resolve.NewResolver().NewPackage("net/http", "").NewSymbol("Request")}}},
-			[]*tinypkg.Var{{Node: main.NewSymbol("Provider")}},
-		)}
-	if err := WriteHandlerFunc(&buf, main, "", resolver, pathinfo, runtime, providerFunc); err != nil {
+	providerFunc := main.NewFunc(
+		"getProvider",
+		[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: resolve.NewResolver().NewPackage("net/http", "").NewSymbol("Request")}}},
+		[]*tinypkg.Var{{Node: main.NewSymbol("Provider")}},
+	)
+	if err := WriteHandlerFunc(&buf, main, resolver, tracker, pathinfo, runtime, providerFunc, ""); err != nil {
 		t.Errorf("unexpected error %+v", err)
 	}
 	fmt.Println(buf.String())
