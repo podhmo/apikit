@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
 )
@@ -12,13 +13,13 @@ import (
 type Article struct{}
 type DB struct{}
 
-func listArticle(db *DB) ([]*Article, error) {
+func ListArticle(db *DB) ([]*Article, error) {
 	return nil, nil
 }
 
 func TestWriteHandlerFUnc(t *testing.T) {
 	r := web.NewRouter()
-	r.Get("/articles/", listArticle)
+	r.Get("/articles/", ListArticle)
 
 	var node *web.WalkerNode
 	web.Walk(r, func(n *web.WalkerNode) error {
@@ -26,7 +27,9 @@ func TestWriteHandlerFUnc(t *testing.T) {
 		return nil
 	})
 
-	resolver := resolve.NewResolver()
+	config := DefaultConfig()
+	resolver := config.Resolver
+
 	def := resolver.Def(node.Node.Value)
 	pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
 	if err != nil {
@@ -34,7 +37,18 @@ func TestWriteHandlerFUnc(t *testing.T) {
 	}
 
 	main := resolver.NewPackage("main", "")
+	runtime := resolver.NewPackage("m/runtime", "")
+
 	var buf strings.Builder
-	WriteHandlerFunc(&buf, main, resolver, pathinfo)
+	providerFunc := &tinypkg.Var{
+		Name: "getProvider",
+		Node: main.NewFunc(
+			"getProvider",
+			[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: resolve.NewResolver().NewPackage("net/http", "").NewSymbol("Request")}}},
+			[]*tinypkg.Var{{Node: main.NewSymbol("Provider")}},
+		)}
+	if err := WriteHandlerFunc(&buf, main, "", resolver, pathinfo, runtime, providerFunc); err != nil {
+		t.Errorf("unexpected error %+v", err)
+	}
 	fmt.Println(buf.String())
 }
