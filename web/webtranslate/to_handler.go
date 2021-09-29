@@ -3,6 +3,7 @@ package webtranslate
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -23,8 +24,11 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
 	def := info.Def
+	argNames := make([]string, 0, len(def.Args))
 	// TODO: handling path info
 	for _, x := range def.Args {
+		argNames = append(argNames, x.Name)
+
 		shape := x.Shape
 		sym := resolver.Symbol(here, shape)
 		switch x.Kind {
@@ -82,16 +86,15 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		// TODO: import http
 		fmt.Fprintf(w, "\treturn func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{\n")
 		if len(componentBindings) > 0 {
+
+			// handling req.Context
+			fmt.Fprintf(w, "\t\treq, %s, err := %s(req)\n", provider.Name, getProviderFunc.Name)
+			fmt.Fprintln(w, "\t\tif err != nil {")
+			fmt.Fprintf(w, "\t\t\t%s(w, req, nil, err)\n", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
+			fmt.Fprintln(w, "\t\t\treturn")
+			fmt.Fprintln(w, "\t\t}")
 			indent := "\t\t"
 			var returns []*tinypkg.Var
-
-			binding, err := tinypkg.NewBinding(provider.Name, getProviderFunc)
-			if err != nil {
-				return err
-			}
-			if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
-				return err
-			}
 
 			for _, binding := range componentBindings {
 				if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
@@ -100,10 +103,11 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 			}
 		}
 
-		fmt.Fprintf(w, "\t\tresult, err := %s()\n",
+		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n",
 			tinypkg.ToRelativeTypeString(here, info.Def.Symbol),
+			strings.Join(argNames, ", "),
 		)
-		fmt.Fprintf(w, "\t\treturn %s(w, req, result, err)\n", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
+		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
 		defer fmt.Fprintln(w, "\t}")
 		return nil
 	})

@@ -45,7 +45,11 @@ func TestWriteHandlerFUnc(t *testing.T) {
 	providerFunc := main.NewFunc(
 		"getProvider",
 		[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: resolve.NewResolver().NewPackage("net/http", "").NewSymbol("Request")}}},
-		[]*tinypkg.Var{{Node: main.NewSymbol("Provider")}},
+		[]*tinypkg.Var{
+			{Node: &tinypkg.Pointer{Lv: 1, V: resolver.NewPackage("net/http", "").NewSymbol("Request")}},
+			{Node: main.NewSymbol("Provider")},
+			{Node: tinypkg.NewSymbol("error")},
+		},
 	)
 	if err := WriteHandlerFunc(&buf, main, resolver, tracker, pathinfo, runtime, providerFunc, ""); err != nil {
 		t.Errorf("unexpected error %+v", err)
