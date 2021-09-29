@@ -17,6 +17,9 @@ type DB struct{}
 func Ping() (interface{}, error) {
 	return map[string]interface{}{"message": "hello"}, nil
 }
+func Greeting(message string) (interface{}, error) {
+	return map[string]interface{}{"message": message}, nil
+}
 
 func ListArticle(db *DB) ([]*Article, error) {
 	return nil, nil
@@ -50,6 +53,22 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 	}
 }`,
 		},
+		{
+			msg:   "bind-path",
+			here:  main,
+			mount: func(r *web.Router) { r.Get("/greet/{message}", Greeting) },
+			want: `
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
+	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+		message := runtime.PathParam(req, "message")
+		result, err := webtranslate.Greeting(message)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		// TODO: ng 404
+		// TODO: path validation
+		// TODO: with context
 		{
 			msg:   "single-dep",
 			here:  main,
