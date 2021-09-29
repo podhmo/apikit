@@ -57,6 +57,8 @@ type Binding struct {
 	Provider      *Func
 	ProviderAlias string
 
+	ZeroReturnsDefault string
+
 	HasError   bool
 	HasCleanup bool
 }
@@ -65,7 +67,11 @@ var ErrUnexpectedReturnType = fmt.Errorf("unexpected-return-type")
 var ErrUnexpectedExternalReturnType = fmt.Errorf("unexpected-external-return-type")
 
 func NewBinding(name string, provider *Func) (*Binding, error) {
-	b := &Binding{Name: name, Provider: provider}
+	b := &Binding{
+		Name:               name,
+		Provider:           provider,
+		ZeroReturnsDefault: "panic(err) // TODO: fix-it",
+	}
 	switch len(provider.Returns) {
 	case 1:
 		// noop
@@ -157,7 +163,10 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 		if b.HasError { // TODO: support zero-value
 			var returnRHS string
 			if len(returns) == 0 {
-				returnRHS = "panic(err) // TODO: fix-it"
+				returnRHS = b.ZeroReturnsDefault
+				if returnRHS == "" {
+					returnRHS = "panic(err) // TODO: fix-it"
+				}
 			} else {
 				values := []string{"nil", "nil", "nil"}
 				if returns[len(returns)-1].Node.String() == "error" {

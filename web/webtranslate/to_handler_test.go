@@ -76,7 +76,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
 			override: func(tracker *resolve.Tracker) {
-				tracker.Override(reflect.TypeOf(&DB{}), "DBOrError", resolver.Def(func() (*DB, error) { return nil, nil }))
+				tracker.Override(reflect.TypeOf(&DB{}), "db", resolver.Def(func() (*DB, error) { return nil, nil }))
 			},
 			want: `
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
@@ -91,8 +91,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			var err error
 			db, err = provider.DB()
 			if err != nil {
-				runtime.HandleResult(w, req, nil, err)
-				return
+				runtime.HandleResult(w, req, nil, err); return
+			}
 		}
 		result, err := webtranslate.ListArticle(db)
 		runtime.HandleResult(w, req, result, err)

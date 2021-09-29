@@ -96,7 +96,9 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 			indent := "\t\t"
 			var returns []*tinypkg.Var
 
+			zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
 			for _, binding := range componentBindings {
+				binding.ZeroReturnsDefault = zeroReturnsDefault
 				if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
 					return err
 				}
