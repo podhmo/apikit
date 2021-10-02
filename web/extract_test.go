@@ -44,7 +44,21 @@ func TestExtractPathInfo(t *testing.T) {
 			msg:           "num-of-varnames-is-bigger",
 			fn:            getFooBar,
 			variableNames: []string{"fooId", "barId", "bazId"},
+			wantName:      "getFooBar",
 			wantErr:       web.ErrMismatchNumberOfVariables,
+		},
+		// normalize
+		{
+			msg:           "normalized, ID and id",
+			fn:            func(ID string) {},
+			variableNames: []string{"id"},
+			wantArgTypes:  []string{"string"},
+		},
+		{
+			msg:           "normalized, id and ID",
+			fn:            func(id string) {},
+			variableNames: []string{"ID"},
+			wantArgTypes:  []string{"string"},
 		},
 	}
 
@@ -67,8 +81,10 @@ func TestExtractPathInfo(t *testing.T) {
 				return
 			}
 
-			if want, got := c.wantName, got.Def.Name; want != got {
-				t.Errorf("want name\n\t%q\nbut got\n%q", want, got)
+			if c.wantName != "" {
+				if want, got := c.wantName, got.Def.Name; want != got {
+					t.Errorf("want name\n\t%q\nbut got\n%q", want, got)
+				}
 			}
 
 			var gotArgTypes []string

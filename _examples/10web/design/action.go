@@ -13,7 +13,7 @@ type Article struct {
 func ListArticle(ctx context.Context) ([]*Article, error) {
 	return nil, nil
 }
-func GetArticle(ctx context.Context, articleId string) (*Article, error) {
+func GetArticle(ctx context.Context, articleID string) (*Article, error) {
 	return nil, nil
 }
 
