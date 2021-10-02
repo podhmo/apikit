@@ -60,6 +60,8 @@ func run() (err error) {
 		w := os.Stdout
 		here := main
 
+		translator.Override("db", design.NewDB)
+
 		getProviderModule, err := translator.GetProviderModule(here, "Provider")
 		if err != nil {
 			return err

@@ -139,9 +139,6 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", info.VarNames, pathBindings, info.Def.Symbol)
 	}
 
-	// TODO: handling ignore
-	_ = ignored
-
 	f := here.NewFunc(name, args, nil)
 	return tinypkg.WriteFunc(w, here, "", f, func() error {
 		fmt.Fprintf(w, "\treturn func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{\n")
@@ -159,22 +156,37 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		// {
 		// 	<component> = <provider>.<method>()
 		// }
-		if len(componentBindings) > 0 {
-			// handling req.Context
+		if len(componentBindings) > 0 || len(ignored) > 0 {
+			if len(componentBindings) == 0 {
+				provider.Name = "_"
+			}
+
 			fmt.Fprintf(w, "\t\treq, %s, err := %s(req)\n", provider.Name, getProviderFunc.Name)
 			fmt.Fprintln(w, "\t\tif err != nil {")
 			fmt.Fprintf(w, "\t\t\t%s(w, req, nil, err)\n", handleResultFunc)
 			fmt.Fprintln(w, "\t\t\treturn")
 			fmt.Fprintln(w, "\t\t}")
-			indent := "\t\t"
-			var returns []*tinypkg.Var
+
+			// handling ignored (context.COntext)
+			if len(ignored) > 0 {
+				for _, x := range ignored {
+					if x.Name != "ctx" {
+						return fmt.Errorf("unsupported %+v", x)
+					}
+					fmt.Fprintf(w, "\t\t%s := req.Context()\n", x.Name)
+				}
+			}
 
 			// handling components
-			zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
-			for _, binding := range componentBindings {
-				binding.ZeroReturnsDefault = zeroReturnsDefault
-				if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
-					return err
+			if len(componentBindings) > 0 {
+				indent := "\t\t"
+				var returns []*tinypkg.Var
+				zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
+				for _, binding := range componentBindings {
+					binding.ZeroReturnsDefault = zeroReturnsDefault
+					if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
+						return err
+					}
 				}
 			}
 		}
