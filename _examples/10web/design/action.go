@@ -1,6 +1,10 @@
 package design
 
-import "context"
+import (
+	"context"
+)
+
+type DB struct{}
 
 // type HandlerFunc func(ctx context.Context) (interface{}, error)
 type Article struct {
@@ -10,10 +14,10 @@ type Article struct {
 
 // TODO: pagination
 
-func ListArticle(ctx context.Context) ([]*Article, error) {
+func ListArticle(ctx context.Context, db *DB) ([]*Article, error) {
 	return nil, nil
 }
-func GetArticle(ctx context.Context, articleID string) (*Article, error) {
+func GetArticle(ctx context.Context, db *DB, articleID string) (*Article, error) {
 	return nil, nil
 }
 
