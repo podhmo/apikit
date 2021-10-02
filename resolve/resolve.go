@@ -1,6 +1,7 @@
 package resolve
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"strings"
@@ -15,9 +16,10 @@ type Resolver struct {
 	extractor *reflectshape.Extractor
 	universe  *tinypkg.Universe
 
-	mu           sync.RWMutex
-	symbolsCache map[reflectshape.Identity][]*symbolCacheItem
-	defCache     map[uintptr]*Def
+	mu             sync.RWMutex
+	symbolsCache   map[reflectshape.Identity][]*symbolCacheItem
+	defCache       map[uintptr]*Def
+	preModuleCache map[reflectshape.Identity]*PreModule
 }
 
 func NewResolver() *Resolver {
@@ -27,10 +29,11 @@ func NewResolver() *Resolver {
 		RevisitArglist: true,
 	}
 	return &Resolver{
-		extractor:    e,
-		universe:     tinypkg.NewUniverse(),
-		symbolsCache: map[reflectshape.Identity][]*symbolCacheItem{},
-		defCache:     map[uintptr]*Def{},
+		extractor:      e,
+		universe:       tinypkg.NewUniverse(),
+		symbolsCache:   map[reflectshape.Identity][]*symbolCacheItem{},
+		defCache:       map[uintptr]*Def{},
+		preModuleCache: map[reflectshape.Identity]*PreModule{},
 	}
 }
 
@@ -56,6 +59,33 @@ func (r *Resolver) NewPackageFromInterface(ob interface{}, name string) *tinypkg
 	parts := strings.Split(rfunc.Name(), ".") // method is not supported
 	path = strings.Join(parts[:len(parts)-1], ".")
 	return r.universe.NewPackage(path, name)
+}
+
+func (r *Resolver) PreModule(ob interface{}) (*PreModule, error) {
+	shape := r.extractor.Extract(ob)
+
+	r.mu.RLock()
+	k := shape.GetIdentity()
+
+	cached, ok := r.preModuleCache[k]
+	r.mu.RUnlock()
+	if ok {
+		return cached, nil
+	}
+
+	s, ok := shape.(reflectshape.Struct)
+	if !ok {
+		return nil, fmt.Errorf("must be struct (%s): %w", shape, ErrInvalidType)
+	}
+	m, err := NewPreModule(r, s)
+	if err != nil {
+		return nil, err
+	}
+	r.mu.Lock()
+	r.preModuleCache[k] = m
+	r.mu.Unlock()
+
+	return m, nil
 }
 
 func (r *Resolver) Shape(ob interface{}) reflectshape.Shape {

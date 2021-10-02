@@ -21,7 +21,7 @@ func TestNewPreModule(t *testing.T) {
 	resolver := NewResolver()
 	target := GetProvider{}
 
-	pm, err := NewPreModule(resolver, target)
+	pm, err := resolver.PreModule(target)
 	if err != nil {
 		t.Fatalf("new pre module %+v", err)
 	}
@@ -48,7 +48,7 @@ func TestNewModule(t *testing.T) {
 
 	resolver := NewResolver()
 	target := GetProvider{}
-	pm, err := NewPreModule(resolver, target)
+	pm, err := resolver.PreModule(target)
 	if err != nil {
 		t.Fatalf("new pre module %+v", err)
 	}
