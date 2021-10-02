@@ -46,7 +46,7 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 			for _, v := range vars {
 				got = append(got, v.Name)
 			}
-			return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
+			return nil, fmt.Errorf("extracted path-parameters are %v, but extracted arguments from function are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 		}
 		if argname != variableNames[idx] {
 			continue
@@ -60,7 +60,7 @@ func ExtractPathInfo(variableNames []string, def *resolve.Def) (*PathInfo, error
 		for _, v := range vars {
 			got = append(got, v.Name)
 		}
-		return nil, fmt.Errorf("expected variables are %v, but want variables are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
+		return nil, fmt.Errorf("extracted path-parameters are %v, but extracted arguments from function are %v (in def %s): %w", got, variableNames, def, ErrMismatchNumberOfVariables)
 	}
 	return &PathInfo{
 		Def:      def,
