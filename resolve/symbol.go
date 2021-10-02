@@ -71,7 +71,7 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 			// TODO: this is shape package's feature (feature request)
 			hasName := false
 			for i, name := range s.Params.Keys {
-				if "arg"+strconv.Itoa(i) != name {
+				if "args"+strconv.Itoa(i) != name {
 					hasName = true
 					break
 				}

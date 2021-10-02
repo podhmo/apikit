@@ -23,13 +23,7 @@ type PreModule struct {
 	resolver *Resolver
 }
 
-func NewPreModule(resolver *Resolver, target interface{}) (*PreModule, error) {
-	shape := resolver.Shape(target)
-	ob, ok := shape.(reflectshape.Struct)
-	if !ok {
-		return nil, fmt.Errorf("must be struct (%s): %w", shape, ErrInvalidType)
-	}
-
+func NewPreModule(resolver *Resolver, ob reflectshape.Struct) (*PreModule, error) {
 	var args []reflectshape.Shape
 	var funcs []reflectshape.Function
 	for i, f := range ob.Fields.Values {
@@ -44,7 +38,7 @@ func NewPreModule(resolver *Resolver, target interface{}) (*PreModule, error) {
 	}
 
 	return &PreModule{
-		Name:     shape.GetName(),
+		Name:     ob.Name,
 		Shape:    &ob,
 		Args:     args,
 		Funcs:    funcs,
@@ -100,6 +94,15 @@ func (m *Module) Shape() *reflectshape.Struct {
 	return m.origin.Shape
 }
 
+func (m *Module) ImportFrom(here *tinypkg.Package, name string) (*tinypkg.ImportedSymbol, error) {
+	_, ok := m.origin.Shape.Fields.Get(name)
+	if !ok {
+		return nil, fmt.Errorf("the function %s is %w", name, ErrNotFound)
+	}
+	sym := m.Here.NewSymbol(name)
+	return here.Import(m.Here).Lookup(sym), nil
+}
+
 func (m *Module) Func(name string) (*tinypkg.Func, error) {
 	if f, ok := m.funcs[name]; ok {
 		return f, nil
@@ -117,12 +120,14 @@ func (m *Module) Func(name string) (*tinypkg.Func, error) {
 		return nil, fmt.Errorf("the function %s is something wrong (shape=%s): %w", name, shape, ErrNotFound)
 	}
 
-	fn = tinypkg.Replace(fn, func(sym *tinypkg.Symbol) tinypkg.Node {
-		if replaced, ok := m.replaceMap[sym]; ok {
-			return replaced
-		}
-		return sym
-	}).(*tinypkg.Func)
-	m.funcs[name] = fn
+	if len(m.Args) > 0 {
+		fn = tinypkg.Replace(fn, func(sym *tinypkg.Symbol) tinypkg.Node {
+			if replaced, ok := m.replaceMap[sym]; ok {
+				return replaced
+			}
+			return sym
+		}).(*tinypkg.Func)
+		m.funcs[name] = fn
+	}
 	return fn, nil
 }

@@ -9,7 +9,6 @@ import (
 
 	"m/10web/design"
 
-	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/web"
 	"github.com/podhmo/apikit/web/webtranslate"
 )
@@ -61,6 +60,14 @@ func run() (err error) {
 		w := os.Stdout
 		here := main
 
+		getProviderModule, err := translator.GetProviderModule(here, "Provider")
+		if err != nil {
+			return err
+		}
+		runtimeModule, err := translator.RuntimeModule(runtime)
+		if err != nil {
+			return err
+		}
 		return web.Walk(r, func(node *web.WalkerNode) error {
 			def := resolver.Def(node.Node.Value)
 			tracker.Track(def)
@@ -68,18 +75,7 @@ func run() (err error) {
 			if err != nil {
 				return fmt.Errorf("extract path info: %w", err)
 			}
-
-			providerFunc := here.NewFunc( // todo: simplify
-				"getProvider",
-				[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: tinypkg.NewPackage("net/http", "").NewSymbol("Request")}}},
-				[]*tinypkg.Var{
-					{Node: &tinypkg.Pointer{Lv: 1, V: tinypkg.NewPackage("net/http", "").NewSymbol("Request")}},
-					{Node: here.NewSymbol("Provider")},
-					{Node: tinypkg.NewSymbol("error")},
-				},
-			)
-
-			if err := webtranslate.WriteHandlerFunc(w, here, resolver, tracker, pathinfo, runtime, providerFunc, ""); err != nil {
+			if err := webtranslate.WriteHandlerFunc(w, here, resolver, tracker, pathinfo, getProviderModule, runtimeModule, ""); err != nil {
 				return fmt.Errorf("write: %w", err)
 			}
 			return nil
