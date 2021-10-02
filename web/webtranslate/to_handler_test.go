@@ -1,6 +1,7 @@
 package webtranslate
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -17,11 +18,17 @@ type DB struct{}
 func Ping() (interface{}, error) {
 	return map[string]interface{}{"message": "hello"}, nil
 }
+func PingWithContext(ctx context.Context) (interface{}, error) {
+	return map[string]interface{}{"message": "hello"}, nil
+}
 func Greeting(message string) (interface{}, error) {
 	return map[string]interface{}{"message": message}, nil
 }
 
 func ListArticle(db *DB) ([]*Article, error) {
+	return nil, nil
+}
+func ListArticleWithContext(ctx context.Context, db *DB) ([]*Article, error) {
 	return nil, nil
 }
 
@@ -68,7 +75,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 		},
 		// TODO: ng 404
 		// TODO: path validation
-		// TODO: with context
 		{
 			msg:   "single-dep",
 			here:  main,
@@ -118,6 +124,50 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 	}
 }`,
 		},
+		// with-context
+		{
+			msg:  "no-dep-with-context",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Get("/ping", PingWithContext)
+			},
+			want: `
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
+	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+		req, _, err := getProvider(req)
+		if err != nil {
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
+		ctx := req.Context()
+		result, err := webtranslate.PingWithContext(ctx)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		{
+			msg:   "single-dep-with-context",
+			here:  main,
+			mount: func(r *web.Router) { r.Get("/articles", ListArticleWithContext) },
+			want: `
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
+	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+		req, provider, err := getProvider(req)
+		if err != nil {
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
+		ctx := req.Context()
+		var db *webtranslate.DB
+		{
+			db = provider.DB()
+		}
+		result, err := webtranslate.ListArticleWithContext(ctx, db)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+
 		// TODO: unexpected action
 		// TODO: path binding
 		// TODO: handling error
