@@ -302,6 +302,7 @@ var db *DB
 				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
 					Returns: []*Var{newDB.Returns[0], newDB.Returns[2]},
 				},
+				ZeroReturnsDefault: "panic(err) // TODO: fix-it",
 			},
 			returns: []*Var{},
 			want: `
