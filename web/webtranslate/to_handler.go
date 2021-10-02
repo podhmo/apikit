@@ -60,6 +60,8 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		return fmt.Errorf("in runtime module, %w", err)
 	}
 
+	actionFunc := tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
+
 	args := []*tinypkg.Var{
 		{Name: getProviderFunc.Name, Node: getProviderFunc},
 	}
@@ -142,7 +144,6 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 
 	f := here.NewFunc(name, args, nil)
 	return tinypkg.WriteFunc(w, here, "", f, func() error {
-		// TODO: import http
 		fmt.Fprintf(w, "\treturn func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{\n")
 		defer fmt.Fprintln(w, "\t}")
 
@@ -179,10 +180,7 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		}
 
 		// result, err := <action>(....)
-		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n",
-			tinypkg.ToRelativeTypeString(here, info.Def.Symbol),
-			strings.Join(argNames, ", "),
-		)
+		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionFunc, strings.Join(argNames, ", "))
 
 		// runtime.HandleResult(w, req, result, err)
 		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", handleResultFunc)
