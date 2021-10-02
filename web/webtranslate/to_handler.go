@@ -47,15 +47,15 @@ func (t *Translator) GetProviderModule(here *tinypkg.Package, providerName strin
 
 func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, info *web.PathInfo, providerModule *resolve.Module, runtimeModule *resolve.Module, name string) error {
 	// TODO: typed
-	getProviderFunc, err := providerModule.Func("getProvider")
+	getProviderFunc, err := providerModule.Type("getProvider")
 	if err != nil {
 		return fmt.Errorf("in provider module, %w", err)
 	}
-	handleResultFunc, err := runtimeModule.ImportFrom(here, "HandleResult")
+	handleResultFunc, err := runtimeModule.Symbol(here, "HandleResult")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
-	pathParamFunc, err := runtimeModule.ImportFrom(here, "PathParam")
+	pathParamFunc, err := runtimeModule.Symbol(here, "PathParam")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}

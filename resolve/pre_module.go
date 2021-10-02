@@ -94,7 +94,7 @@ func (m *Module) Shape() *reflectshape.Struct {
 	return m.origin.Shape
 }
 
-func (m *Module) ImportFrom(here *tinypkg.Package, name string) (*tinypkg.ImportedSymbol, error) {
+func (m *Module) Symbol(here *tinypkg.Package, name string) (*tinypkg.ImportedSymbol, error) {
 	_, ok := m.origin.Shape.Fields.Get(name)
 	if !ok {
 		return nil, fmt.Errorf("the function %s is %w", name, ErrNotFound)
@@ -103,7 +103,7 @@ func (m *Module) ImportFrom(here *tinypkg.Package, name string) (*tinypkg.Import
 	return here.Import(m.Here).Lookup(sym), nil
 }
 
-func (m *Module) Func(name string) (*tinypkg.Func, error) {
+func (m *Module) Type(name string) (*tinypkg.Func, error) {
 	if f, ok := m.funcs[name]; ok {
 		return f, nil
 	}
