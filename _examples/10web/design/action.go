@@ -6,6 +6,10 @@ import (
 
 type DB struct{}
 
+func NewDB(ctx context.Context) (*DB, error) {
+	return nil, nil
+}
+
 // type HandlerFunc func(ctx context.Context) (interface{}, error)
 type Article struct {
 	Title string
