@@ -67,7 +67,7 @@ func TestNewModule(t *testing.T) {
 	})
 	t.Run("funcs", func(t *testing.T) {
 		name := "GetProvider"
-		want := `func(args0 *resolve.Request) (*resolve.Request, Provider, error)`
+		want := `func(*resolve.Request) (*resolve.Request, Provider, error)`
 		f, err := m.Func(name)
 		if err != nil {
 			t.Errorf("Func() %+v", err)
