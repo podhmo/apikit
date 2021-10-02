@@ -28,8 +28,8 @@ func ListArticle(db *DB) ([]*Article, error) {
 func TestWriteHandlerFunc(t *testing.T) {
 	handlerName := "Handler"
 
-	config := DefaultConfig()
-	resolver := config.Resolver
+	translator := NewTranslator(DefaultConfig())
+	resolver := translator.Resolver
 
 	main := resolver.NewPackage("main", "")
 	runtime := resolver.NewPackage("m/runtime", "")
@@ -141,6 +141,15 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 				c.override(tracker)
 			}
 
+			providerModule, err := translator.GetProviderModule(runtime, "Provider")
+			if err != nil {
+				t.Fatalf("unexpected error %+v", err)
+			}
+			runtimeModule, err := translator.RuntimeModule(runtime)
+			if err != nil {
+				t.Fatalf("unexpected error %+v", err)
+			}
+
 			def := resolver.Def(node.Node.Value)
 			tracker.Track(def)
 			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
@@ -149,16 +158,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			}
 
 			var buf strings.Builder
-			providerFunc := c.here.NewFunc( // todo: simplify
-				"getProvider",
-				[]*tinypkg.Var{{Node: &tinypkg.Pointer{Lv: 1, V: resolve.NewResolver().NewPackage("net/http", "").NewSymbol("Request")}}},
-				[]*tinypkg.Var{
-					{Node: &tinypkg.Pointer{Lv: 1, V: resolver.NewPackage("net/http", "").NewSymbol("Request")}},
-					{Node: c.here.NewSymbol("Provider")},
-					{Node: tinypkg.NewSymbol("error")},
-				},
-			)
-			if err := WriteHandlerFunc(&buf, c.here, resolver, tracker, pathinfo, runtime, providerFunc, handlerName); err != nil {
+			if err := WriteHandlerFunc(&buf, c.here, resolver, tracker, pathinfo, providerModule, runtimeModule, handlerName); err != nil {
 				t.Errorf("unexpected error %+v", err)
 			}
 			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {

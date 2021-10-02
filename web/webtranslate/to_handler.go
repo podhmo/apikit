@@ -3,6 +3,7 @@ package webtranslate
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
@@ -11,15 +12,54 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-// TODO:
-// type GetProviderFunc func(*http.Request) (*http.Request, Provider, error)
-//
-// type runtime interface {
-// 	ParamPath(*http.Request, string) string
-// 	HandleResult(Http.ResponseWriter, *http.Request, interface{}, error)
-// }
+func (t *Translator) RuntimeModule(here *tinypkg.Package) (*resolve.Module, error) {
+	var moduleSkeleton struct {
+		PathParam    func(*http.Request, string) string
+		HandleResult func(http.ResponseWriter, *http.Request, interface{}, error)
+	}
+	pm, err := t.Resolver.PreModule(moduleSkeleton)
+	if err != nil {
+		return nil, fmt.Errorf("new runtime pre-module: %w", err)
+	}
+	m, err := pm.NewModule(here)
+	if err != nil {
+		return nil, fmt.Errorf("new runtime module: %w", err)
+	}
+	return m, nil
+}
 
-func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, info *web.PathInfo, runtime *tinypkg.Package, getProviderFunc *tinypkg.Func, name string) error {
+func (t *Translator) GetProviderModule(here *tinypkg.Package, providerName string) (*resolve.Module, error) {
+	type providerT interface{}
+	var moduleSkeleton struct {
+		T           providerT
+		getProvider func(*http.Request) (*http.Request, providerT, error)
+	}
+	pm, err := t.Resolver.PreModule(moduleSkeleton)
+	if err != nil {
+		return nil, fmt.Errorf("new provider pre-module: %w", err)
+	}
+	m, err := pm.NewModule(here, here.NewSymbol(providerName))
+	if err != nil {
+		return nil, fmt.Errorf("new provider module: %w", err)
+	}
+	return m, nil
+}
+
+func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, info *web.PathInfo, providerModule *resolve.Module, runtimeModule *resolve.Module, name string) error {
+	// TODO: typed
+	getProviderFunc, err := providerModule.Func("getProvider")
+	if err != nil {
+		return fmt.Errorf("in provider module, %w", err)
+	}
+	handleResultFunc, err := runtimeModule.ImportFrom(here, "HandleResult")
+	if err != nil {
+		return fmt.Errorf("in runtime module, %w", err)
+	}
+	pathParamFunc, err := runtimeModule.ImportFrom(here, "PathParam")
+	if err != nil {
+		return fmt.Errorf("in runtime module, %w", err)
+	}
+
 	args := []*tinypkg.Var{
 		{Name: getProviderFunc.Name, Node: getProviderFunc},
 	}
@@ -110,7 +150,7 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		if len(pathBindings) > 0 {
 			for _, pathvar := range pathBindings {
 				// TODO: type check
-				fmt.Fprintf(w, "\t\t%s := runtime.PathParam(req, %q)\n", pathvar.Name, pathvar.Name)
+				fmt.Fprintf(w, "\t\t%s := %s(req, %q)\n", pathvar.Name, pathParamFunc, pathvar.Name)
 			}
 		}
 
@@ -122,14 +162,14 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 			// handling req.Context
 			fmt.Fprintf(w, "\t\treq, %s, err := %s(req)\n", provider.Name, getProviderFunc.Name)
 			fmt.Fprintln(w, "\t\tif err != nil {")
-			fmt.Fprintf(w, "\t\t\t%s(w, req, nil, err)\n", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
+			fmt.Fprintf(w, "\t\t\t%s(w, req, nil, err)\n", handleResultFunc)
 			fmt.Fprintln(w, "\t\t\treturn")
 			fmt.Fprintln(w, "\t\t}")
 			indent := "\t\t"
 			var returns []*tinypkg.Var
 
 			// handling components
-			zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
+			zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
 			for _, binding := range componentBindings {
 				binding.ZeroReturnsDefault = zeroReturnsDefault
 				if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
@@ -145,7 +185,7 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 		)
 
 		// runtime.HandleResult(w, req, result, err)
-		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", tinypkg.ToRelativeTypeString(here, runtime.NewSymbol("HandleResult")))
+		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", handleResultFunc)
 		return nil
 	})
 }
