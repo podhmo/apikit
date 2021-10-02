@@ -58,6 +58,10 @@ func (r *Resolver) NewPackageFromInterface(ob interface{}, name string) *tinypkg
 	return r.universe.NewPackage(path, name)
 }
 
+func (r *Resolver) Shape(ob interface{}) reflectshape.Shape {
+	return r.extractor.Extract(ob)
+}
+
 func (r *Resolver) Def(fn interface{}) *Def {
 	r.mu.RLock()
 	k := reflect.ValueOf(fn).Pointer()

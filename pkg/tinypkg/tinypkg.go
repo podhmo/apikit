@@ -103,6 +103,10 @@ type ImportedSymbol struct {
 	sym *Symbol
 }
 
+func (im *ImportedSymbol) Here() *Package {
+	return im.pkg.here
+}
+
 func (im *ImportedSymbol) Qualifier() string {
 	qualifier := im.pkg.qualifier
 	if qualifier != "" {
