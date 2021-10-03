@@ -53,8 +53,8 @@ func TestWriteHandlerFunc(t *testing.T) {
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/ping", Ping) },
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		result, err := webtranslate.Ping()
 		runtime.HandleResult(w, req, result, err)
 	}
@@ -65,8 +65,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/greet/{message}", Greeting) },
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		message := runtime.PathParam(req, "message")
 		result, err := webtranslate.Greeting(message)
 		runtime.HandleResult(w, req, result, err)
@@ -80,8 +80,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err)
@@ -104,8 +104,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 				tracker.Override(reflect.TypeOf(&DB{}), "db", resolver.Def(func() (*DB, error) { return nil, nil }))
 			},
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err)
@@ -132,8 +132,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 				r.Get("/ping", PingWithContext)
 			},
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		req, _, err := getProvider(req)
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err)
@@ -150,8 +150,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticleWithContext) },
 			want: `
-func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) {
-	return func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err)
