@@ -31,8 +31,10 @@ func (t *Translator) RuntimeModule(here *tinypkg.Package) (*resolve.Module, erro
 func (t *Translator) GetProviderModule(here *tinypkg.Package, providerName string) (*resolve.Module, error) {
 	type providerT interface{}
 	var moduleSkeleton struct {
-		T           providerT
-		getProvider func(*http.Request) (*http.Request, providerT, error)
+		T             providerT
+		createHandler func(
+			getProvider func(*http.Request) (*http.Request, providerT, error),
+		) http.HandlerFunc
 	}
 	pm, err := t.Resolver.PreModule(moduleSkeleton)
 	if err != nil {
@@ -45,12 +47,24 @@ func (t *Translator) GetProviderModule(here *tinypkg.Package, providerName strin
 	return m, nil
 }
 
-func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, info *web.PathInfo, providerModule *resolve.Module, runtimeModule *resolve.Module, name string) error {
+func WriteHandlerFunc(w io.Writer,
+	here *tinypkg.Package,
+	resolver *resolve.Resolver,
+	tracker *resolve.Tracker,
+	info *web.PathInfo,
+	providerModule *resolve.Module,
+	runtimeModule *resolve.Module,
+	name string,
+) error {
 	// TODO: typed
-	getProviderFunc, err := providerModule.Type("getProvider")
+	createHandlerFunc, err := providerModule.Type("createHandler")
 	if err != nil {
 		return fmt.Errorf("in provider module, %w", err)
 	}
+	createHandlerFunc.Args[0].Name = "getProvider" // todo: remove
+	getProviderFunc := createHandlerFunc.Args[0].Node.(*tinypkg.Func)
+	getProviderFunc.Name = "getProvider" // todo: remove
+
 	handleResultFunc, err := runtimeModule.Symbol(here, "HandleResult")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
@@ -62,9 +76,6 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 
 	actionFunc := tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 
-	args := []*tinypkg.Var{
-		{Name: getProviderFunc.Name, Node: getProviderFunc},
-	}
 	provider := &tinypkg.Var{Name: "provider", Node: getProviderFunc.Returns[0].Node}
 	if name == "" {
 		name = info.Def.Name
@@ -131,17 +142,15 @@ func WriteHandlerFunc(w io.Writer, here *tinypkg.Package, resolver *resolve.Reso
 				pathBindings = append(pathBindings, v)
 			}
 		default:
-			args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
+			// args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
 		}
 	}
 
 	if len(pathBindings) != len(info.VarNames) {
 		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", info.VarNames, pathBindings, info.Def.Symbol)
 	}
-
-	f := here.NewFunc(name, args, nil)
-	return tinypkg.WriteFunc(w, here, "", f, func() error {
-		fmt.Fprintf(w, "\treturn func(w http.ResponseWriter, req *http.Request) http.HandlerFunc{\n")
+	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
+		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
 		defer fmt.Fprintln(w, "\t}")
 
 		// <path name> := runtime.PathParam(req, "<path name>")
