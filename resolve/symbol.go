@@ -2,7 +2,6 @@ package resolve
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	reflectshape "github.com/podhmo/reflect-shape"
@@ -68,36 +67,15 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 	case reflectshape.Function:
 		args := make([]*tinypkg.Var, 0, s.Params.Len())
 		{
-			// TODO: this is shape package's feature (feature request)
-			hasName := false
-			for i, name := range s.Params.Keys {
-				if "arg"+strconv.Itoa(i) != name {
-					hasName = true
-					break
-				}
-			}
 			for i, name := range s.Params.Keys {
 				arg := s.Params.Values[i]
-				if !hasName {
-					name = ""
-				}
 				args = append(args, &tinypkg.Var{Name: name, Node: ExtractSymbol(universe, here, arg)})
 			}
 		}
 		returns := make([]*tinypkg.Var, 0, s.Returns.Len())
 		{
-			hasName := false
-			for i, name := range s.Returns.Keys {
-				if "ret"+strconv.Itoa(i) != name {
-					hasName = true
-					break
-				}
-			}
 			for i, name := range s.Returns.Keys {
 				arg := s.Returns.Values[i]
-				if !hasName {
-					name = ""
-				}
 				returns = append(returns, &tinypkg.Var{Name: name, Node: ExtractSymbol(universe, here, arg)})
 			}
 		}
