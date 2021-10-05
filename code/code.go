@@ -17,14 +17,14 @@ type Code struct {
 	imported []*tinypkg.ImportedPackage
 
 	ImportPackages func(*tinypkg.ImportCollector) error
-	EmitCode       func(w io.Writer) error // currently used by Config.EmitCodeFunc
+	EmitCode       func(w io.Writer, c *Code) error // currently used by Config.EmitCodeFunc
 
 	Priority int
 	Config   *Config
 	Depends  []tinypkg.Node
 }
 
-func (c *Code) ImportPackage(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
+func (c *Code) Import(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
 	im := c.Here.Import(pkg)
 	c.imported = append(c.imported, im)
 	return im
