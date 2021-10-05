@@ -38,7 +38,7 @@ func TestWriteHandlerFunc(t *testing.T) {
 	config := DefaultConfig()
 	config.Header = ""
 	resolver := config.Resolver
-	config.Runtime = resolver.NewPackage("m/runtime", "")
+	config.RuntimePkg = resolver.NewPackage("m/runtime", "")
 
 	main := resolver.NewPackage("main", "")
 
@@ -185,8 +185,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 		// TODO: path binding
 		// TODO: handling error
 	}
-	// ?? runtime is also interface?
-
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
