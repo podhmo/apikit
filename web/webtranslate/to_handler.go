@@ -3,48 +3,83 @@ package webtranslate
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 
+	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func (t *Translator) RuntimeModule(here *tinypkg.Package) (*resolve.Module, error) {
-	var moduleSkeleton struct {
-		PathParam    func(*http.Request, string) string
-		HandleResult func(http.ResponseWriter, *http.Request, interface{}, error)
+func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.Code {
+	def := t.Resolver.Def(node.Node.Value)
+	if name == "" {
+		name = def.Name
 	}
-	pm, err := t.Resolver.PreModule(moduleSkeleton)
-	if err != nil {
-		return nil, fmt.Errorf("new runtime pre-module: %w", err)
+	t.Tracker.Track(def)
+
+	return &code.Code{
+		Name: name,
+		Here: here,
+		// priority: code.PrioritySecond,
+		Config: t.Config.Config,
+		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+			// todo: support provider *tinypkg.Var
+			imports, err := collectImportsForHandler(here, t.Resolver, t.Tracker, def)
+			if err != nil {
+				return nil, err
+			}
+			return append(
+				imports,
+				here.Import(t.Config.RuntimePkg), // todo: remove if unused
+				here.Import(t.Resolver.NewPackage("net/http", "")),
+			), nil
+		},
+		EmitCode: func(w io.Writer) error {
+			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
+			if err != nil {
+				return err
+			}
+			providerModule, err := t.ProviderModule()
+			if err != nil {
+				return err
+			}
+			runtimeModule, err := t.RuntimeModule()
+			if err != nil {
+				return err
+			}
+			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
+		},
 	}
-	m, err := pm.NewModule(here)
-	if err != nil {
-		return nil, fmt.Errorf("new runtime module: %w", err)
-	}
-	return m, nil
 }
 
-func (t *Translator) GetProviderModule(here *tinypkg.Package, providerName string) (*resolve.Module, error) {
-	type providerT interface{}
-	var moduleSkeleton struct {
-		T             providerT
-		createHandler func(
-			getProvider func(*http.Request) (*http.Request, providerT, error),
-		) http.HandlerFunc
+func collectImportsForHandler(here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
+	collector := tinypkg.NewImportCollector(here)
+	use := collector.Collect
+
+	for _, x := range def.Args {
+		shape := tracker.ExtractComponentFactoryShape(x)
+		sym := resolver.Symbol(here, shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return nil, err
+		}
 	}
-	pm, err := t.Resolver.PreModule(moduleSkeleton)
-	if err != nil {
-		return nil, fmt.Errorf("new provider pre-module: %w", err)
+	for _, x := range def.Returns {
+		sym := resolver.Symbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return nil, err
+		}
 	}
-	m, err := pm.NewModule(here, here.NewSymbol(providerName))
-	if err != nil {
-		return nil, fmt.Errorf("new provider module: %w", err)
+	if err := use(def.Symbol); err != nil {
+		return nil, err
 	}
-	return m, nil
+
+	// TODO:
+	// if err := tinypkg.Walk(provider, use); err != nil {
+	// 	return nil, err
+	// }
+	return collector.Imports, nil
 }
 
 func WriteHandlerFunc(w io.Writer,
@@ -82,7 +117,11 @@ func WriteHandlerFunc(w io.Writer,
 	}
 
 	var componentBindings []*tinypkg.Binding
-	var pathBindings []*web.PathVar
+	type pathBinding struct {
+		Name string // go's name
+		Var  *web.PathVar
+	}
+	var pathBindings []*pathBinding
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
 	def := info.Def
@@ -139,7 +178,7 @@ func WriteHandlerFunc(w io.Writer,
 			componentBindings = append(componentBindings, binding)
 		case resolve.KindPrimitive:
 			if v, ok := info.Vars[x.Name]; ok {
-				pathBindings = append(pathBindings, v)
+				pathBindings = append(pathBindings, &pathBinding{Name: x.Name, Var: v})
 			}
 		default:
 			// args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
@@ -155,9 +194,9 @@ func WriteHandlerFunc(w io.Writer,
 
 		// <path name> := runtime.PathParam(req, "<path name>")
 		if len(pathBindings) > 0 {
-			for _, pathvar := range pathBindings {
+			for _, b := range pathBindings {
 				// TODO: type check
-				fmt.Fprintf(w, "\t\t%s := %s(req, %q)\n", pathvar.Name, pathParamFunc, pathvar.Name)
+				fmt.Fprintf(w, "\t\t%s := %s(req, %q)\n", b.Name, pathParamFunc, b.Var.Name)
 			}
 		}
 
