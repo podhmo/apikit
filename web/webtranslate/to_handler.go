@@ -71,6 +71,10 @@ func collectImportsForHandler(here *tinypkg.Package, resolver *resolve.Resolver,
 			return nil, err
 		}
 	}
+	if err := use(def.Symbol); err != nil {
+		return nil, err
+	}
+
 	// TODO:
 	// if err := tinypkg.Walk(provider, use); err != nil {
 	// 	return nil, err

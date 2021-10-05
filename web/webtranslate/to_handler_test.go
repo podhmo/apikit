@@ -38,9 +38,10 @@ func TestWriteHandlerFunc(t *testing.T) {
 	config := DefaultConfig()
 	config.Header = ""
 	resolver := config.Resolver
-	config.RuntimePkg = resolver.NewPackage("m/runtime", "")
 
 	main := resolver.NewPackage("main", "")
+	config.RuntimePkg = resolver.NewPackage("m/runtime", "")
+	config.ProviderPkg = main
 
 	cases := []struct {
 		msg      string
@@ -101,7 +102,7 @@ import (
 	"m/runtime"
 	"net/http"
 )
-			
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
