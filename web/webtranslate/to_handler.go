@@ -12,14 +12,14 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.Code {
+func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.CodeEmitter {
 	def := t.Resolver.Def(node.Node.Value)
 	if name == "" {
 		name = def.Name
 	}
 	t.Tracker.Track(def)
 
-	return &code.Code{
+	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
@@ -54,6 +54,7 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
 		},
 	}
+	return &code.CodeEmitter{Code: c}
 }
 
 func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) error {

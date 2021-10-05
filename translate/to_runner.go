@@ -13,13 +13,13 @@ import (
 
 // TODO: omit provider arguments
 
-func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *code.Code {
+func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, name string, provider *tinypkg.Var) *code.CodeEmitter {
 	def := t.Resolver.Def(fn)
 	if name == "" {
 		name = def.Name
 	}
 	t.Tracker.Track(def)
-	return &code.Code{
+	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
@@ -37,6 +37,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 			return writeRunner(w, here, t.Resolver, t.Tracker, def, provider, name)
 		},
 	}
+	return &code.CodeEmitter{Code: c}
 }
 
 func collectImportsForRunner(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var) error {

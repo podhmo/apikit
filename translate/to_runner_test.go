@@ -302,7 +302,7 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 
 			code := translator.TranslateToRunner(c.here, c.input, c.name, provider)
 			var buf bytes.Buffer
-			if err := config.EmitCode(&buf, code); err != nil {
+			if err := code.Emit(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, code %+v", err)
 				}

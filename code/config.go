@@ -70,10 +70,6 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 
 }
 
-func (c *Config) EmitCode(w io.Writer, code *Code) error {
-	return (&CodeEmitter{Code: code}).Emit(w)
-}
-
 func (c *Config) NewCode(
 	here *tinypkg.Package,
 	name string,

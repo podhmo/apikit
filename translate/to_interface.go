@@ -10,9 +10,9 @@ import (
 	"github.com/podhmo/apikit/resolve"
 )
 
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
 	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
-	return &code.Code{
+	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PriorityFirst,
@@ -24,6 +24,7 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *c
 			return writeInterface(w, here, t.Resolver, t.Tracker, name)
 		},
 	}
+	return &code.CodeEmitter{Code: c}
 }
 
 func collectImportsForInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {

@@ -148,7 +148,7 @@ type Component interface {
 
 			code := translator.TranslateToInterface(c.here, "Component")
 			var buf strings.Builder
-			if err := config.EmitCode(&buf, code); err != nil {
+			if err := code.Emit(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, code %+v", err)
 				}

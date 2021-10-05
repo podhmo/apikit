@@ -232,7 +232,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			if err := web.Walk(r, func(n *web.WalkerNode) error {
 				code := translator.TranslateToHandler(c.here, n, handlerName)
 				var buf strings.Builder
-				if err := config.EmitCode(&buf, code); err != nil {
+				if err := code.Emit(&buf); err != nil {
 					t.Fatalf("unexpected error %+v", err)
 				}
 				if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
