@@ -24,11 +24,11 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 		Here: here,
 		// priority: code.PrioritySecond,
 		Config: t.Config,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			if provider == nil {
 				provider = t.providerVar
 			}
-			return collectImportsForRunner(here, t.Resolver, t.Tracker, def, provider)
+			return collectImportsForRunner(collector, t.Resolver, t.Tracker, def, provider)
 		},
 		EmitCode: func(w io.Writer) error {
 			if provider == nil {
@@ -39,29 +39,29 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 	}
 }
 
-func collectImportsForRunner(here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var) ([]*tinypkg.ImportedPackage, error) {
-	collector := tinypkg.NewImportCollector(here)
+func collectImportsForRunner(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var) error {
+	here := collector.Here
 	use := collector.Collect
 	for _, x := range def.Args {
 		shape := tracker.ExtractComponentFactoryShape(x)
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk args %s: %w", sym, err)
 		}
 	}
 	for _, x := range def.Returns {
 		sym := resolver.Symbol(here, x.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk returns %s: %w", sym, err)
 		}
 	}
 	if err := use(def.Symbol); err != nil {
-		return nil, err
+		return fmt.Errorf("on self %s: %w", def.Symbol, err)
 	}
 	if err := tinypkg.Walk(provider, use); err != nil {
-		return nil, err
+		return fmt.Errorf("on provider: %w", err)
 	}
-	return collector.Imports, nil
+	return nil
 }
 
 func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def, provider *tinypkg.Var, name string) error {

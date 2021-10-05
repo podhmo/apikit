@@ -58,7 +58,6 @@ type Component interface {
 type Component interface {
 	DB() *DB
 }`,
-			wantError: ErrNoImports,
 		},
 		// TODO: support qualified import
 		{
@@ -136,10 +135,11 @@ type Component interface {
 
 			code := translator.TranslateToInterface(c.here, "Component")
 			var buf strings.Builder
-			imports, err := code.CollectImports(c.here)
-			if err != nil && c.wantError == nil || c.wantError != err {
+			collector := tinypkg.NewImportCollector(c.here)
+			if err := code.CollectImports(collector); err != nil && c.wantError == nil || c.wantError != err {
 				t.Fatalf("unexpected error, collect imports %+v", err)
 			}
+			imports := collector.Imports
 			if err := code.EmitImports(&buf, imports); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, import %+v", err)
