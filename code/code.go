@@ -24,10 +24,13 @@ type Code struct {
 	Depends  []tinypkg.Node
 }
 
-func (c *Code) Import(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
+func (c *Code) ImportPackage(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
 	im := c.Here.Import(pkg)
 	c.imported = append(c.imported, im)
 	return im
+}
+func (c *Code) AddDependency(dep tinypkg.Node) {
+	c.Depends = append(c.Depends, dep)
 }
 
 // CollectImports is currently used by Config.EmitCodeFunc
@@ -49,8 +52,13 @@ func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
 			return fmt.Errorf("in import package : %w", err)
 		}
 	}
-	if c.Depends != nil {
+	if c.Depends != nil { // TODO: cache
+		seen := make(map[tinypkg.Node]struct{}, len(c.Depends))
 		for _, dep := range c.Depends {
+			if _, ok := seen[dep]; ok {
+				continue
+			}
+			seen[dep] = struct{}{}
 			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
 				return fmt.Errorf("in walk : %w", err)
 			}
