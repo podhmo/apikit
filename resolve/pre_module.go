@@ -132,3 +132,15 @@ func (m *Module) Type(name string) (*tinypkg.Func, error) {
 	m.funcs[name] = fn
 	return fn, nil
 }
+
+func (m *Module) OnWalk(use func(*tinypkg.Symbol) error) error {
+	if err := use(m.Here.NewSymbol("")); err != nil {
+		return err
+	}
+	for _, f := range m.funcs {
+		if err := f.OnWalk(use); err != nil {
+			return err
+		}
+	}
+	return nil
+}
