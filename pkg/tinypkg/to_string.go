@@ -78,7 +78,9 @@ func ToRelativeTypeString(here *Package, node Node) string {
 		}
 		return x.Package.Name + "." + x.Name
 	case *ImportedSymbol:
-		here := x.pkg.here
+		if here == nil {
+			here = x.pkg.here
+		}
 		if x.pkg.pkg.Name == "" {
 			return x.sym.Name
 		}

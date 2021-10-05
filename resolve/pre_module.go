@@ -127,7 +127,8 @@ func (m *Module) Type(name string) (*tinypkg.Func, error) {
 			}
 			return sym
 		}).(*tinypkg.Func)
-		m.funcs[name] = fn
 	}
+	fn = here.NewFunc(name, fn.Args, fn.Returns)
+	m.funcs[name] = fn
 	return fn, nil
 }
