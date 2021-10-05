@@ -6,11 +6,46 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
+
+func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.Code {
+	def := t.Resolver.Def(node.Node.Value)
+	if name == "" {
+		name = def.Name
+	}
+	t.Tracker.Track(def)
+
+	return &code.Code{
+		Name: name,
+		Here: here,
+		// priority: code.PrioritySecond,
+		Config:         t.Config.Config,
+		ImportPackages: nil, // todo
+		EmitCode: func(w io.Writer) error {
+			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
+			if err != nil {
+				return err
+			}
+
+			// cached
+			runtime := t.Config.Runtime
+			providerModule, err := t.GetProviderModule(runtime, "Provider")
+			if err != nil {
+				return err
+			}
+			runtimeModule, err := t.RuntimeModule(runtime)
+			if err != nil {
+				return err
+			}
+			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
+		},
+	}
+}
 
 func (t *Translator) RuntimeModule(here *tinypkg.Package) (*resolve.Module, error) {
 	var moduleSkeleton struct {
