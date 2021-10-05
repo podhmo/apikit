@@ -1,6 +1,7 @@
 package tinypkg
 
 import (
+	"fmt"
 	"path"
 	"strings"
 	"sync"
@@ -52,6 +53,10 @@ type Package struct {
 	mu       sync.Mutex
 }
 
+func (p *Package) String() string {
+	return fmt.Sprintf("Package[name=%q, path=%q, u=%p]", p.Path, p.Name, p.universe)
+}
+
 func (p *Package) Relative(pkgpath string, name string) *Package {
 	fullpath := path.Join(p.Path, pkgpath)
 	return p.universe.NewPackage(fullpath, name)
@@ -92,6 +97,10 @@ type ImportedPackage struct {
 	here      *Package
 	pkg       *Package
 	qualifier string
+}
+
+func (ip *ImportedPackage) String() string {
+	return fmt.Sprintf("ImportedPackage[path=%q, from=%q, u=%p]", ip.pkg.Path, ip.here.Path, ip.here.universe)
 }
 
 func (ip *ImportedPackage) Lookup(sym *Symbol) *ImportedSymbol {
