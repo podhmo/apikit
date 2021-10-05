@@ -58,8 +58,8 @@ func TestWriteHandlerFunc(t *testing.T) {
 
 import (
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -77,8 +77,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -99,8 +99,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -130,8 +130,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -166,8 +166,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 import (
 	"context"
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -177,7 +177,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		ctx := req.Context()
+		var ctx context.Context = req.Context()
 		result, err := webtranslate.PingWithContext(ctx)
 		runtime.HandleResult(w, req, result, err)
 	}
@@ -192,8 +192,8 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 import (
 	"context"
 	"github.com/podhmo/apikit/web/webtranslate"
-	"m/runtime"
 	"net/http"
+	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
@@ -203,7 +203,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		ctx := req.Context()
+		var ctx context.Context = req.Context()
 		var db *webtranslate.DB
 		{
 			db = provider.DB()

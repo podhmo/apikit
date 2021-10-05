@@ -26,33 +26,25 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		Config: t.Config.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			// todo: support provider *tinypkg.Var
-			if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, def); err != nil {
-				return err
-			}
-			// todo: remove if unused
-			if err := collector.Add(here.Import(t.Config.RuntimePkg)); err != nil {
-				return err
-			}
-			if err := collector.Add(here.Import(t.Resolver.NewPackage("net/http", ""))); err != nil {
-				return err
-			}
-			return nil
+			return collectImportsForHandler(collector, t.Resolver, t.Tracker, def)
 		},
-		EmitCode: func(w io.Writer) error {
-			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
-			if err != nil {
-				return err
-			}
-			providerModule, err := t.ProviderModule()
-			if err != nil {
-				return err
-			}
-			runtimeModule, err := t.RuntimeModule()
-			if err != nil {
-				return err
-			}
-			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
-		},
+	}
+	c.EmitCode = func(w io.Writer) error {
+		pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
+		if err != nil {
+			return err
+		}
+		providerModule, err := t.ProviderModule()
+		if err != nil {
+			return err
+		}
+		c.AddDependency(providerModule)
+		runtimeModule, err := t.RuntimeModule()
+		if err != nil {
+			return err
+		}
+		c.AddDependency(runtimeModule)
+		return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
 	}
 	return &code.CodeEmitter{Code: c}
 }
@@ -62,8 +54,7 @@ func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *reso
 	use := collector.Collect
 
 	for _, x := range def.Args {
-		shape := tracker.ExtractComponentFactoryShape(x)
-		sym := resolver.Symbol(here, shape)
+		sym := resolver.Symbol(here, x.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
 			return fmt.Errorf("on walk args %s: %w", sym, err)
 		}
@@ -77,11 +68,6 @@ func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *reso
 	if err := use(def.Symbol); err != nil {
 		return fmt.Errorf("on self %s: %w", def.Symbol, err)
 	}
-
-	// TODO:
-	// if err := tinypkg.Walk(provider, use); err != nil {
-	// 	return nil, err
-	// }
 	return nil
 }
 
@@ -224,7 +210,7 @@ func WriteHandlerFunc(w io.Writer,
 					if x.Name != "ctx" {
 						return fmt.Errorf("unsupported %+v", x)
 					}
-					fmt.Fprintf(w, "\t\t%s := req.Context()\n", x.Name)
+					fmt.Fprintf(w, "\t\tvar %s context.Context = req.Context()\n", x.Name)
 				}
 			}
 
