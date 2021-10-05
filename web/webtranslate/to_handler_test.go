@@ -35,11 +35,12 @@ func ListArticleWithContext(ctx context.Context, db *DB) ([]*Article, error) {
 func TestWriteHandlerFunc(t *testing.T) {
 	handlerName := "Handler"
 
-	translator := NewTranslator(DefaultConfig())
-	resolver := translator.Resolver
+	config := DefaultConfig()
+	config.Header = ""
+	resolver := config.Resolver
+	config.Runtime = resolver.NewPackage("m/runtime", "")
 
 	main := resolver.NewPackage("main", "")
-	runtime := resolver.NewPackage("m/runtime", "")
 
 	cases := []struct {
 		msg      string
@@ -52,7 +53,9 @@ func TestWriteHandlerFunc(t *testing.T) {
 			msg:   "no-deps",
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/ping", Ping) },
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		result, err := webtranslate.Ping()
@@ -64,7 +67,9 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			msg:   "bind-path",
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/greet/{message}", Greeting) },
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		message := runtime.PathParam(req, "message")
@@ -79,7 +84,9 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			msg:   "single-dep",
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
@@ -103,7 +110,9 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			override: func(tracker *resolve.Tracker) {
 				tracker.Override(reflect.TypeOf(&DB{}), "db", resolver.Def(func() (*DB, error) { return nil, nil }))
 			},
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
@@ -131,7 +140,9 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			mount: func(r *web.Router) {
 				r.Get("/ping", PingWithContext)
 			},
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, _, err := getProvider(req)
@@ -149,7 +160,9 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			msg:   "single-dep-with-context",
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticleWithContext) },
-			want: `
+			want: `package main
+
+
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
@@ -177,42 +190,26 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
+			translator := NewTranslator(config)
+
 			r := web.NewRouter()
 			c.mount(r)
-
-			var node *web.WalkerNode
-			web.Walk(r, func(n *web.WalkerNode) error {
-				node = n
-				return nil
-			})
-
-			tracker := resolve.NewTracker()
 			if c.override != nil {
-				c.override(tracker)
+				c.override(translator.Tracker)
 			}
 
-			providerModule, err := translator.GetProviderModule(runtime, "Provider")
-			if err != nil {
+			if err := web.Walk(r, func(n *web.WalkerNode) error {
+				code := translator.TranslateToHandler(c.here, n, handlerName)
+				var buf strings.Builder
+				if err := code.Emit(&buf); err != nil {
+					t.Fatalf("unexpected error %+v", err)
+				}
+				if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
+					difftest.LogDiffGotStringAndWantString(t, got, want)
+				}
+				return nil
+			}); err != nil {
 				t.Fatalf("unexpected error %+v", err)
-			}
-			runtimeModule, err := translator.RuntimeModule(runtime)
-			if err != nil {
-				t.Fatalf("unexpected error %+v", err)
-			}
-
-			def := resolver.Def(node.Node.Value)
-			tracker.Track(def)
-			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
-			if err != nil {
-				t.Fatalf("unexpected error, extract info, %+v", err)
-			}
-
-			var buf strings.Builder
-			if err := WriteHandlerFunc(&buf, c.here, resolver, tracker, pathinfo, providerModule, runtimeModule, handlerName); err != nil {
-				t.Errorf("unexpected error %+v", err)
-			}
-			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
-				difftest.LogDiffGotStringAndWantString(t, got, want)
 			}
 		})
 	}
