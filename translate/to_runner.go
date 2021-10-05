@@ -30,7 +30,7 @@ func (t *Translator) TranslateToRunner(here *tinypkg.Package, fn interface{}, na
 			}
 			return collectImportsForRunner(collector, t.Resolver, t.Tracker, def, provider)
 		},
-		EmitCode: func(w io.Writer) error {
+		EmitCode: func(w io.Writer, c *code.Code) error {
 			if provider == nil {
 				provider = t.providerVar
 			}

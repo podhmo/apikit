@@ -19,7 +19,7 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package) *code.CodeEmitt
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			return collectImportsForInterface(collector, t.Resolver, t.Tracker)
 		},
-		EmitCode: func(w io.Writer) error {
+		EmitCode: func(w io.Writer, c *code.Code) error {
 			return writeInterface(w, here, t.Resolver, t.Tracker, name)
 		},
 	}

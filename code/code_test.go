@@ -21,7 +21,7 @@ func TestCodeEmitCode(t *testing.T) {
 	}{
 		{
 			msg: "no-import",
-			code: config.NewCode(pkg, "", func(w io.Writer) error {
+			code: config.NewCode(pkg, "", func(w io.Writer, c *Code) error {
 				fmt.Fprintln(w, `func Hello() string { return "hello" }`)
 				return nil
 			}),
@@ -37,7 +37,7 @@ func Hello() string { return "hello" }`,
 		{
 			msg: "with-import",
 			code: func() *Code {
-				code := config.NewCode(pkg, "", func(w io.Writer) error {
+				code := config.NewCode(pkg, "", func(w io.Writer, c *Code) error {
 					fmt.Fprintln(w, `func Hello(ctx context.Context) string { return "hello" }`)
 					return nil
 				})
@@ -63,7 +63,7 @@ func Hello(ctx context.Context) string { return "hello" }`,
 			code: func() *Code {
 				c := DefaultConfig()
 				c.Header = ""
-				return c.NewCode(pkg, "", func(w io.Writer) error {
+				return c.NewCode(pkg, "", func(w io.Writer, c *Code) error {
 					fmt.Fprintln(w, `func Hello() string { return "hello" }`)
 					return nil
 				})
@@ -106,7 +106,7 @@ func TestCodeUseAsSymbol(t *testing.T) {
 		{
 			msg:  "same package",
 			here: pkg,
-			code: config.NewCode(pkg, "Foo", func(w io.Writer) error {
+			code: config.NewCode(pkg, "Foo", func(w io.Writer, c *Code) error {
 				fmt.Fprintln(w, "func Foo() string")
 				return nil
 			}),
@@ -115,7 +115,7 @@ func TestCodeUseAsSymbol(t *testing.T) {
 		{
 			msg:  "another package",
 			here: main,
-			code: config.NewCode(pkg, "Foo", func(w io.Writer) error {
+			code: config.NewCode(pkg, "Foo", func(w io.Writer, c *Code) error {
 				fmt.Fprintln(w, "func Foo() string")
 				return nil
 			}),
@@ -128,15 +128,15 @@ func TestCodeUseAsSymbol(t *testing.T) {
 			code: func() *Code {
 				// foo.Foo, main.Bar is defined
 				// and define main.Use() function.
-				fooCode := config.NewCode(pkg, "Foo", func(w io.Writer) error {
+				fooCode := config.NewCode(pkg, "Foo", func(w io.Writer, c *Code) error {
 					fmt.Fprintln(w, "type Foo struct {}")
 					return nil
 				})
-				barCode := config.NewCode(main, "Bar", func(w io.Writer) error {
+				barCode := config.NewCode(main, "Bar", func(w io.Writer, c *Code) error {
 					fmt.Fprintln(w, "type Bar struct {}")
 					return nil
 				})
-				useCode := config.NewCode(main, "Use", func(w io.Writer) error {
+				useCode := config.NewCode(main, "Use", func(w io.Writer, c *Code) error {
 					fmt.Fprintf(w, "func Use(foo %s, bar %s) error { return nil }\n",
 						tinypkg.ToRelativeTypeString(main, fooCode),
 						tinypkg.ToRelativeTypeString(main, barCode),

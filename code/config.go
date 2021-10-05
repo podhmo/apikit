@@ -45,7 +45,7 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 
 	// first, emit code
 	buf := new(bytes.Buffer)
-	if err := code.EmitCode(buf); err != nil {
+	if err := code.EmitCode(buf, code.Code); err != nil {
 		return fmt.Errorf("emit code in code %q : %w", code.Name, err)
 	}
 
@@ -73,7 +73,7 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 func (c *Config) NewCode(
 	here *tinypkg.Package,
 	name string,
-	emitCode func(w io.Writer) error,
+	emitCode func(io.Writer, *Code) error,
 ) *Code {
 	return &Code{
 		Name:     name,
