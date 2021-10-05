@@ -16,7 +16,7 @@ func ListArticle(getProvider func(*http.Request) (*http.Request, Provider, error
 			webruntime.HandleResult(w, req, nil, err)
 			return
 		}
-		ctx := req.Context()
+		var ctx context.Context = req.Context()
 		var db *design.DB
 		{
 			var err error
