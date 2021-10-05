@@ -42,10 +42,11 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *Code) error {
 	fmt.Fprintln(w, c.Header)
 	fmt.Fprintf(w, "package %s\n\n", code.Here.Name)
 
-	imports, err := code.CollectImports(code.Here)
-	if err != nil {
+	collector := tinypkg.NewImportCollector(code.Here)
+	if err := code.CollectImports(collector); err != nil {
 		return err
 	}
+	imports := collector.Imports
 	if err := code.EmitImports(w, imports); err != nil {
 		if err != ErrNoImports {
 			return err

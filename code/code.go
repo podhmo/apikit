@@ -12,15 +12,22 @@ import (
 var ErrNoImports = fmt.Errorf("no imports")
 
 type Code struct {
-	Name string
-	Here *tinypkg.Package
+	Name     string
+	Here     *tinypkg.Package
+	imported []*tinypkg.ImportedPackage
 
-	ImportPackages func() ([]*tinypkg.ImportedPackage, error)
+	ImportPackages func(*tinypkg.ImportCollector) error
 	EmitCode       func(w io.Writer) error
 
 	priority int
 	Config   *Config
 	Depends  []tinypkg.Node
+}
+
+func (c *Code) Import(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
+	im := c.Here.Import(pkg)
+	c.imported = append(c.imported, im)
+	return im
 }
 
 func (c *Code) Priority(priority *int) int {
@@ -34,38 +41,32 @@ func (c *Code) FormatBytes(b []byte) ([]byte, error) {
 	return format.Source(b) // TODO: speed-up
 }
 
-func (c *Code) CollectImports(here *tinypkg.Package) ([]*tinypkg.ImportedPackage, error) {
-	var imports []*tinypkg.ImportedPackage
-	if c.Here != here {
-		imports = append(imports, here.Import(c.Here))
+func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
+	if c.Here != collector.Here {
+		collector.Add(collector.Here.Import(c.Here))
+	}
+	if len(c.imported) > 0 {
+		if err := collector.Merge(c.imported); err != nil {
+			return err
+		}
 	}
 	if c.Depends == nil && c.ImportPackages == nil {
-		return imports, nil
+		return nil
 	}
 
 	if c.ImportPackages != nil {
-		impkgs, err := c.ImportPackages()
-		if err != nil {
-			return nil, err
+		if err := c.ImportPackages(collector); err != nil {
+			return fmt.Errorf("collect import in code %q, in import package : %w", c.Name, err)
 		}
-		if len(impkgs) == 0 {
-			return nil, ErrNoImports
-		}
-		imports = append(imports, impkgs...)
 	}
 	if c.Depends != nil {
-		collector := tinypkg.NewImportCollector(c.Here)
-		if err := collector.Merge(imports); err != nil {
-			return nil, fmt.Errorf("collect import in code %q : %w", c.Name, err)
-		}
 		for _, dep := range c.Depends {
 			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
-				return nil, fmt.Errorf("collect import in code %q, in walk : %w", c.Name, err)
+				return fmt.Errorf("collect import in code %q, in walk : %w", c.Name, err)
 			}
 		}
-		imports = collector.Imports
 	}
-	return imports, nil
+	return nil
 }
 
 func (c *Code) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackage) error {
