@@ -55,6 +55,11 @@ func TestWriteHandlerFunc(t *testing.T) {
 			mount: func(r *web.Router) { r.Get("/ping", Ping) },
 			want: `package main
 
+import (
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -69,6 +74,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			mount: func(r *web.Router) { r.Get("/greet/{message}", Greeting) },
 			want: `package main
 
+import (
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -86,7 +96,12 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
 			want: `package main
 
-
+import (
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
+			
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
@@ -112,6 +127,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			},
 			want: `package main
 
+import (
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -142,6 +162,12 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			},
 			want: `package main
 
+import (
+	"context"
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
@@ -162,6 +188,12 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			mount: func(r *web.Router) { r.Get("/articles", ListArticleWithContext) },
 			want: `package main
 
+import (
+	"context"
+	"github.com/podhmo/apikit/web/webtranslate"
+	"m/runtime"
+	"net/http"
+)
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {

@@ -14,7 +14,10 @@ var ErrNoImports = code.ErrNoImports
 
 type Config struct {
 	*code.Config
+	RootPkg *tinypkg.Package
+
 	RuntimePkg   *tinypkg.Package
+	ProviderPkg  *tinypkg.Package
 	ProviderName string
 }
 
@@ -22,8 +25,8 @@ func DefaultConfig() *Config {
 	c := code.DefaultConfig()
 	return &Config{
 		Config:       c,
-		RuntimePkg:   c.Resolver.NewPackage("runtime", ""), // TODO: relative import from rootpkg
 		ProviderName: "Provider",
+		RootPkg:      c.Resolver.NewPackage("", ""),
 	}
 }
 
@@ -53,6 +56,9 @@ func (t *Translator) Override(name string, providerFunc interface{}) (prev *reso
 }
 
 func (t *Translator) RuntimeModule() (*resolve.Module, error) {
+	if t.Config.RuntimePkg == nil {
+		t.Config.RuntimePkg = t.Config.RootPkg.Relative("runtime", "")
+	}
 	here := t.Config.RuntimePkg
 	if t.runtimeModule != nil {
 		if t.runtimeModule.Here != here {
@@ -79,7 +85,10 @@ func (t *Translator) RuntimeModule() (*resolve.Module, error) {
 
 func (t *Translator) ProviderModule() (*resolve.Module, error) {
 	providerName := t.Config.ProviderName
-	here := t.Config.RuntimePkg
+	if t.Config.ProviderPkg == nil {
+		t.Config.ProviderPkg = t.Config.RootPkg.Relative("provider", "")
+	}
+	here := t.Config.ProviderPkg
 	if t.providerModule != nil {
 		if t.providerModule.Here != here {
 			return nil, fmt.Errorf("conflict package, %v != %v", t.providerModule.Here, here)

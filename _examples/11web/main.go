@@ -61,6 +61,7 @@ func run() (err error) {
 
 	translator.Config.RuntimePkg = resolver.NewPackage("github.com/podhmo/apikit/web/webruntime", "") // xxx
 	pkg := rootpkg.Relative("handler", "")
+	// translator.Config.ProviderPkg = pkg
 
 	translator.Override("db", design.NewDB)
 
