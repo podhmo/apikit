@@ -1,6 +1,7 @@
 package webtranslate
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/podhmo/apikit/code"
@@ -15,8 +16,8 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package) *code.Code {
 		Here: here,
 		// priority: code.PriorityFirst,
 		Config: t.Config.Config,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForInterface(here, t.Resolver, t.Tracker)
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
+			return collectImportsForInterface(collector, t.Resolver, t.Tracker)
 		},
 		EmitCode: func(w io.Writer) error {
 			return writeInterface(w, here, t.Resolver, t.Tracker, name)
@@ -24,8 +25,8 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package) *code.Code {
 	}
 }
 
-func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker) ([]*tinypkg.ImportedPackage, error) {
-	collector := tinypkg.NewImportCollector(here)
+func collectImportsForInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {
+	here := collector.Here
 	use := collector.Collect
 	for _, need := range t.Needs {
 		shape := need.Shape
@@ -34,10 +35,10 @@ func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolve
 		}
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk %s: %w", sym, err)
 		}
 	}
-	return collector.Imports, nil
+	return nil
 }
 
 func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {

@@ -24,17 +24,19 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		Here: here,
 		// priority: code.PrioritySecond,
 		Config: t.Config.Config,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			// todo: support provider *tinypkg.Var
-			imports, err := collectImportsForHandler(here, t.Resolver, t.Tracker, def)
-			if err != nil {
-				return nil, err
+			if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, def); err != nil {
+				return err
 			}
-			return append(
-				imports,
-				here.Import(t.Config.RuntimePkg), // todo: remove if unused
-				here.Import(t.Resolver.NewPackage("net/http", "")),
-			), nil
+			// todo: remove if unused
+			if err := collector.Add(here.Import(t.Config.RuntimePkg)); err != nil {
+				return err
+			}
+			if err := collector.Add(here.Import(t.Resolver.NewPackage("net/http", ""))); err != nil {
+				return err
+			}
+			return nil
 		},
 		EmitCode: func(w io.Writer) error {
 			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
@@ -54,32 +56,32 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 	}
 }
 
-func collectImportsForHandler(here *tinypkg.Package, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) ([]*tinypkg.ImportedPackage, error) {
-	collector := tinypkg.NewImportCollector(here)
+func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) error {
+	here := collector.Here
 	use := collector.Collect
 
 	for _, x := range def.Args {
 		shape := tracker.ExtractComponentFactoryShape(x)
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk args %s: %w", sym, err)
 		}
 	}
 	for _, x := range def.Returns {
 		sym := resolver.Symbol(here, x.Shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk returns %s: %w", sym, err)
 		}
 	}
 	if err := use(def.Symbol); err != nil {
-		return nil, err
+		return fmt.Errorf("on self %s: %w", def.Symbol, err)
 	}
 
 	// TODO:
 	// if err := tinypkg.Walk(provider, use); err != nil {
 	// 	return nil, err
 	// }
-	return collector.Imports, nil
+	return nil
 }
 
 func WriteHandlerFunc(w io.Writer,
