@@ -41,9 +41,7 @@ func replace(node Node, use func(*Symbol) Node) Node {
 	case *ImportedSymbol:
 		replaced := replace(x.sym, use)
 		if sym, ok := replaced.(*Symbol); ok {
-			x.pkg.pkg = sym.Package // ImportedPackage is not cached. so update directly
-			x.sym = sym
-			return x
+			return x.pkg.here.Import(sym.Package).Lookup(sym)
 		}
 		return replaced
 	default:
