@@ -28,23 +28,23 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			// todo: support provider *tinypkg.Var
 			return collectImportsForHandler(collector, t.Resolver, t.Tracker, def)
 		},
-	}
-	c.EmitCode = func(w io.Writer) error {
-		pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
-		if err != nil {
-			return err
-		}
-		providerModule, err := t.ProviderModule()
-		if err != nil {
-			return err
-		}
-		c.AddDependency(providerModule)
-		runtimeModule, err := t.RuntimeModule()
-		if err != nil {
-			return err
-		}
-		c.AddDependency(runtimeModule)
-		return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
+		EmitCode: func(w io.Writer, c *code.Code) error {
+			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
+			if err != nil {
+				return err
+			}
+			providerModule, err := t.ProviderModule()
+			if err != nil {
+				return err
+			}
+			c.AddDependency(providerModule)
+			runtimeModule, err := t.RuntimeModule()
+			if err != nil {
+				return err
+			}
+			c.AddDependency(runtimeModule)
+			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
+		},
 	}
 	return &code.CodeEmitter{Code: c}
 }

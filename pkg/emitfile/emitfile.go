@@ -83,9 +83,12 @@ func (e *Executor) Emit() error {
 		}
 		b := buf.Bytes()
 		if action.FormatFunc != nil {
-			b, err = action.FormatFunc(b)
-			if err != nil {
+			output, err := action.FormatFunc(b)
+			if err != nil && !DEBUG {
 				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+			}
+			if err == nil {
+				b = output
 			}
 		}
 		if err := WriteOrCreateFile(fpath, b); err != nil {

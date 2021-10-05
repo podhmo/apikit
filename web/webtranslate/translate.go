@@ -99,6 +99,7 @@ func (t *Translator) ProviderModule() (*resolve.Module, error) {
 	type providerT interface{}
 	var moduleSkeleton struct {
 		T             providerT
+		getProvider   func(*http.Request) (*http.Request, providerT, error)
 		createHandler func(
 			getProvider func(*http.Request) (*http.Request, providerT, error),
 		) http.HandlerFunc
