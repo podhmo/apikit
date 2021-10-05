@@ -79,7 +79,8 @@ func Hello() string { return "hello" }`,
 	for _, c := range cases {
 		t.Run(c.msg, func(t *testing.T) {
 			var buf strings.Builder
-			if err := c.code.Emit(&buf); err != nil {
+			emitter := &CodeEmitter{Code: c.code}
+			if err := emitter.Emit(&buf); err != nil {
 				t.Fatalf("unexpected error %+v", err)
 			}
 			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
