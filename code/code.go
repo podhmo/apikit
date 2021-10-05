@@ -12,63 +12,82 @@ import (
 var ErrNoImports = fmt.Errorf("no imports")
 
 type Code struct {
-	Name string
-	Here *tinypkg.Package
+	Name     string
+	Here     *tinypkg.Package
+	imported []*tinypkg.ImportedPackage
 
-	ImportPackages func() ([]*tinypkg.ImportedPackage, error)
-	EmitCode       func(w io.Writer) error
+	ImportPackages func(*tinypkg.ImportCollector) error
+	EmitCode       func(w io.Writer) error // currently used by Config.EmitCodeFunc
 
-	priority int
+	Priority int
 	Config   *Config
 	Depends  []tinypkg.Node
 }
 
-func (c *Code) Priority(priority *int) int {
-	return c.priority
+func (c *Code) ImportPackage(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
+	im := c.Here.Import(pkg)
+	c.imported = append(c.imported, im)
+	return im
+}
+func (c *Code) AddDependency(dep tinypkg.Node) {
+	c.Depends = append(c.Depends, dep)
 }
 
-func (c *Code) FormatBytes(b []byte) ([]byte, error) {
-	if c.Config.DisableFormat {
-		return b, nil
+// CollectImports is currently used by Config.EmitCodeFunc
+func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
+	if c.Here != collector.Here {
+		collector.Add(collector.Here.Import(c.Here))
 	}
-	return format.Source(b) // TODO: speed-up
-}
-
-func (c *Code) CollectImports(here *tinypkg.Package) ([]*tinypkg.ImportedPackage, error) {
-	var imports []*tinypkg.ImportedPackage
-	if c.Here != here {
-		imports = append(imports, here.Import(c.Here))
+	if len(c.imported) > 0 {
+		if err := collector.Merge(c.imported); err != nil {
+			return err
+		}
 	}
 	if c.Depends == nil && c.ImportPackages == nil {
-		return imports, nil
+		return nil
 	}
 
 	if c.ImportPackages != nil {
-		impkgs, err := c.ImportPackages()
-		if err != nil {
-			return nil, err
+		if err := c.ImportPackages(collector); err != nil {
+			return fmt.Errorf("in import package : %w", err)
 		}
-		if len(impkgs) == 0 {
-			return nil, ErrNoImports
-		}
-		imports = append(imports, impkgs...)
 	}
-	if c.Depends != nil {
-		collector := tinypkg.NewImportCollector(c.Here)
-		if err := collector.Merge(imports); err != nil {
-			return nil, fmt.Errorf("collect import in code %q : %w", c.Name, err)
-		}
+	if c.Depends != nil { // TODO: cache
+		seen := make(map[tinypkg.Node]struct{}, len(c.Depends))
 		for _, dep := range c.Depends {
+			if _, ok := seen[dep]; ok {
+				continue
+			}
+			seen[dep] = struct{}{}
 			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
-				return nil, fmt.Errorf("collect import in code %q, in walk : %w", c.Name, err)
+				return fmt.Errorf("in walk : %w", err)
 			}
 		}
-		imports = collector.Imports
 	}
-	return imports, nil
+	return nil
 }
 
-func (c *Code) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackage) error {
+// String : for pkg/tinypkg.Node
+func (c *Code) String() string {
+	return tinypkg.ToRelativeTypeString(c.Here, c.Here.NewSymbol(c.Name))
+}
+
+// OnWalk : for pkg/tinypkg.Node
+func (c *Code) OnWalk(use func(*tinypkg.Symbol) error) error {
+	return use(c.Here.NewSymbol(c.Name))
+}
+
+// String : for pkg/tinypkg 's internal interface
+func (c *Code) RelativeTypeString(here *tinypkg.Package) string {
+	return tinypkg.ToRelativeTypeString(here, c.Here.NewSymbol(c.Name))
+}
+
+type CodeEmitter struct {
+	*Code
+}
+
+// EmitImports is currently used by Config.EmitCodeFunc
+func (c *CodeEmitter) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackage) error {
 	if imports == nil {
 		return nil
 	}
@@ -81,25 +100,23 @@ func (c *Code) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackage) erro
 	return nil
 }
 
-// Emit for pkg/emitfile.Emitter
-func (c *Code) Emit(w io.Writer) error {
+// Emit : for pkg/emitfile.Emitter
+func (c *CodeEmitter) Emit(w io.Writer) error {
 	return c.Config.EmitCodeFunc(w, c)
 }
 
-// String for pkg/tinypkg.Node
-func (c *Code) String() string {
-	return tinypkg.ToRelativeTypeString(c.Here, c.Here.NewSymbol(c.Name))
+// Priority : for pkg/emitfile 's internal interface
+func (c *CodeEmitter) Priority(priority *int) int {
+	return c.Code.Priority
 }
 
-// OnWalk for pkg/tinypkg.Node
-func (c *Code) OnWalk(use func(*tinypkg.Symbol) error) error {
-	return use(c.Here.NewSymbol(c.Name))
+// Priority : for pkg/emitfile 's internal interface
+func (c *CodeEmitter) FormatBytes(b []byte) ([]byte, error) {
+	if c.Config.DisableFormat {
+		return b, nil
+	}
+	return format.Source(b) // TODO: speed-up
 }
 
-// String for pkg/tinypkg 's internal interface
-func (c *Code) RelativeTypeString(here *tinypkg.Package) string {
-	return tinypkg.ToRelativeTypeString(here, c.Here.NewSymbol(c.Name))
-}
-
-var _ emitfile.Emitter = &Code{}
+var _ emitfile.Emitter = &CodeEmitter{}
 var _ tinypkg.Node = &Code{}

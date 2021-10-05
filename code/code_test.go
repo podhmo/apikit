@@ -41,10 +41,8 @@ func Hello() string { return "hello" }`,
 					fmt.Fprintln(w, `func Hello(ctx context.Context) string { return "hello" }`)
 					return nil
 				})
-				code.ImportPackages = func() ([]*tinypkg.ImportedPackage, error) {
-					return []*tinypkg.ImportedPackage{
-						pkg.Import(tinypkg.NewPackage("context", "")),
-					}, nil
+				code.ImportPackages = func(collector *tinypkg.ImportCollector) error {
+					return collector.Add(pkg.Import(tinypkg.NewPackage("context", "")))
 				}
 				return code
 			}(),
@@ -81,7 +79,8 @@ func Hello() string { return "hello" }`,
 	for _, c := range cases {
 		t.Run(c.msg, func(t *testing.T) {
 			var buf strings.Builder
-			if err := c.code.Emit(&buf); err != nil {
+			emitter := &CodeEmitter{Code: c.code}
+			if err := emitter.Emit(&buf); err != nil {
 				t.Fatalf("unexpected error %+v", err)
 			}
 			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
@@ -165,10 +164,11 @@ func TestCodeUseAsSymbol(t *testing.T) {
 
 			// imports
 			{
-				imports, err := c.code.CollectImports(c.here)
-				if err != nil {
+				collector := tinypkg.NewImportCollector(c.here)
+				if err := c.code.CollectImports(collector); err != nil {
 					t.Errorf("unexpected error for collect import")
 				}
+				imports := collector.Imports
 				if want, got := c.wantImports, imports; !reflect.DeepEqual(want, got) {
 					t.Errorf("want imports:\n\t%+v\nbug got:\n\t%+v", want, got)
 				}

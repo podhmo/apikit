@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -9,24 +10,25 @@ import (
 	"github.com/podhmo/apikit/resolve"
 )
 
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
 	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
-	return &code.Code{
+	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PriorityFirst,
 		Config: t.Config,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForInterface(here, t.Resolver, t.Tracker)
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
+			return collectImportsForInterface(collector, t.Resolver, t.Tracker)
 		},
 		EmitCode: func(w io.Writer) error {
 			return writeInterface(w, here, t.Resolver, t.Tracker, name)
 		},
 	}
+	return &code.CodeEmitter{Code: c}
 }
 
-func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker) ([]*tinypkg.ImportedPackage, error) {
-	collector := tinypkg.NewImportCollector(here)
+func collectImportsForInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {
+	here := collector.Here
 	use := collector.Collect
 	for _, need := range t.Needs {
 		shape := need.Shape
@@ -35,10 +37,10 @@ func collectImportsForInterface(here *tinypkg.Package, resolver *resolve.Resolve
 		}
 		sym := resolver.Symbol(here, shape)
 		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
+			return fmt.Errorf("on walk %s: %w", sym, err)
 		}
 	}
-	return collector.Imports, nil
+	return nil
 }
 
 func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {

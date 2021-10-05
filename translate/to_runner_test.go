@@ -36,6 +36,7 @@ func TestWriteRunner(t *testing.T) {
 	resolver := resolve.NewResolver()
 
 	config := DefaultConfig()
+	config.Header = ""
 	config.Resolver = resolver
 
 	cases := []struct {
@@ -51,11 +52,13 @@ func TestWriteRunner(t *testing.T) {
 			name:  "RunAddTodo",
 			input: AddTodo,
 			here:  main,
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -68,11 +71,13 @@ func RunAddTodo(provider component.Provider, title string, done bool) (*translat
 			name:  "RunAddAlsoAnotherTodo",
 			input: AddAlsoAnotherTodo,
 			here:  main,
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddAlsoAnotherTodo(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -89,12 +94,14 @@ func RunAddAlsoAnotherTodo(provider component.Provider, title string, done bool)
 			name:  "RunAddTodoWithContext",
 			input: AddTodoWithContext,
 			here:  main,
-			want: `
+			want: `package main
+
 import (
 	"context"
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodoWithContext(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -112,11 +119,13 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 				def := resolver.Def(func() (*Session, error) { return nil, nil })
 				tracker.Override(rt, "session", def)
 			},
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodoWithOverride1(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -138,11 +147,13 @@ func RunAddTodoWithOverride1(provider component.Provider, title string, done boo
 				def := resolver.Def(func() (*Session, func()) { return nil, nil })
 				tracker.Override(rt, "session", def)
 			},
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodoWithOverride2(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -164,11 +175,13 @@ func RunAddTodoWithOverride2(provider component.Provider, title string, done boo
 				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
 			},
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodoWithOverride3(provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -194,11 +207,13 @@ func RunAddTodoWithOverride3(provider component.Provider, title string, done boo
 				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
 			},
-			want: `
+			want: `package main
+
 import (
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunMustAddTodoWithOverride3(provider component.Provider, title string, done bool) *translate.Todo {
 	var session *translate.Session
 	{
@@ -224,12 +239,14 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 				def := resolver.Def(func(ctx context.Context) (*Session, func(), error) { return nil, nil, nil })
 				tracker.Override(rt, "session", def)
 			},
-			want: `
+			want: `package main
+
 import (
 	"context"
 	"github.com/podhmo/apikit/translate"
 	"m/component"
 )
+
 func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, title string, done bool) (*translate.Todo, error) {
 	var session *translate.Session
 	{
@@ -285,17 +302,7 @@ func RunAddTodoWithOverride4(ctx context.Context, provider component.Provider, t
 
 			code := translator.TranslateToRunner(c.here, c.input, c.name, provider)
 			var buf bytes.Buffer
-
-			imports, err := code.CollectImports(c.here)
-			if err != nil && c.wantError == nil || c.wantError != err {
-				t.Fatalf("unexpected error, collect imports %+v", err)
-			}
-			if err := code.EmitImports(&buf, imports); err != nil {
-				if c.wantError == nil || c.wantError != err {
-					t.Fatalf("unexpected error, import %+v", err)
-				}
-			}
-			if err := code.EmitCode(&buf); err != nil {
+			if err := code.Emit(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {
 					t.Fatalf("unexpected error, code %+v", err)
 				}
