@@ -1,20 +1,69 @@
 package webruntime
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
+	"io"
 	"net/http"
 	"reflect"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
+	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/schema"
 )
 
-var PathParam = chi.URLParam
+var mu sync.Mutex
+var decoder = schema.NewDecoder()
+var validate = validator.New()
 
-func Wrap(next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-		next.ServeHTTP(w, req)
+func Validate(ob interface{}) error {
+	// TODO: merge error
+	if err := validate.Struct(ob); err != nil {
+		return err
 	}
+	if v, ok := ob.(interface{ Validate() error }); ok {
+		return v.Validate()
+	}
+	return nil
+}
+
+// TODO: performance
+func BindPath(dst interface{}, req *http.Request, keys []string) error {
+	params := make(map[string][]string, len(keys))
+	rctx := chi.RouteContext(req.Context())
+	if rctx == nil {
+		return nil
+	}
+
+	for _, k := range keys {
+		params[k] = []string{rctx.URLParam(k)}
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	decoder.SetAliasTag("path")
+	return decoder.Decode(dst, params)
+}
+
+func BindQuery(dst interface{}, req *http.Request) error {
+	mu.Lock()
+	defer mu.Unlock()
+	decoder.SetAliasTag("query")
+	return decoder.Decode(dst, req.URL.Query())
+}
+
+func BindHeader(dst interface{}, req *http.Request, keys []string) error {
+	mu.Lock()
+	defer mu.Unlock()
+	decoder.SetAliasTag("header")
+	return decoder.Decode(dst, req.Header)
+}
+
+func BindBody(dst interface{}, r io.ReadCloser) error {
+	if err := render.DecodeJSON(r, dst); err != nil {
+		return err
+	}
+	return nil
 }
 
 func HandleResult(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
@@ -24,33 +73,16 @@ func HandleResult(w http.ResponseWriter, req *http.Request, v interface{}, err e
 		v = reflect.MakeSlice(val.Type(), 0, 0).Interface()
 	}
 
-	JSON(w, req, v, err)
-}
-
-func JSON(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
 	var code int
-	target := v
-
 	if err != nil {
 		code = 500
 		if impl, ok := err.(interface{ Code() int }); ok {
 			code = impl.Code()
 		}
-		target = map[string]interface{}{"message": err.Error()}
+		v = map[string]interface{}{"message": err.Error()}
 	}
-
-	buf := &bytes.Buffer{}
-	encoder := json.NewEncoder(buf)
-	encoder.SetEscapeHTML(true)
-
-	if err := encoder.Encode(target); err != nil {
-		http.Error(w, err.Error(), 500)
-		return
+	if code != 0 {
+		req = req.WithContext(context.WithValue(req.Context(), render.StatusCtxKey, code))
 	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	if code > 0 {
-		w.WriteHeader(code)
-	}
-	w.Write(buf.Bytes())
+	render.JSON(w, req, v)
 }
