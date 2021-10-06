@@ -13,7 +13,7 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, name string) *c
 		Name: name,
 		Here: here,
 		// priority: code.PriorityFirst,
-		Config: t.Config.Config,
+		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			resolver := t.Resolver
 			tracker := t.Tracker
