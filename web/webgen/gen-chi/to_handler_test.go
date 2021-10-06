@@ -1,4 +1,4 @@
-package webtranslate
+package genchi
 
 import (
 	"context"
@@ -57,14 +57,14 @@ func TestWriteHandlerFunc(t *testing.T) {
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		result, err := webtranslate.Ping()
+		result, err := genchi.Ping()
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -76,7 +76,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
@@ -84,7 +84,7 @@ import (
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		message := runtime.PathParam(req, "message")
-		result, err := webtranslate.Greeting(message)
+		result, err := genchi.Greeting(message)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -98,7 +98,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
@@ -110,11 +110,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			db = provider.DB()
 		}
-		result, err := webtranslate.ListArticle(db)
+		result, err := genchi.ListArticle(db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -129,7 +129,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
@@ -141,7 +141,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			var err error
 			db, err = provider.DB()
@@ -149,7 +149,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 				runtime.HandleResult(w, req, nil, err); return
 			}
 		}
-		result, err := webtranslate.ListArticle(db)
+		result, err := genchi.ListArticle(db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -165,7 +165,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
@@ -178,7 +178,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			return
 		}
 		var ctx context.Context = req.Context()
-		result, err := webtranslate.PingWithContext(ctx)
+		result, err := genchi.PingWithContext(ctx)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -191,7 +191,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/genchi"
 	"net/http"
 	"m/runtime"
 )
@@ -204,11 +204,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			return
 		}
 		var ctx context.Context = req.Context()
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			db = provider.DB()
 		}
-		result, err := webtranslate.ListArticleWithContext(ctx, db)
+		result, err := genchi.ListArticleWithContext(ctx, db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,

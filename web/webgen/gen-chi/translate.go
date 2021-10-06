@@ -1,4 +1,4 @@
-package webtranslate
+package genchi
 
 import (
 	"fmt"

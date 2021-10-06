@@ -10,10 +10,9 @@ import (
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/web/webtranslate"
 )
 
-func New(emitter *emitgo.Emitter, translator *webtranslate.Translator) *Generator {
+func New(emitter *emitgo.Emitter, translator *Translator) *Generator {
 	rootpkg := emitter.RootPkg
 
 	g := &Generator{
@@ -32,8 +31,8 @@ func New(emitter *emitgo.Emitter, translator *webtranslate.Translator) *Generato
 
 type Generator struct {
 	Emitter    *emitgo.Emitter
-	Translator *webtranslate.Translator
-	Config     *webtranslate.Config
+	Translator *Translator
+	Config     *Config
 
 	RootPkg     *tinypkg.Package
 	ProviderPkg *tinypkg.Package
@@ -41,8 +40,6 @@ type Generator struct {
 	HandlerPkg  *tinypkg.Package
 	RuntimePkg  *tinypkg.Package
 }
-
-var DefaultConfig = webtranslate.DefaultConfig
 
 func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	c := g.Config
@@ -115,7 +112,8 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	// provider
 	{
 		here := g.ProviderPkg
-		code := g.Translator.TranslateToInterface(here)
+		name := g.Config.ProviderName // xxx
+		code := g.Translator.TranslateToInterface(here, name)
 		g.Emitter.Register(here, code.Name, code)
 	}
 	return nil
