@@ -3,7 +3,6 @@ package translate
 import (
 	"bytes"
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -115,9 +114,7 @@ func RunAddTodoWithContext(ctx context.Context, provider component.Provider, tit
 			input: AddTodo,
 			here:  main,
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(AddTodo).In(0)
-				def := resolver.Def(func() (*Session, error) { return nil, nil })
-				tracker.Override(rt, "session", def)
+				tracker.Override("session", func() (*Session, error) { return nil, nil })
 			},
 			want: `package main
 
@@ -143,9 +140,7 @@ func RunAddTodoWithOverride1(provider component.Provider, title string, done boo
 			input: AddTodo,
 			here:  main,
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(AddTodo).In(0)
-				def := resolver.Def(func() (*Session, func()) { return nil, nil })
-				tracker.Override(rt, "session", def)
+				tracker.Override("session", func() (*Session, func()) { return nil, nil })
 			},
 			want: `package main
 
@@ -171,9 +166,7 @@ func RunAddTodoWithOverride2(provider component.Provider, title string, done boo
 			input: AddTodo,
 			here:  main,
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(AddTodo).In(0)
-				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
-				tracker.Override(rt, "session", def)
+				tracker.Override("session", func() (*Session, func(), error) { return nil, nil, nil })
 			},
 			want: `package main
 
@@ -203,9 +196,7 @@ func RunAddTodoWithOverride3(provider component.Provider, title string, done boo
 			input: MustAddTodo,
 			here:  main,
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(AddTodo).In(0)
-				def := resolver.Def(func() (*Session, func(), error) { return nil, nil, nil })
-				tracker.Override(rt, "session", def)
+				tracker.Override("session", func() (*Session, func(), error) { return nil, nil, nil })
 			},
 			want: `package main
 
@@ -235,9 +226,7 @@ func RunMustAddTodoWithOverride3(provider component.Provider, title string, done
 			input: AddTodo,
 			here:  main,
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(AddTodo).In(0)
-				def := resolver.Def(func(ctx context.Context) (*Session, func(), error) { return nil, nil, nil })
-				tracker.Override(rt, "session", def)
+				tracker.Override("session", func(ctx context.Context) (*Session, func(), error) { return nil, nil, nil })
 			},
 			want: `package main
 

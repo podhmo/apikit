@@ -19,8 +19,8 @@ type Bar struct{}
 func UseBar(ctx context.Context, store *Store, bar *Bar) error { return nil }
 
 func TestTrackerExtractInterface(t *testing.T) {
-	tracker := NewTracker()
 	resolver := NewResolver()
+	tracker := NewTracker(resolver)
 
 	tracker.Track(resolver.Def(UseFoo))
 	tracker.Track(resolver.Def(UseBar))

@@ -18,14 +18,16 @@ type Need struct {
 }
 
 type Tracker struct {
-	Needs []*Need
+	Resolver *Resolver
+	Needs    []*Need
 
 	visitedDef map[string]bool
 	seen       map[reflect.Type][]*Need
 }
 
-func NewTracker() *Tracker {
+func NewTracker(resolver *Resolver) *Tracker {
 	return &Tracker{
+		Resolver:   resolver,
 		visitedDef: map[string]bool{},
 		seen:       map[reflect.Type][]*Need{},
 	}
@@ -68,7 +70,15 @@ toplevel:
 	}
 }
 
-func (t *Tracker) Override(rt reflect.Type, name string, def *Def) (prev *Def) {
+func (t *Tracker) Override(name string, providerFunc interface{}) (prev *Def, err error) {
+	rt := reflect.TypeOf(providerFunc)
+	if rt.Kind() != reflect.Func {
+		return nil, fmt.Errorf("unexpected providerFunc, only function %v", rt)
+	}
+	return t.overrideByDef(rt.Out(0), name, t.Resolver.Def(providerFunc)), nil
+}
+
+func (t *Tracker) overrideByDef(rt reflect.Type, name string, def *Def) (prev *Def) {
 	for {
 		if rt.Kind() != reflect.Ptr {
 			break
