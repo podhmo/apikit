@@ -2,7 +2,6 @@ package genchi
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -40,8 +39,17 @@ func TestWriteHandlerFunc(t *testing.T) {
 	resolver := config.Resolver
 
 	main := resolver.NewPackage("main", "")
-	config.RuntimePkg = resolver.NewPackage("m/runtime", "")
-	config.ProviderPkg = main
+	runtimepkg := resolver.NewPackage("m/runtime", "")
+	providerpkg := main
+
+	runtimeModule, err := RuntimeModule(runtimepkg, resolver)
+	if err != nil {
+		t.Fatalf("unexpected error %+v", err)
+	}
+	providerModule, err := ProviderModule(providerpkg, resolver, "Provider")
+	if err != nil {
+		t.Fatalf("unexpected error %+v", err)
+	}
 
 	cases := []struct {
 		msg      string
@@ -57,7 +65,7 @@ func TestWriteHandlerFunc(t *testing.T) {
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -76,7 +84,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -98,7 +106,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -124,12 +132,12 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
 			override: func(tracker *resolve.Tracker) {
-				tracker.Override(reflect.TypeOf(&DB{}), "db", resolver.Def(func() (*DB, error) { return nil, nil }))
+				tracker.Override("db", func() (*DB, error) { return nil, nil })
 			},
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -165,7 +173,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -191,7 +199,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/genchi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -221,7 +229,13 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			translator := NewTranslator(config)
+			translator := &Translator{
+				Resolver:       config.Resolver,
+				Tracker:        resolve.NewTracker(config.Resolver),
+				Config:         config.Config,
+				RuntimeModule:  runtimeModule,
+				ProviderModule: providerModule,
+			}
 
 			r := web.NewRouter()
 			c.mount(r)
