@@ -4,17 +4,17 @@ package handler
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/webruntime"
 	"m/11web/design"
+	"m/11web/runtime"
 	"net/http"
 )
 
 func GetArticle(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		articleID := webruntime.PathParam(req, "articleId")
+		articleID := runtime.PathParam(req, "articleId")
 		req, provider, err := getProvider(req)
 		if err != nil {
-			webruntime.HandleResult(w, req, nil, err)
+			runtime.HandleResult(w, req, nil, err)
 			return
 		}
 		var ctx context.Context = req.Context()
@@ -23,11 +23,11 @@ func GetArticle(getProvider func(*http.Request) (*http.Request, Provider, error)
 			var err error
 			db, err = provider.DB(ctx)
 			if err != nil {
-				webruntime.HandleResult(w, req, nil, err)
+				runtime.HandleResult(w, req, nil, err)
 				return
 			}
 		}
 		result, err := design.GetArticle(ctx, db, articleID)
-		webruntime.HandleResult(w, req, result, err)
+		runtime.HandleResult(w, req, result, err)
 	}
 }

@@ -40,6 +40,5 @@ func run() (err error) {
 	c.Override("db", design.NewDB)
 
 	g := c.New(emitter)
-	g.RuntimePkg = c.NewPackage("github.com/podhmo/apikit/web/webruntime", "")
 	return g.Generate(context.Background(), r)
 }

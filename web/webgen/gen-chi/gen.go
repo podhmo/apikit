@@ -154,7 +154,7 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	{
 		here := g.RuntimePkg
 		code := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
-			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "testdata/webruntime/runtime.go")
+			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/runtime.go")
 			f, err := os.Open(fpath)
 			if err != nil {
 				return err
