@@ -9,27 +9,16 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/schema"
 )
 
 var mu sync.Mutex
 var decoder = schema.NewDecoder()
-var validate = validator.New()
 
-func Validate(ob interface{}) error {
-	// TODO: merge error
-	if err := validate.Struct(ob); err != nil {
-		return err
-	}
-	if v, ok := ob.(interface{ Validate() error }); ok {
-		return v.Validate()
-	}
-	return nil
-}
+// TODO: APIError
 
 // TODO: performance
-func BindPath(dst interface{}, req *http.Request, keys []string) error {
+func BindPath(dst interface{}, req *http.Request, keys ...string) error {
 	params := make(map[string][]string, len(keys))
 	rctx := chi.RouteContext(req.Context())
 	if rctx == nil {
