@@ -1,4 +1,4 @@
-package webtranslate
+package genchi
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
-		Config: t.Config.Config,
+		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			// todo: support provider *tinypkg.Var
 			return collectImportsForHandler(collector, t.Resolver, t.Tracker, def)
@@ -33,17 +33,9 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			if err != nil {
 				return err
 			}
-			providerModule, err := t.ProviderModule()
-			if err != nil {
-				return err
-			}
-			c.AddDependency(providerModule)
-			runtimeModule, err := t.RuntimeModule()
-			if err != nil {
-				return err
-			}
-			c.AddDependency(runtimeModule)
-			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, providerModule, runtimeModule, name)
+			c.AddDependency(t.ProviderModule)
+			c.AddDependency(t.RuntimeModule)
+			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, t.ProviderModule, t.RuntimeModule, name)
 		},
 	}
 	return &code.CodeEmitter{Code: c}
