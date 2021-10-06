@@ -99,9 +99,7 @@ type Component interface {
 			here:  main,
 			input: []interface{}{ListUser},
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(ListUser).In(0)
-				def := resolver.Def(func() (*DB, error) { return nil, nil })
-				tracker.Override(rt, "db", def)
+				tracker.Override("db", func() (*DB, error) { return nil, nil })
 			},
 			want: `package main
 
@@ -118,9 +116,7 @@ type Component interface {
 			here:  main,
 			input: []interface{}{ListUser},
 			modifyTracker: func(tracker *resolve.Tracker) {
-				rt := reflect.TypeOf(ListUser).In(0)
-				def := resolver.Def(func(ctx context.Context) (*DB, error) { return nil, nil })
-				tracker.Override(rt, "db", def)
+				tracker.Override("db", func(ctx context.Context) (*DB, error) { return nil, nil })
 			},
 			want: `package main
 

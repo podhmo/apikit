@@ -1,8 +1,7 @@
-package webtranslate
+package genchi
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -40,8 +39,17 @@ func TestWriteHandlerFunc(t *testing.T) {
 	resolver := config.Resolver
 
 	main := resolver.NewPackage("main", "")
-	config.RuntimePkg = resolver.NewPackage("m/runtime", "")
-	config.ProviderPkg = main
+	runtimepkg := resolver.NewPackage("m/runtime", "")
+	providerpkg := main
+
+	runtimeModule, err := RuntimeModule(runtimepkg, resolver)
+	if err != nil {
+		t.Fatalf("unexpected error %+v", err)
+	}
+	providerModule, err := ProviderModule(providerpkg, resolver, "Provider")
+	if err != nil {
+		t.Fatalf("unexpected error %+v", err)
+	}
 
 	cases := []struct {
 		msg      string
@@ -57,14 +65,14 @@ func TestWriteHandlerFunc(t *testing.T) {
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		result, err := webtranslate.Ping()
+		result, err := genchi.Ping()
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -76,7 +84,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -84,7 +92,7 @@ import (
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		message := runtime.PathParam(req, "message")
-		result, err := webtranslate.Greeting(message)
+		result, err := genchi.Greeting(message)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -98,7 +106,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -110,11 +118,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			db = provider.DB()
 		}
-		result, err := webtranslate.ListArticle(db)
+		result, err := genchi.ListArticle(db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -124,12 +132,12 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
 			override: func(tracker *resolve.Tracker) {
-				tracker.Override(reflect.TypeOf(&DB{}), "db", resolver.Def(func() (*DB, error) { return nil, nil }))
+				tracker.Override("db", func() (*DB, error) { return nil, nil })
 			},
 			want: `package main
 
 import (
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -141,7 +149,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			var err error
 			db, err = provider.DB()
@@ -149,7 +157,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 				runtime.HandleResult(w, req, nil, err); return
 			}
 		}
-		result, err := webtranslate.ListArticle(db)
+		result, err := genchi.ListArticle(db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -165,7 +173,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -178,7 +186,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			return
 		}
 		var ctx context.Context = req.Context()
-		result, err := webtranslate.PingWithContext(ctx)
+		result, err := genchi.PingWithContext(ctx)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -191,7 +199,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 
 import (
 	"context"
-	"github.com/podhmo/apikit/web/webtranslate"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
 )
@@ -204,11 +212,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			return
 		}
 		var ctx context.Context = req.Context()
-		var db *webtranslate.DB
+		var db *genchi.DB
 		{
 			db = provider.DB()
 		}
-		result, err := webtranslate.ListArticleWithContext(ctx, db)
+		result, err := genchi.ListArticleWithContext(ctx, db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -221,7 +229,13 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			translator := NewTranslator(config)
+			translator := &Translator{
+				Resolver:       config.Resolver,
+				Tracker:        resolve.NewTracker(config.Resolver),
+				Config:         config.Config,
+				RuntimeModule:  runtimeModule,
+				ProviderModule: providerModule,
+			}
 
 			r := web.NewRouter()
 			c.mount(r)
