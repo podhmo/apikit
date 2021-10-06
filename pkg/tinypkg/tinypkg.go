@@ -27,7 +27,7 @@ func (u *Universe) NewPackage(pkgpath, name string) *Package {
 	}
 	if name == "" {
 		parts := strings.Split(pkgpath, "/")
-		name = parts[len(parts)-1]
+		name = strings.ReplaceAll(parts[len(parts)-1], "-", "")
 	}
 
 	pkg = &Package{
