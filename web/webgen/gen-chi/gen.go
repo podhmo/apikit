@@ -1,9 +1,12 @@
 package genchi
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
@@ -144,6 +147,35 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 		here := g.ProviderPkg
 		name := g.Config.ProviderName // xxx
 		code := translator.TranslateToInterface(here, name)
+		g.Emitter.Register(here, code.Name, code)
+	}
+
+	// runtime (copy)
+	{
+		here := g.RuntimePkg
+		code := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
+			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "testdata/webruntime/runtime.go")
+			f, err := os.Open(fpath)
+			if err != nil {
+				return err
+			}
+
+			defer f.Close()
+			r := bufio.NewReader(f)
+			for {
+				line, _, err := r.ReadLine()
+				if err != nil {
+					return err
+				}
+				if strings.HasPrefix(string(line), "package ") {
+					break
+				}
+			}
+			if _, err := io.Copy(w, r); err != nil {
+				return err
+			}
+			return nil
+		})}
 		g.Emitter.Register(here, code.Name, code)
 	}
 	return nil
