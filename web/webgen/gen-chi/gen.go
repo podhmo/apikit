@@ -65,7 +65,11 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	return g
 }
 
-func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
+func (g *Generator) Generate(
+	ctx context.Context,
+	r *web.Router,
+	getHTTPStatusFromError func(error) int,
+) error {
 	resolver := g.Tracker.Resolver
 	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
 	if err != nil {
@@ -75,6 +79,11 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	if err != nil {
 		return err
 	}
+	createHandleResultFunc, err := runtimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
+	if err != nil {
+		return err
+	}
+
 	translator := &Translator{
 		Resolver:       resolver,
 		Tracker:        g.Tracker,
@@ -173,6 +182,16 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 			}
 			if _, err := io.Copy(w, r); err != nil {
 				return err
+			}
+
+			// generate HandleResult = CreateGenerateHandleResult
+			{
+				fmt.Fprintln(w, "")
+				fnShape := resolver.Shape(getHTTPStatusFromError)
+				pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
+				c.Import(pkg)
+				sym := pkg.NewSymbol(fnShape.GetName())
+				fmt.Fprintf(w, "var HandleResult = %s(%s)\n", createHandleResultFunc, here.Import(pkg).Lookup(sym))
 			}
 			return nil
 		})}
