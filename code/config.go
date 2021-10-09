@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
+	"os"
+	"strconv"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -16,20 +19,32 @@ const (
 )
 
 type EmitCodeFunc func(w io.Writer, e *CodeEmitter) error
-
+type Logger interface {
+	Printf(fmt string, args ...interface{})
+}
 type Config struct {
 	Header        string
 	DisableFormat bool
 
 	EmitCodeFunc EmitCodeFunc
 	Resolver     *resolve.Resolver
+
+	Log     Logger
+	Verbose bool
 }
 
 func DefaultConfig() *Config {
+	verbose := false
+	if v, err := strconv.ParseBool(os.Getenv("VERBOSE")); err == nil {
+		verbose = v
+	}
+
 	c := &Config{
 		Header:        Header,
 		DisableFormat: false,
+		Log:           log.New(os.Stderr, "", 0),
 		Resolver:      resolve.NewResolver(),
+		Verbose:       verbose,
 	}
 	c.EmitCodeFunc = c.defaultEmitCodeFunc
 	return c

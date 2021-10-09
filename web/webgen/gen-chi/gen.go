@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,12 +19,8 @@ import (
 
 type Config struct {
 	*code.Config
-
-	Tracker *resolve.Tracker
-	Log     emitfile.Logger
-
+	Tracker      *resolve.Tracker
 	ProviderName string
-	Verbose      bool
 }
 
 func DefaultConfig() *Config {
@@ -33,7 +28,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Config:       c,
 		Tracker:      resolve.NewTracker(c.Resolver),
-		Log:          log.New(os.Stderr, "", 0),
 		ProviderName: "Provider",
 	}
 }
@@ -132,10 +126,13 @@ func (g *Generator) Generate(
 
 	// handler
 	{
+		g.Log.Printf("generate handler package ...")
 		here := g.RouterPkg
+
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
 			code := translator.TranslateToHandler(here, node, "")
 			g.Emitter.Register(here, code.Name, code)
+
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
 			h := handler{
 				name:   code.Name,
@@ -153,7 +150,9 @@ func (g *Generator) Generate(
 	// routing
 	// TODO: get provider func
 	{
+		g.Log.Printf("generate router package ...")
 		here := g.RouterPkg
+
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
@@ -191,6 +190,7 @@ func (g *Generator) Generate(
 
 	// runtime (copy)
 	{
+		g.Log.Printf("generate runtime package ...")
 		here := g.RuntimePkg
 		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
 			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/runtime.go")
