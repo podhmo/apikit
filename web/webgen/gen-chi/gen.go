@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,8 +19,11 @@ import (
 
 type Config struct {
 	*code.Config
-	Tracker      *resolve.Tracker
+
+	Tracker *resolve.Tracker
+
 	ProviderName string
+	Verbose      bool
 }
 
 func DefaultConfig() *Config {
@@ -39,7 +43,8 @@ func (c *Config) NewPackage(path, name string) *tinypkg.Package {
 }
 
 type Generator struct {
-	Config  *Config
+	*Config
+
 	Emitter *emitgo.Emitter
 	Tracker *resolve.Tracker
 
@@ -70,6 +75,13 @@ func (g *Generator) Generate(
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
 ) error {
+	if g.Verbose {
+		log.Printf("* runtime package -> %s", g.RuntimePkg.Path)
+		log.Printf("* handler package -> %s", g.HandlerPkg.Path)
+		log.Printf("* provider package -> %s", g.ProviderPkg.Path)
+		log.Printf("* router package -> %s", g.RouterPkg.Path)
+	}
+
 	resolver := g.Tracker.Resolver
 	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
 	if err != nil {
