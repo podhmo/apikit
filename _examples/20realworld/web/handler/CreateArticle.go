@@ -17,7 +17,12 @@ func CreateArticle(getProvider func(*http.Request) (*http.Request, Provider, err
 			return
 		}
 		var ctx context.Context = req.Context()
-		result, err := action.CreateArticle(ctx)
+		var input action.CreateArticleInput
+		if err := runtime.BindBody(&input, req.Body); err != nil {
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
+		result, err := action.CreateArticle(ctx, input)
 		runtime.HandleResult(w, req, result, err)
 	}
 }

@@ -8,5 +8,4 @@ import (
 
 func init() {
 	HandleResult = CreateHandleResultFunction(design.HTTPStatusOf)
-
 }
