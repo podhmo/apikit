@@ -29,6 +29,7 @@ init-check:
 	@echo ----------------------------------------
 	VERBOSE=1 go run foo/gen.go
 	go install -v ./foo/...	
+	# rm -r foo
 .PHONY: init-check
 
 clean:
