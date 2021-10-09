@@ -13,6 +13,8 @@ import (
 )
 
 type Resolver struct {
+	Config *Config
+
 	extractor *reflectshape.Extractor
 	universe  *tinypkg.Universe
 
@@ -29,6 +31,7 @@ func NewResolver() *Resolver {
 		RevisitArglist: true,
 	}
 	return &Resolver{
+		Config:         DefaultConfig(),
 		extractor:      e,
 		universe:       tinypkg.NewUniverse(),
 		symbolsCache:   map[reflectshape.Identity][]*symbolCacheItem{},
