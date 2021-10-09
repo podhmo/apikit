@@ -71,11 +71,6 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 		Verbose: g.Verbose,
 		Log:     g.Log,
 	}
-
-	g.RuntimePkg = rootpkg.Relative("runtime", "")
-	g.HandlerPkg = rootpkg.Relative("handler", "")
-	g.ProviderPkg = g.HandlerPkg
-	g.RouterPkg = g.HandlerPkg
 	return g
 }
 
@@ -84,6 +79,19 @@ func (g *Generator) Generate(
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
 ) error {
+	if g.RuntimePkg == nil {
+		g.RuntimePkg = g.RootPkg.Relative("runtime", "")
+	}
+	if g.HandlerPkg == nil {
+		g.HandlerPkg = g.RootPkg.Relative("handler", "")
+	}
+	if g.ProviderPkg == nil {
+		g.ProviderPkg = g.HandlerPkg
+	}
+	if g.RouterPkg == nil {
+		g.RouterPkg = g.HandlerPkg
+	}
+
 	g.Log.Printf("detect target packages ...")
 	if g.Verbose {
 		g.Log.Printf("\t* runtime package -> %s", g.RuntimePkg.Path)
