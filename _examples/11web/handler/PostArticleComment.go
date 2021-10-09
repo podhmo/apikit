@@ -27,6 +27,11 @@ func PostArticleComment(getProvider func(*http.Request) (*http.Request, Provider
 				return
 			}
 		}
+		var data design.Comment
+		if err := runtime.BindBody(&data, req.Body); err != nil {
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
 		result, err := design.PostArticleComment(ctx, db, articleID, data)
 		runtime.HandleResult(w, req, result, err)
 	}
