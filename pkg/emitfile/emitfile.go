@@ -26,7 +26,7 @@ type Logger interface {
 
 type Config struct {
 	Verbose bool
-	// Debug   bool
+	Debug   bool
 
 	Log Logger
 }
@@ -57,11 +57,15 @@ type Emitter interface {
 }
 
 func New(rootdir string) *Executor {
+	c := &Config{
+		Debug: DEBUG,
+		Log:   log.New(os.Stderr, "fileemit: ", 0),
+	}
+	r := newPathResolver(rootdir)
+	r.Config = c
 	return &Executor{
-		PathResolver: newPathResolver(rootdir),
-		Config: &Config{
-			Log: log.New(os.Stderr, "fileemit: ", 0),
-		},
+		PathResolver: r,
+		Config:       c,
 	}
 }
 
@@ -95,7 +99,7 @@ func (e *Executor) Emit() error {
 		}
 
 		if e.Verbose {
-			e.Log.Printf("\tC %s", fpath) // todo: detect Create Or Update Or Deletee (?)
+			e.Log.Printf("\tF   emit %s", fpath) // todo: detect Create Or Update Or Deletee (?)
 		}
 
 		buf := new(bytes.Buffer)
@@ -105,14 +109,14 @@ func (e *Executor) Emit() error {
 		b := buf.Bytes()
 		if action.FormatFunc != nil {
 			output, err := action.FormatFunc(b)
-			if err != nil && !DEBUG {
+			if err != nil && !e.Debug {
 				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
 			}
 			if err == nil {
 				b = output
 			}
 		}
-		if err := WriteOrCreateFile(fpath, b); err != nil {
+		if err := WriteOrCreateFile(fpath, b, e.Config); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
 	}
@@ -120,6 +124,7 @@ func (e *Executor) Emit() error {
 }
 
 type PathResolver struct {
+	*Config
 	RootDirs map[string]string
 }
 
@@ -142,15 +147,15 @@ func (r *PathResolver) AddRoot(pkgpath string, rootdir string) error {
 func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 	if pkgpath == "/" || !strings.HasPrefix(pkgpath, "/") {
 		fpath := filepath.Join(r.RootDirs["/"], pkgpath)
-		if DEBUG {
-			log.Printf("\tresolve filepath %q -> %q", pkgpath, fpath)
+		if r.Debug {
+			r.Log.Printf("\tresolve filepath %q -> %q", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
 
 	if fpath, ok := r.RootDirs[pkgpath]; ok {
-		if DEBUG {
-			log.Printf("\tresolve filepath %q -> %q (cached)", pkgpath, fpath)
+		if r.Debug {
+			r.Log.Printf("\tresolve filepath %q -> %q (cached)", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
@@ -163,25 +168,25 @@ func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 		}
 
 		parent, ok := r.RootDirs[prefix]
-		if DEBUG {
-			log.Printf("\t\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
+		if r.Debug {
+			r.Log.Printf("\t\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
 		}
 		if ok {
 			fpath := filepath.Join(parent, strings.Join(parts[i:], "/"))
 			r.RootDirs[pkgpath] = fpath
-			if DEBUG {
-				log.Printf("\tresolve filepath %q -> %q (registered)", pkgpath, fpath)
+			if r.Debug {
+				r.Log.Printf("\tresolve filepath %q -> %q (registered)", pkgpath, fpath)
 			}
 			return fpath, nil
 		}
 	}
 
-	if DEBUG {
+	if r.Debug {
 		saved := make([]string, 0, len(r.RootDirs))
 		for k := range r.RootDirs {
 			saved = append(saved, k)
 		}
-		log.Printf("\terror, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
+		r.Log.Printf("\terror, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
 	}
 	return "", ErrNotFound
 }
