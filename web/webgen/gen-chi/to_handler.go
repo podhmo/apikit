@@ -277,11 +277,11 @@ func WriteHandlerFunc(w io.Writer,
 			indent := "\t\t"
 			fmt.Fprintf(w, "%svar queryParams struct {\n", indent)
 			for _, b := range queryBindings {
-				fmt.Fprintf(w, "%s\t%s %s `query:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Name)
+				fmt.Fprintf(w, "%s\t%s %s `query:\"%s\"`\n", indent, b.Name, b.Sym, b.Name)
 			}
 			fmt.Fprintf(w, "%s}\n", indent)
 			fmt.Fprintf(w, "%sif err := %s(&queryParams, req); err != nil {\n", indent, bindQueryFunc)
-			fmt.Fprintf(w, "\t%s_ = err // ignored -- %s(w, req, nil, err)\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "\t%s_ = err // ignored\n", indent)
 			fmt.Fprintf(w, "%s}\n", indent)
 		}
 
