@@ -12,7 +12,9 @@ import (
 var ErrNoImports = fmt.Errorf("no imports")
 
 type Code struct {
-	Name     string
+	Name   string
+	Header string
+
 	Here     *tinypkg.Package
 	imported []*tinypkg.ImportedPackage
 

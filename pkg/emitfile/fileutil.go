@@ -25,7 +25,7 @@ func (wf *fileSaver) SaveOrCreateFile(path string, b []byte) error {
 			if err == nil {
 				path = relative
 			}
-			wf.config.Log.Printf("\tF create %s", relative) // todo: detect Create Or Update Or Delete (?)
+			wf.config.Log.Printf("\tF create %s", path) // todo: detect Create Or Update Or Delete (?)
 		}
 	}()
 
@@ -36,7 +36,9 @@ func (wf *fileSaver) SaveOrCreateFile(path string, b []byte) error {
 		}
 
 		wf.mkdirSentinelMap[dirpath] = true
-		wf.config.Log.Printf("\tD create %s", dirpath)
+		if wf.config.Verbose {
+			wf.config.Log.Printf("\tD create %s", dirpath)
+		}
 		if err := os.MkdirAll(dirpath, 0744); err != nil {
 			wf.config.Log.Printf("ERROR: %s", err)
 			return err
