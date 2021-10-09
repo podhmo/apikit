@@ -10,7 +10,6 @@ func NewDB(ctx context.Context) (*DB, error) {
 	return nil, nil
 }
 
-// type HandlerFunc func(ctx context.Context) (interface{}, error)
 type Article struct {
 	Title string
 	Text  string
@@ -22,6 +21,17 @@ func ListArticle(ctx context.Context, db *DB) ([]*Article, error) {
 	return nil, nil
 }
 func GetArticle(ctx context.Context, db *DB, articleID string) (*Article, error) {
+	return nil, nil
+}
+
+type Comment struct {
+	ArticleID string
+	Author    string
+	Title     string
+	Text      string
+}
+
+func PostArticleComment(ctx context.Context, db *DB, articleID string, data Comment) (*Comment, error) {
 	return nil, nil
 }
 
