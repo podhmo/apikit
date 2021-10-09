@@ -97,7 +97,7 @@ func PostArticleCommentHandler(getProvider func(*http.Request) (*http.Request, P
 			ArticleID int64 `path:"articleId,required"`
 		}
 		{
-			if err := webruntime.BindPath(&pathVars, req, "articleId"); err != nil {
+			if err := webruntime.BindPathParams(&pathVars, req, "articleId"); err != nil {
 				w.WriteHeader(http.StatusNotFound) // todo: some helpers
 				webruntime.HandleResult(w, req, nil, err)
 				return

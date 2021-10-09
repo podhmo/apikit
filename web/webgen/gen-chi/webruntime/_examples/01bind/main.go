@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator"
+	"github.com/go-playground/validator/v10"
 )
 
 type Article struct {
