@@ -26,7 +26,13 @@ func ListArticle(getProvider func(*http.Request) (*http.Request, Provider, error
 				return
 			}
 		}
-		result, err := design.ListArticle(ctx, db)
+		var queryParams struct {
+			limit *int `query:"limit,required"`
+		}
+		if err := runtime.BindQuery(&queryParams, req); err != nil {
+			_ = err // ignored -- runtime.HandleResult(w, req, nil, err)
+		}
+		result, err := design.ListArticle(ctx, db, queryParams.limit)
 		runtime.HandleResult(w, req, result, err)
 	}
 }

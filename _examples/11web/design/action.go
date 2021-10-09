@@ -17,7 +17,7 @@ type Article struct {
 
 // TODO: pagination
 
-func ListArticle(ctx context.Context, db *DB) ([]*Article, error) {
+func ListArticle(ctx context.Context, db *DB, limit *int) ([]*Article, error) {
 	return nil, nil
 }
 func GetArticle(ctx context.Context, db *DB, articleID int64) (*Article, error) {
