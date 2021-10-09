@@ -66,6 +66,25 @@ func TestRouting(t *testing.T) {
 				"articleSlug:[a-z-]+",
 			},
 		},
+		{
+			msg: "regression-1",
+			router: func() *web.Router {
+				r := web.NewRouter()
+				r.Group("/articles", func(r *web.Router) {
+					r.Get("/{articleId}", "GetArticle")
+					r.Post("/{articleId}/comments", "PostArticleComment")
+				})
+				return r
+			}(),
+			want: []string{
+				"POST /articles/{articleId}/comments",
+				"GET /articles/{articleId}",
+			},
+			wantVariables: []string{
+				"articleId",
+				"articleId",
+			},
+		},
 	}
 
 	for _, c := range cases {

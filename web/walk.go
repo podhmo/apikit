@@ -32,16 +32,29 @@ type WalkerNode struct {
 
 func (n *WalkerNode) Path() []string {
 	parts := make([]string, 0, len(n.History))
+	var buf []string // something wrong, when passed path is like this "POST /articles/{articleId}/comments"
+
 	i := 0
 	for _, suffix := range n.History {
-		if suffix.Pattern != "" {
-			parts = append(parts, suffix.Pattern)
-		}
-
 		if len(suffix.Node.VariableNames) > i {
 			parts = append(parts, fmt.Sprintf("{%s}", suffix.Node.VariableNames[i]))
 			i++
 		}
+
+		if suffix.Pattern != "" {
+			if len(parts) == 0 || suffix.Pattern != parts[len(parts)-1] {
+				if buf != nil {
+					parts = append(parts, buf...)
+					buf = nil
+				}
+				parts = append(parts, suffix.Pattern)
+			} else {
+				buf = append(buf, suffix.Pattern)
+			}
+		}
+	}
+	if buf != nil {
+		parts = append(parts, buf...)
 	}
 	return parts
 }
