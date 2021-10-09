@@ -65,7 +65,11 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	return g
 }
 
-func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
+func (g *Generator) Generate(
+	ctx context.Context,
+	r *web.Router,
+	getHTTPStatusFromError func(error) int,
+) error {
 	resolver := g.Tracker.Resolver
 	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
 	if err != nil {
@@ -75,6 +79,11 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	if err != nil {
 		return err
 	}
+	createHandleResultFunc, err := runtimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
+	if err != nil {
+		return err
+	}
+
 	translator := &Translator{
 		Resolver:       resolver,
 		Tracker:        g.Tracker,
@@ -153,7 +162,7 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 	// runtime (copy)
 	{
 		here := g.RuntimePkg
-		code := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
+		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
 			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/runtime.go")
 			f, err := os.Open(fpath)
 			if err != nil {
@@ -176,7 +185,23 @@ func (g *Generator) Generate(ctx context.Context, r *web.Router) error {
 			}
 			return nil
 		})}
-		g.Emitter.Register(here, code.Name, code)
+		g.Emitter.Register(here, c.Name, c)
+
+		// generate HandleResult = CreateGenerateHandleResult
+		g.Emitter.Register(here, "HandleResult", &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
+			pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
+			c.Import(pkg)
+
+			fmt.Fprintln(w, "func init(){")
+			defer fmt.Fprintln(w, "}")
+
+			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n",
+				createHandleResultFunc,
+				here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName())),
+			)
+			fmt.Fprintln(w, "")
+			return nil
+		})})
 	}
 	return nil
 }
