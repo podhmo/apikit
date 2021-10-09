@@ -61,7 +61,7 @@ func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 type PostArticleCommentInput struct {
-	Text string `validate:"required"`
+	Text string `json:"text" validate:"required"`
 }
 
 func PostArticleComment(

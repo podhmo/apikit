@@ -1,21 +1,24 @@
 package webruntime
 
 import (
-	"context"
 	"io"
 	"net/http"
+	"os"
 	"reflect"
+	"strconv"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/gorilla/schema"
+	"github.com/morikuni/failure"
 )
 
 var mu sync.Mutex
 var decoder = schema.NewDecoder()
 
-// TODO: APIError
+// TODO: fix
+var PathParam = chi.URLParam
 
 // TODO: performance
 func BindPath(dst interface{}, req *http.Request, keys ...string) error {
@@ -56,22 +59,82 @@ func BindBody(dst interface{}, r io.ReadCloser) error {
 }
 
 func HandleResult(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
-	// Force to return empty JSON array [] instead of null in case of zero slice.
-	val := reflect.ValueOf(v)
-	if val.Kind() == reflect.Slice && val.IsNil() {
-		v = reflect.MakeSlice(val.Type(), 0, 0).Interface()
-	}
+	target := v
 
-	var code int
 	if err != nil {
-		code = 500
-		if impl, ok := err.(interface{ Code() int }); ok {
-			code = impl.Code()
+		// log if 5xx ? (or middleware?)
+		target = &errorRender{
+			HTTPStatusCode: statusOf(err),
+			Message:        messageOf(err),
+			DebugContext:   debugContextOf(err),
 		}
-		v = map[string]interface{}{"message": err.Error()}
+	} else {
+		// Force to return empty JSON array [] instead of null in case of zero slice.
+		val := reflect.ValueOf(v)
+		if val.Kind() == reflect.Slice && val.IsNil() {
+			target = reflect.MakeSlice(val.Type(), 0, 0).Interface()
+		}
 	}
-	if code != 0 {
-		req = req.WithContext(context.WithValue(req.Context(), render.StatusCtxKey, code))
+	render.JSON(w, req, target)
+}
+
+// error
+
+type errorRender struct {
+	HTTPStatusCode int    `json:"-"`
+	Message        string `json:"message"`
+	DebugContext   string `json:"debug-context,omitempty"`
+}
+
+func (e *errorRender) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+// API Error
+// error codes for your application.
+const (
+	NotFound  failure.StringCode = "NotFound"
+	Forbidden failure.StringCode = "Forbidden"
+)
+
+// TODO: inject from external
+
+func statusOf(err error) int {
+	c, ok := failure.CodeOf(err)
+	if !ok {
+		return http.StatusInternalServerError
 	}
-	render.JSON(w, req, v)
+	switch c {
+	case NotFound:
+		return http.StatusNotFound
+	case Forbidden:
+		return http.StatusForbidden
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
+func messageOf(err error) string {
+	msg, ok := failure.MessageOf(err)
+	if ok {
+		return msg
+	}
+	return "Error"
+}
+
+func debugContextOf(err error) string {
+	msg, ok := failure.MessageOf(err)
+	if ok {
+		return msg
+	}
+	return "Error"
+}
+
+var DEBUG = false
+
+func init() {
+	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
+		DEBUG = v
+	}
 }
