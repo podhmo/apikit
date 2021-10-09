@@ -27,10 +27,10 @@ func ListArticle(getProvider func(*http.Request) (*http.Request, Provider, error
 			}
 		}
 		var queryParams struct {
-			limit *int `query:"limit,required"`
+			limit *int `query:"limit"`
 		}
 		if err := runtime.BindQuery(&queryParams, req); err != nil {
-			_ = err // ignored -- runtime.HandleResult(w, req, nil, err)
+			_ = err // ignored
 		}
 		result, err := design.ListArticle(ctx, db, queryParams.limit)
 		runtime.HandleResult(w, req, result, err)
