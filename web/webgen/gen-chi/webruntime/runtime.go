@@ -1,6 +1,7 @@
 package webruntime
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -55,24 +56,30 @@ func BindBody(dst interface{}, r io.ReadCloser) error {
 	return nil
 }
 
-func HandleResult(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
-	target := v
+// generate:
+// var HandleResult = CreateHandleResult(<getHTTPStatus function>)
+type HandleResultFunc func(w http.ResponseWriter, req *http.Request, v interface{}, err error)
 
-	if err != nil {
-		// log if 5xx ? (or middleware?)
-		target = &errorRender{
-			HTTPStatusCode: statusOf(err),
-			Message:        messageOf(err),
-			DebugContext:   debugContextOf(err),
+func CreateHandleResultFunction(getHTTPStatus func(error) int) HandleResultFunc {
+	return func(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
+		target := v
+
+		if err != nil {
+			// log if 5xx ? (or middleware?)
+			target = &errorRender{
+				HTTPStatusCode: getHTTPStatus(err),
+				Message:        messageOf(err),
+				DebugContext:   debugContextOf(err),
+			}
+		} else {
+			// Force to return empty JSON array [] instead of null in case of zero slice.
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Slice && val.IsNil() {
+				target = reflect.MakeSlice(val.Type(), 0, 0).Interface()
+			}
 		}
-	} else {
-		// Force to return empty JSON array [] instead of null in case of zero slice.
-		val := reflect.ValueOf(v)
-		if val.Kind() == reflect.Slice && val.IsNil() {
-			target = reflect.MakeSlice(val.Type(), 0, 0).Interface()
-		}
+		render.JSON(w, req, target)
 	}
-	render.JSON(w, req, target)
 }
 
 // error
@@ -88,44 +95,19 @@ func (e *errorRender) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// API Error
-// error codes for your application.
-const (
-	NotFound  failure.StringCode = "NotFound"
-	Forbidden failure.StringCode = "Forbidden"
-)
-
-// TODO: inject from external
-
-func statusOf(err error) int {
-	c, ok := failure.CodeOf(err)
-	if !ok {
-		return http.StatusInternalServerError
-	}
-	switch c {
-	case NotFound:
-		return http.StatusNotFound
-	case Forbidden:
-		return http.StatusForbidden
-	default:
-		return http.StatusInternalServerError
-	}
-}
-
 func messageOf(err error) string {
 	msg, ok := failure.MessageOf(err)
 	if ok {
 		return msg
 	}
-	return "Error"
+	return "error"
 }
 
 func debugContextOf(err error) string {
-	msg, ok := failure.MessageOf(err)
-	if ok {
-		return msg
+	if DEBUG {
+		return fmt.Sprintf("%+v", err)
 	}
-	return "Error"
+	return ""
 }
 
 var DEBUG = false
