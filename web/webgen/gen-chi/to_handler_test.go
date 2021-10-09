@@ -196,6 +196,11 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	return func(w http.ResponseWriter, req *http.Request) {
 		var data genchi.Data
 		if err := runtime.BindBody(&data, req.Body); err != nil {
+			w.WriteHeader(400)
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		if err := runtime.ValidateStruct(&data); err != nil {
+			w.WriteHeader(422)
 			runtime.HandleResult(w, req, nil, err); return
 		}
 		result, err := genchi.PostMessage(data)
