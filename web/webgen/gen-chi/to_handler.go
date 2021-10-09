@@ -89,6 +89,10 @@ func WriteHandlerFunc(w io.Writer,
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
+	bindBodyFunc, err := runtimeModule.Symbol(here, "BindBody")
+	if err != nil {
+		return fmt.Errorf("in runtime module, %w", err)
+	}
 
 	actionFunc := tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 
@@ -98,11 +102,15 @@ func WriteHandlerFunc(w io.Writer,
 	}
 
 	var componentBindings []*tinypkg.Binding
+
 	type pathBinding struct {
 		Name string // go's name
 		Var  *web.PathVar
 	}
 	var pathBindings []*pathBinding
+
+	var dataBindings []resolve.Item
+
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
 	def := info.Def
@@ -161,6 +169,8 @@ func WriteHandlerFunc(w io.Writer,
 			if v, ok := info.Vars[x.Name]; ok {
 				pathBindings = append(pathBindings, &pathBinding{Name: x.Name, Var: v})
 			}
+		case resolve.KindData: // handle request.Body
+			dataBindings = append(dataBindings, x)
 		default:
 			// args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
 		}
@@ -169,6 +179,10 @@ func WriteHandlerFunc(w io.Writer,
 	if len(pathBindings) != len(info.VarNames) {
 		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", info.VarNames, pathBindings, info.Def.Symbol)
 	}
+	if len(dataBindings) > 1 {
+		return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(dataBindings), info.Def.Symbol)
+	}
+
 	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
 		defer fmt.Fprintln(w, "\t}")
@@ -190,11 +204,11 @@ func WriteHandlerFunc(w io.Writer,
 				provider.Name = "_"
 			}
 
-			fmt.Fprintf(w, "\t\treq, %s, err := %s(req)\n", provider.Name, getProviderFunc.Name)
-			fmt.Fprintln(w, "\t\tif err != nil {")
-			fmt.Fprintf(w, "\t\t\t%s(w, req, nil, err)\n", handleResultFunc)
-			fmt.Fprintln(w, "\t\t\treturn")
-			fmt.Fprintln(w, "\t\t}")
+			indent := "\t\t"
+			fmt.Fprintf(w, "%sreq, %s, err := %s(req)\n", indent, provider.Name, getProviderFunc.Name)
+			fmt.Fprintf(w, "%sif err != nil {\n", indent)
+			fmt.Fprintf(w, "%s\t%s(w, req, nil, err); return\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "%s}\n", indent)
 
 			// handling ignored (context.COntext)
 			if len(ignored) > 0 {
@@ -218,6 +232,15 @@ func WriteHandlerFunc(w io.Writer,
 					}
 				}
 			}
+		}
+
+		if len(dataBindings) > 0 {
+			indent := "\t\t"
+			x := dataBindings[0]
+			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, resolver.Symbol(here, x.Shape)) // todo: depenency?
+			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
+			fmt.Fprintf(w, "\t%s%s(w, req, nil, err); return\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "%s}\n", indent)
 		}
 
 		// result, err := <action>(....)
