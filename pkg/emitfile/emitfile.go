@@ -13,10 +13,14 @@ import (
 )
 
 var DEBUG = false
+var VERBOSE = false
 
 func init() {
 	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
 		DEBUG = v
+	}
+	if v, err := strconv.ParseBool(os.Getenv("VERBOSE")); err == nil {
+		VERBOSE = v
 	}
 }
 
@@ -25,8 +29,9 @@ type Logger interface {
 }
 
 type Config struct {
-	Verbose bool
-	Debug   bool
+	Verbose     bool
+	Debug       bool
+	AlwaysWrite bool
 
 	Log Logger
 }
@@ -58,8 +63,14 @@ type Emitter interface {
 
 func New(rootdir string) *Executor {
 	c := &Config{
-		Debug: DEBUG,
-		Log:   log.New(os.Stderr, "fileemit: ", 0),
+		Debug:       DEBUG,
+		Verbose:     VERBOSE,
+		Log:         log.New(os.Stderr, "", 0),
+		AlwaysWrite: true,
+	}
+	if c.Debug {
+		c.Verbose = true
+		c.AlwaysWrite = true
 	}
 	r := newPathResolver(rootdir)
 	r.Config = c
@@ -99,7 +110,7 @@ func (e *Executor) Emit() error {
 		}
 
 		if e.Verbose {
-			e.Log.Printf("\tF   emit %s", fpath) // todo: detect Create Or Update Or Deletee (?)
+			e.Log.Printf("\tF emit   %s", fpath) // todo: detect Create Or Update Or Deletee (?)
 		}
 
 		buf := new(bytes.Buffer)
@@ -109,7 +120,7 @@ func (e *Executor) Emit() error {
 		b := buf.Bytes()
 		if action.FormatFunc != nil {
 			output, err := action.FormatFunc(b)
-			if err != nil && !e.Debug {
+			if err != nil && !e.AlwaysWrite {
 				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
 			}
 			if err == nil {

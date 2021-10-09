@@ -1,4 +1,6 @@
-export DEBUG ?= 1
+export DEBUG ?= 0
+export VERBOSE ?= 1
+
 default: 00 01 10 11
 
 00:
