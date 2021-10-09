@@ -56,10 +56,11 @@ func BindBody(dst interface{}, r io.ReadCloser) error {
 	return nil
 }
 
-// generate:
-// var HandleResult = CreateHandleResult(<getHTTPStatus function>)
 type HandleResultFunc func(w http.ResponseWriter, req *http.Request, v interface{}, err error)
 
+var HandleResult HandleResultFunc
+
+// CreateHandleResultFunction create HandleResult
 func CreateHandleResultFunction(getHTTPStatus func(error) int) HandleResultFunc {
 	return func(w http.ResponseWriter, req *http.Request, v interface{}, err error) {
 		target := v
