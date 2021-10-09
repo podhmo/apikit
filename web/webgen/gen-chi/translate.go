@@ -2,6 +2,7 @@ package genchi
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/podhmo/apikit/code"
@@ -22,6 +23,7 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.
 	var moduleSkeleton struct {
 		PathParam    func(*http.Request, string) string
 		HandleResult func(http.ResponseWriter, *http.Request, interface{}, error)
+		BindBody     func(dst interface{}, src io.ReadCloser) error
 	}
 	pm, err := resolver.PreModule(moduleSkeleton)
 	if err != nil {

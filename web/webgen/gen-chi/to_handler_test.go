@@ -24,6 +24,11 @@ func Greeting(message string) (interface{}, error) {
 	return map[string]interface{}{"message": message}, nil
 }
 
+type Data struct {
+	Message string `json:"message"`
+}
+
+func PostMessage(data Data) (interface{}, error) { return nil, nil }
 func ListArticle(db *DB) ([]*Article, error) {
 	return nil, nil
 }
@@ -56,7 +61,9 @@ func TestWriteHandlerFunc(t *testing.T) {
 		here     *tinypkg.Package
 		mount    func(r *web.Router)
 		override func(t *resolve.Tracker)
-		want     string
+
+		want   string
+		hasErr bool
 	}{
 		{
 			msg:   "no-deps",
@@ -100,6 +107,37 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 		// TODO: ng 404
 		// TODO: path validation
 		{
+			msg:   "bind-data",
+			here:  main,
+			mount: func(r *web.Router) { r.Post("/message", PostMessage) },
+			want: `package main
+
+import (
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"net/http"
+	"m/runtime"
+)
+
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		var data genchi.Data
+		if err := runtime.BindBody(&data, req.Body); err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		result, err := genchi.PostMessage(data)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		{
+			msg:  "ng-bind-data",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Post("/message", func(data Data, data2 Data) (interface{}, error) { return nil, nil })
+			},
+			hasErr: true,
+		},
+		{
 			msg:   "single-dep",
 			here:  main,
 			mount: func(r *web.Router) { r.Get("/articles", ListArticle) },
@@ -115,8 +153,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
-			runtime.HandleResult(w, req, nil, err)
-			return
+			runtime.HandleResult(w, req, nil, err); return
 		}
 		var db *genchi.DB
 		{
@@ -146,8 +183,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
-			runtime.HandleResult(w, req, nil, err)
-			return
+			runtime.HandleResult(w, req, nil, err); return
 		}
 		var db *genchi.DB
 		{
@@ -182,8 +218,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, _, err := getProvider(req)
 		if err != nil {
-			runtime.HandleResult(w, req, nil, err)
-			return
+			runtime.HandleResult(w, req, nil, err); return
 		}
 		var ctx context.Context = req.Context()
 		result, err := genchi.PingWithContext(ctx)
@@ -208,8 +243,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	return func(w http.ResponseWriter, req *http.Request) {
 		req, provider, err := getProvider(req)
 		if err != nil {
-			runtime.HandleResult(w, req, nil, err)
-			return
+			runtime.HandleResult(w, req, nil, err); return
 		}
 		var ctx context.Context = req.Context()
 		var db *genchi.DB
@@ -246,7 +280,16 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			if err := web.Walk(r, func(n *web.WalkerNode) error {
 				code := translator.TranslateToHandler(c.here, n, handlerName)
 				var buf strings.Builder
-				if err := code.Emit(&buf); err != nil {
+				err := code.Emit(&buf)
+
+				if c.hasErr {
+					if err == nil {
+						t.Error("expected error, but not occured")
+					}
+					return nil
+				}
+
+				if err != nil {
 					t.Fatalf("unexpected error %+v", err)
 				}
 				if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {

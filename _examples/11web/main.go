@@ -34,6 +34,7 @@ func run() (err error) {
 
 		r.Get("/", design.ListArticle)
 		r.Get("/{articleId}", design.GetArticle)
+		r.Post("/{articleId}/comments", design.PostArticleComment)
 	})
 
 	c := genchi.DefaultConfig()

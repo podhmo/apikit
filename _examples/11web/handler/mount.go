@@ -8,6 +8,7 @@ import (
 )
 
 func Mount(r chi.Router, getProvider func(*http.Request) (*http.Request, Provider, error)) {
+	r.Post("/articles/{articleId}/comments", PostArticleComment(getProvider))
 	r.Get("/articles", ListArticle(getProvider))
 	r.Get("/articles/{articleId}", GetArticle(getProvider))
 }
