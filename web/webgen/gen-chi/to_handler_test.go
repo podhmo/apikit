@@ -61,7 +61,9 @@ func TestWriteHandlerFunc(t *testing.T) {
 		here     *tinypkg.Package
 		mount    func(r *web.Router)
 		override func(t *resolve.Tracker)
-		want     string
+
+		want   string
+		hasErr bool
 	}{
 		{
 			msg:   "no-deps",
@@ -126,6 +128,14 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
+		},
+		{
+			msg:  "ng-bind-data",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Post("/message", func(data Data, data2 Data) (interface{}, error) { return nil, nil })
+			},
+			hasErr: true,
 		},
 		{
 			msg:   "single-dep",
@@ -270,7 +280,16 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			if err := web.Walk(r, func(n *web.WalkerNode) error {
 				code := translator.TranslateToHandler(c.here, n, handlerName)
 				var buf strings.Builder
-				if err := code.Emit(&buf); err != nil {
+				err := code.Emit(&buf)
+
+				if c.hasErr {
+					if err == nil {
+						t.Error("expected error, but not occured")
+					}
+					return nil
+				}
+
+				if err != nil {
 					t.Fatalf("unexpected error %+v", err)
 				}
 				if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
