@@ -23,7 +23,9 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.
 	var moduleSkeleton struct {
 		PathParam    func(*http.Request, string) string
 		HandleResult func(http.ResponseWriter, *http.Request, interface{}, error)
-		BindBody     func(dst interface{}, src io.ReadCloser) error
+
+		BindPathParams func(dst interface{}, req *http.Request, keys ...string) error
+		BindBody       func(dst interface{}, src io.ReadCloser) error
 	}
 	pm, err := resolver.PreModule(moduleSkeleton)
 	if err != nil {

@@ -20,7 +20,7 @@ type Article struct {
 func ListArticle(ctx context.Context, db *DB) ([]*Article, error) {
 	return nil, nil
 }
-func GetArticle(ctx context.Context, db *DB, articleID string) (*Article, error) {
+func GetArticle(ctx context.Context, db *DB, articleID int64) (*Article, error) {
 	return nil, nil
 }
 
@@ -31,7 +31,7 @@ type Comment struct {
 	Text      string
 }
 
-func PostArticleComment(ctx context.Context, db *DB, articleID string, data Comment) (*Comment, error) {
+func PostArticleComment(ctx context.Context, db *DB, articleID int64, data Comment) (*Comment, error) {
 	return nil, nil
 }
 

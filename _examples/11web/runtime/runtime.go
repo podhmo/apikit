@@ -19,11 +19,8 @@ import (
 var mu sync.Mutex
 var decoder = schema.NewDecoder()
 
-// TODO: fix
-var PathParam = chi.URLParam
-
 // TODO: performance
-func BindPath(dst interface{}, req *http.Request, keys ...string) error {
+func BindPathParams(dst interface{}, req *http.Request, keys ...string) error {
 	params := make(map[string][]string, len(keys))
 	rctx := chi.RouteContext(req.Context())
 	if rctx == nil {
