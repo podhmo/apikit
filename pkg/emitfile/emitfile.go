@@ -109,10 +109,6 @@ func (e *Executor) Emit() error {
 			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
 		}
 
-		if e.Verbose {
-			e.Log.Printf("\tF emit   %s", fpath) // todo: detect Create Or Update Or Deletee (?)
-		}
-
 		buf := new(bytes.Buffer)
 		if err := action.Target.Emit(buf); err != nil {
 			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
@@ -127,6 +123,7 @@ func (e *Executor) Emit() error {
 				b = output
 			}
 		}
+
 		if err := WriteOrCreateFile(fpath, b, e.Config); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
