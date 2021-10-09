@@ -11,7 +11,14 @@ import (
 
 func GetArticle(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		articleID := runtime.PathParam(req, "articleId")
+		var pathParams struct {
+			articleID int64 `query:"articleId,required"`
+		}
+		if err := runtime.BindPathParams(&pathParams, req, "articleId"); err != nil {
+			w.WriteHeader(404)
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
 		req, provider, err := getProvider(req)
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err)
@@ -27,7 +34,7 @@ func GetArticle(getProvider func(*http.Request) (*http.Request, Provider, error)
 				return
 			}
 		}
-		result, err := design.GetArticle(ctx, db, articleID)
+		result, err := design.GetArticle(ctx, db, pathParams.articleID)
 		runtime.HandleResult(w, req, result, err)
 	}
 }
