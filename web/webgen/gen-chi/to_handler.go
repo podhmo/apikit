@@ -90,6 +90,10 @@ func WriteHandlerFunc(w io.Writer,
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
+	bindQueryFunc, err := runtimeModule.Symbol(here, "BindQuery")
+	if err != nil {
+		return fmt.Errorf("in runtime module, %w", err)
+	}
 	bindBodyFunc, err := runtimeModule.Symbol(here, "BindBody")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
@@ -110,7 +114,11 @@ func WriteHandlerFunc(w io.Writer,
 		Sym  tinypkg.Node
 	}
 	var pathBindings []*pathBinding
-
+	type queryBinding struct {
+		Name string
+		Sym  tinypkg.Node
+	}
+	var queryBindings []*queryBinding
 	var dataBindings []resolve.Item
 
 	var ignored []*tinypkg.Var
@@ -172,6 +180,9 @@ func WriteHandlerFunc(w io.Writer,
 				pathBindings = append(pathBindings, &pathBinding{Name: x.Name, Var: v, Sym: resolver.Symbol(here, v.Shape)})
 			}
 			argNames = append(argNames, "pathParams."+x.Name)
+		case resolve.KindPrimitivePointer: // handle query string
+			queryBindings = append(queryBindings, &queryBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
+			argNames = append(argNames, "queryParams."+x.Name)
 		case resolve.KindData: // handle request.Body
 			dataBindings = append(dataBindings, x)
 			argNames = append(argNames, x.Name)
@@ -255,6 +266,22 @@ func WriteHandlerFunc(w io.Writer,
 			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, resolver.Symbol(here, x.Shape)) // todo: depenency?
 			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
 			fmt.Fprintf(w, "\t%s%s(w, req, nil, err); return\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "%s}\n", indent)
+		}
+
+		// handling query params
+		//
+		// var queryParams struct { <var 1> string `query:"<var 1>,required"`; ... }
+		// runtime.BindQuery(&queryParams, req);
+		if len(queryBindings) > 0 {
+			indent := "\t\t"
+			fmt.Fprintf(w, "%svar queryParams struct {\n", indent)
+			for _, b := range queryBindings {
+				fmt.Fprintf(w, "%s\t%s %s `query:\"%s\"`\n", indent, b.Name, b.Sym, b.Name)
+			}
+			fmt.Fprintf(w, "%s}\n", indent)
+			fmt.Fprintf(w, "%sif err := %s(&queryParams, req); err != nil {\n", indent, bindQueryFunc)
+			fmt.Fprintf(w, "\t%s_ = err // ignored\n", indent)
 			fmt.Fprintf(w, "%s}\n", indent)
 		}
 
