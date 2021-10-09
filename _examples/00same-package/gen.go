@@ -1,3 +1,5 @@
+// +build apikit
+
 package main
 
 import (

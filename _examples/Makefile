@@ -2,15 +2,15 @@ export DEBUG ?= 1
 default: 00 01 10 11
 
 00:
-	go run $(shell echo $@*/)main.go
+	go run $(shell echo $@*/)gen.go
 01:
-	go run $(shell echo $@*/)main.go
+	go run $(shell echo $@*/)gen.go
 
 # web
 10:
 	go run $(shell echo $@*/)main.go
 11:
-	go run $(shell echo $@*/)main.go
+	go run $(shell echo $@*/)gen.go
 
 check:
 	go install -v ./$(shell echo 00*/)/runner/...
