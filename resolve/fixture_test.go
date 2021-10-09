@@ -14,6 +14,10 @@ func ListUser(db *DB) []*User {
 	return nil
 }
 
+func ListUserWithPrimitivePointer(db *DB, sort *int, orderBy *string) []*User {
+	return nil
+}
+
 func ListUserWithContext(ctx context.Context, db *DB) []*User {
 	return nil
 }
