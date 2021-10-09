@@ -62,7 +62,7 @@ toplevel:
 			}
 			t.seen[k] = append(t.seen[k], need)
 			t.Needs = append(t.Needs, need)
-		case KindPrimitive:
+		case KindPrimitive, KindPrimitivePointer:
 			continue
 		default:
 			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))

@@ -30,6 +30,10 @@ func GreetingWithNewType(message Message) (interface{}, error) {
 	return map[string]interface{}{"message": message}, nil
 }
 
+func GreetingWithQueryString(message Message, verbose *bool) (interface{}, error) {
+	return map[string]interface{}{"message": message}, nil
+}
+
 type Data struct {
 	Message string `json:"message"`
 }
@@ -138,6 +142,38 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err); return
 		}
 		result, err := genchi.GreetingWithNewType(pathParams.message)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		{
+			msg:   "bind-query",
+			here:  main,
+			mount: func(r *web.Router) { r.Get("/greet/{message}", GreetingWithQueryString) },
+			want: `package main
+
+import (
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"net/http"
+	"m/runtime"
+)
+
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		var pathParams struct {
+			` + "message genchi.Message `query:\"message,required\"`" + `
+		}
+		if err := runtime.BindPathParams(&pathParams, req, "message"); err != nil {
+			w.WriteHeader(404)
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		var queryParams struct {
+			` + "verbose *bool `query:\"verbose\"`" + `
+		}
+		if err := runtime.BindQuery(&queryParams, req); err != nil {
+			_ = err // ignored
+		}
+		result, err := genchi.GreetingWithQueryString(pathParams.message, queryParams.verbose)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,

@@ -29,6 +29,9 @@ func AddTodoWithContext(ctx context.Context, session *Session, title string, don
 func MustAddTodo(session *Session, title string, done bool) *Todo {
 	return nil
 }
+func ListTodo(session *Session, limit *int) ([]*Todo, error) {
+	return nil, nil
+}
 
 func TestWriteRunner(t *testing.T) {
 	main := tinypkg.NewPackage("main", "")
@@ -47,6 +50,25 @@ func TestWriteRunner(t *testing.T) {
 		wantError     error
 		modifyTracker func(t *resolve.Tracker)
 	}{
+		{
+			name:  "RunListTodo",
+			input: ListTodo,
+			here:  main,
+			want: `package main
+
+import (
+	"github.com/podhmo/apikit/translate"
+	"m/component"
+)
+
+func RunListTodo(provider component.Provider, limit *int) ([]*translate.Todo, error) {
+	var session *translate.Session
+	{
+		session = provider.Session()
+	}
+	return translate.ListTodo(session, limit)
+}`,
+		},
 		{
 			name:  "RunAddTodo",
 			input: AddTodo,

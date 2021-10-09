@@ -18,6 +18,11 @@ func Test(t *testing.T) {
 			Args: []Kind{KindComponent},
 		},
 		{
+			// OK: handle params primitive pointer -> primitive-pointer
+			Def:  resolver.Def(ListUserWithPrimitivePointer),
+			Args: []Kind{KindComponent, KindPrimitivePointer, KindPrimitivePointer},
+		},
+		{
 			// OK: handle params context.Context -> ignored
 			Def:  resolver.Def(ListUserWithContext),
 			Args: []Kind{KindIgnored, KindComponent},
