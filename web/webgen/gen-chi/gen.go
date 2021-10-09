@@ -152,6 +152,9 @@ func (g *Generator) Generate(
 	{
 		g.Log.Printf("generate router package ...")
 		here := g.RouterPkg
+		if g.Verbose {
+			g.Log.Printf("\t+ generate %s.Mount()", here.Path)
+		}
 
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
@@ -192,6 +195,10 @@ func (g *Generator) Generate(
 	{
 		g.Log.Printf("generate runtime package ...")
 		here := g.RuntimePkg
+		if g.Verbose {
+			g.Log.Printf("\t+ generate runtime (almost copy)")
+		}
+
 		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
 			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/runtime.go")
 			f, err := os.Open(fpath)
@@ -218,18 +225,16 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, c.Name, c)
 
 		// generate HandleResult = CreateGenerateHandleResult
+		pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
+		getStatusFunc := here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName()))
+		if g.Verbose {
+			g.Log.Printf("\t+ generate HandleResult() with %s", getStatusFunc)
+		}
 		g.Emitter.Register(here, "HandleResult", &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
-			pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
 			c.Import(pkg)
-
 			fmt.Fprintln(w, "func init(){")
-			defer fmt.Fprintln(w, "}")
-
-			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n",
-				createHandleResultFunc,
-				here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName())),
-			)
-			fmt.Fprintln(w, "")
+			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n", createHandleResultFunc, getStatusFunc)
+			fmt.Fprintln(w, "}")
 			return nil
 		})})
 	}
