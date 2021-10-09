@@ -72,7 +72,7 @@ func New(rootdir string) *Executor {
 		c.Verbose = true
 		c.AlwaysWrite = true
 	}
-	r := newPathResolver(rootdir)
+	r := newPathResolver(rootdir, c)
 	r.Config = c
 	return &Executor{
 		PathResolver: r,
@@ -136,9 +136,10 @@ type PathResolver struct {
 	RootDirs map[string]string
 }
 
-func newPathResolver(rootdir string) *PathResolver {
+func newPathResolver(rootdir string, config *Config) *PathResolver {
 	return &PathResolver{
 		RootDirs: map[string]string{"/": rootdir},
+		Config:   config,
 	}
 }
 
