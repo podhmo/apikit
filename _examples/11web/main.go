@@ -41,5 +41,9 @@ func run() (err error) {
 	c.Override("db", design.NewDB)
 
 	g := c.New(emitter)
-	return g.Generate(context.Background(), r)
+	return g.Generate(
+		context.Background(),
+		r,
+		design.HTTPStatusOf,
+	)
 }
