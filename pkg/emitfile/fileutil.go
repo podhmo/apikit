@@ -6,25 +6,39 @@ import (
 	"path/filepath"
 )
 
-var mkdirSentinelMap = map[string]bool{}
+type fileSaver struct {
+	config           *Config
+	mkdirSentinelMap map[string]bool
+}
 
-func WriteOrCreateFile(path string, b []byte, config *Config) error {
+func newfileSaver(config *Config) *fileSaver {
+	return &fileSaver{
+		config:           config,
+		mkdirSentinelMap: map[string]bool{},
+	}
+}
+
+func (wf *fileSaver) SaveOrCreateFile(path string, b []byte) error {
 	defer func() {
-		if config.Verbose {
-			config.Log.Printf("\tF create %s", path) // todo: detect Create Or Update Or Delete (?)
+		if wf.config.Verbose {
+			relative, err := filepath.Rel(wf.config.CurDir, path)
+			if err == nil {
+				path = relative
+			}
+			wf.config.Log.Printf("\tF create %s", relative) // todo: detect Create Or Update Or Delete (?)
 		}
 	}()
 
 	if err := ioutil.WriteFile(path, b, 0666); err != nil {
 		dirpath := filepath.Dir(path)
-		if _, ok := mkdirSentinelMap[dirpath]; ok {
+		if _, ok := wf.mkdirSentinelMap[dirpath]; ok {
 			return err
 		}
 
-		mkdirSentinelMap[dirpath] = true
-		config.Log.Printf("\tD create %s", dirpath)
+		wf.mkdirSentinelMap[dirpath] = true
+		wf.config.Log.Printf("\tD create %s", dirpath)
 		if err := os.MkdirAll(dirpath, 0744); err != nil {
-			config.Log.Printf("ERROR: %s", err)
+			wf.config.Log.Printf("ERROR: %s", err)
 			return err
 		}
 		return ioutil.WriteFile(path, b, 0666)

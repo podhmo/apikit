@@ -33,13 +33,18 @@ type Config struct {
 	Debug       bool
 	AlwaysWrite bool
 
+	CurDir string
+
 	Log Logger
 }
 
 type Executor struct {
 	*Config
+
 	PathResolver *PathResolver
-	Actions      []*EmitAction
+	saver        *fileSaver
+
+	Actions []*EmitAction
 	// TODO: permission
 	// TODO: sort by priority
 }
@@ -72,10 +77,14 @@ func New(rootdir string) *Executor {
 		c.Verbose = true
 		c.AlwaysWrite = true
 	}
+	if cwd, err := os.Getwd(); err == nil {
+		c.CurDir = cwd
+	}
 	r := newPathResolver(rootdir, c)
 	r.Config = c
 	return &Executor{
 		PathResolver: r,
+		saver:        newfileSaver(c),
 		Config:       c,
 	}
 }
@@ -124,7 +133,7 @@ func (e *Executor) Emit() error {
 			}
 		}
 
-		if err := WriteOrCreateFile(fpath, b, e.Config); err != nil {
+		if err := e.saver.SaveOrCreateFile(fpath, b); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
 	}
