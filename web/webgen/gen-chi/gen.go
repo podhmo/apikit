@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
+	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -21,6 +22,7 @@ type Config struct {
 	*code.Config
 
 	Tracker *resolve.Tracker
+	Log     emitfile.Logger
 
 	ProviderName string
 	Verbose      bool
@@ -31,6 +33,7 @@ func DefaultConfig() *Config {
 	return &Config{
 		Config:       c,
 		Tracker:      resolve.NewTracker(c.Resolver),
+		Log:          log.New(os.Stderr, "", 0),
 		ProviderName: "Provider",
 	}
 }
@@ -63,6 +66,12 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 		Config:  c,
 		RootPkg: rootpkg,
 	}
+
+	g.Emitter.FileEmitter.Config = &emitfile.Config{
+		Verbose: g.Verbose,
+		Log:     g.Log,
+	}
+
 	g.RuntimePkg = rootpkg.Relative("runtime", "")
 	g.HandlerPkg = rootpkg.Relative("handler", "")
 	g.ProviderPkg = g.HandlerPkg
@@ -75,11 +84,12 @@ func (g *Generator) Generate(
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
 ) error {
+	g.Log.Printf("detect target packages ...")
 	if g.Verbose {
-		log.Printf("* runtime package -> %s", g.RuntimePkg.Path)
-		log.Printf("* handler package -> %s", g.HandlerPkg.Path)
-		log.Printf("* provider package -> %s", g.ProviderPkg.Path)
-		log.Printf("* router package -> %s", g.RouterPkg.Path)
+		g.Log.Printf("\t* runtime package -> %s", g.RuntimePkg.Path)
+		g.Log.Printf("\t* handler package -> %s", g.HandlerPkg.Path)
+		g.Log.Printf("\t* provider package -> %s", g.ProviderPkg.Path)
+		g.Log.Printf("\t* router package -> %s", g.RouterPkg.Path)
 	}
 
 	resolver := g.Tracker.Resolver

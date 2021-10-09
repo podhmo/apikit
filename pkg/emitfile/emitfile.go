@@ -20,7 +20,19 @@ func init() {
 	}
 }
 
+type Logger interface {
+	Printf(fmt string, args ...interface{})
+}
+
+type Config struct {
+	Verbose bool
+	// Debug   bool
+
+	Log Logger
+}
+
 type Executor struct {
+	*Config
 	PathResolver *PathResolver
 	Actions      []*EmitAction
 	// TODO: permission
@@ -47,6 +59,9 @@ type Emitter interface {
 func New(rootdir string) *Executor {
 	return &Executor{
 		PathResolver: newPathResolver(rootdir),
+		Config: &Config{
+			Log: log.New(os.Stderr, "fileemit: ", 0),
+		},
 	}
 }
 
@@ -71,12 +86,18 @@ func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
 func (e *Executor) Emit() error {
 	// TODO: strategy (failfast, runall)
 	// TODO: run once
+	e.Log.Printf("emit files ...")
 	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
 	for _, action := range e.Actions {
 		fpath, err := e.PathResolver.ResolvePath(action.Path)
 		if err != nil {
 			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
 		}
+
+		if e.Verbose {
+			e.Log.Printf("\tC %s", fpath) // todo: detect Create Or Update Or Deletee (?)
+		}
+
 		buf := new(bytes.Buffer)
 		if err := action.Target.Emit(buf); err != nil {
 			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
