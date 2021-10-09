@@ -98,8 +98,14 @@ import (
 
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
-		message := runtime.PathParam(req, "message")
-		result, err := genchi.Greeting(message)
+		var pathParams struct {
+			` + "message string `query:\"message,required\"`" + `
+		}
+		if err := runtime.BindPathParams(&pathParams, req, "message"); err != nil {
+			w.WriteHeader(404)
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		result, err := genchi.Greeting(pathParams.message)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
