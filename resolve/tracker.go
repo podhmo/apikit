@@ -75,7 +75,13 @@ func (t *Tracker) Override(name string, providerFunc interface{}) (prev *Def, er
 	if rt.Kind() != reflect.Func {
 		return nil, fmt.Errorf("unexpected providerFunc, only function %v", rt)
 	}
-	return t.overrideByDef(rt.Out(0), name, t.Resolver.Def(providerFunc)), nil
+
+	targetType := rt.Out(0)
+	def := t.Resolver.Def(providerFunc)
+	if t.Resolver.Config.Verbose {
+		t.Resolver.Config.Log.Printf("\t! override provider[name=%q] = %s.%s [type=%s]", name, def.Package.Path, def.Symbol, rt)
+	}
+	return t.overrideByDef(targetType, name, def), nil
 }
 
 func (t *Tracker) overrideByDef(rt reflect.Type, name string, def *Def) (prev *Def) {

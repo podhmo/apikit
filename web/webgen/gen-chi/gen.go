@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
+	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -39,7 +40,8 @@ func (c *Config) NewPackage(path, name string) *tinypkg.Package {
 }
 
 type Generator struct {
-	Config  *Config
+	*Config
+
 	Emitter *emitgo.Emitter
 	Tracker *resolve.Tracker
 
@@ -58,10 +60,11 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 		Config:  c,
 		RootPkg: rootpkg,
 	}
-	g.RuntimePkg = rootpkg.Relative("runtime", "")
-	g.HandlerPkg = rootpkg.Relative("handler", "")
-	g.ProviderPkg = g.HandlerPkg
-	g.RouterPkg = g.HandlerPkg
+
+	g.Emitter.FileEmitter.Config = &emitfile.Config{
+		Verbose: g.Verbose,
+		Log:     g.Log,
+	}
 	return g
 }
 
@@ -70,6 +73,27 @@ func (g *Generator) Generate(
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
 ) error {
+	if g.RuntimePkg == nil {
+		g.RuntimePkg = g.RootPkg.Relative("runtime", "")
+	}
+	if g.HandlerPkg == nil {
+		g.HandlerPkg = g.RootPkg.Relative("handler", "")
+	}
+	if g.ProviderPkg == nil {
+		g.ProviderPkg = g.HandlerPkg
+	}
+	if g.RouterPkg == nil {
+		g.RouterPkg = g.HandlerPkg
+	}
+
+	g.Log.Printf("detect target packages ...")
+	if g.Verbose {
+		g.Log.Printf("\t* runtime package -> %s", g.RuntimePkg.Path)
+		g.Log.Printf("\t* handler package -> %s", g.HandlerPkg.Path)
+		g.Log.Printf("\t* provider package -> %s", g.ProviderPkg.Path)
+		g.Log.Printf("\t* router package -> %s", g.RouterPkg.Path)
+	}
+
 	resolver := g.Tracker.Resolver
 	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
 	if err != nil {
@@ -102,10 +126,13 @@ func (g *Generator) Generate(
 
 	// handler
 	{
+		g.Log.Printf("generate handler package ...")
 		here := g.RouterPkg
+
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
 			code := translator.TranslateToHandler(here, node, "")
 			g.Emitter.Register(here, code.Name, code)
+
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
 			h := handler{
 				name:   code.Name,
@@ -123,7 +150,12 @@ func (g *Generator) Generate(
 	// routing
 	// TODO: get provider func
 	{
+		g.Log.Printf("generate router package ...")
 		here := g.RouterPkg
+		if g.Verbose {
+			g.Log.Printf("\t+ generate %s.Mount()", here.Path)
+		}
+
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
@@ -161,7 +193,12 @@ func (g *Generator) Generate(
 
 	// runtime (copy)
 	{
+		g.Log.Printf("generate runtime package ...")
 		here := g.RuntimePkg
+		if g.Verbose {
+			g.Log.Printf("\t+ generate runtime (almost copy)")
+		}
+
 		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
 			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/runtime.go")
 			f, err := os.Open(fpath)
@@ -188,18 +225,16 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, c.Name, c)
 
 		// generate HandleResult = CreateGenerateHandleResult
+		pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
+		getStatusFunc := here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName()))
+		if g.Verbose {
+			g.Log.Printf("\t+ generate HandleResult() with %s", getStatusFunc)
+		}
 		g.Emitter.Register(here, "HandleResult", &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
-			pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
 			c.Import(pkg)
-
 			fmt.Fprintln(w, "func init(){")
-			defer fmt.Fprintln(w, "}")
-
-			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n",
-				createHandleResultFunc,
-				here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName())),
-			)
-			fmt.Fprintln(w, "")
+			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n", createHandleResultFunc, getStatusFunc)
+			fmt.Fprintln(w, "}")
 			return nil
 		})})
 	}

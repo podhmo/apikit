@@ -13,16 +13,38 @@ import (
 )
 
 var DEBUG = false
+var VERBOSE = false
 
 func init() {
 	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
 		DEBUG = v
 	}
+	if v, err := strconv.ParseBool(os.Getenv("VERBOSE")); err == nil {
+		VERBOSE = v
+	}
+}
+
+type Logger interface {
+	Printf(fmt string, args ...interface{})
+}
+
+type Config struct {
+	Verbose     bool
+	Debug       bool
+	AlwaysWrite bool
+
+	CurDir string
+
+	Log Logger
 }
 
 type Executor struct {
+	*Config
+
 	PathResolver *PathResolver
-	Actions      []*EmitAction
+	saver        *fileSaver
+
+	Actions []*EmitAction
 	// TODO: permission
 	// TODO: sort by priority
 }
@@ -45,8 +67,25 @@ type Emitter interface {
 }
 
 func New(rootdir string) *Executor {
+	c := &Config{
+		Debug:       DEBUG,
+		Verbose:     VERBOSE,
+		Log:         log.New(os.Stderr, "", 0),
+		AlwaysWrite: true,
+	}
+	if c.Debug {
+		c.Verbose = true
+		c.AlwaysWrite = true
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		c.CurDir = cwd
+	}
+	r := newPathResolver(rootdir, c)
+	r.Config = c
 	return &Executor{
-		PathResolver: newPathResolver(rootdir),
+		PathResolver: r,
+		saver:        newfileSaver(c),
+		Config:       c,
 	}
 }
 
@@ -71,12 +110,14 @@ func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
 func (e *Executor) Emit() error {
 	// TODO: strategy (failfast, runall)
 	// TODO: run once
+	e.Log.Printf("emit files ...")
 	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
 	for _, action := range e.Actions {
 		fpath, err := e.PathResolver.ResolvePath(action.Path)
 		if err != nil {
 			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
 		}
+
 		buf := new(bytes.Buffer)
 		if err := action.Target.Emit(buf); err != nil {
 			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
@@ -84,14 +125,15 @@ func (e *Executor) Emit() error {
 		b := buf.Bytes()
 		if action.FormatFunc != nil {
 			output, err := action.FormatFunc(b)
-			if err != nil && !DEBUG {
+			if err != nil && !e.AlwaysWrite {
 				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
 			}
 			if err == nil {
 				b = output
 			}
 		}
-		if err := WriteOrCreateFile(fpath, b); err != nil {
+
+		if err := e.saver.SaveOrCreateFile(fpath, b); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
 	}
@@ -99,12 +141,14 @@ func (e *Executor) Emit() error {
 }
 
 type PathResolver struct {
+	*Config
 	RootDirs map[string]string
 }
 
-func newPathResolver(rootdir string) *PathResolver {
+func newPathResolver(rootdir string, config *Config) *PathResolver {
 	return &PathResolver{
 		RootDirs: map[string]string{"/": rootdir},
+		Config:   config,
 	}
 }
 
@@ -121,15 +165,15 @@ func (r *PathResolver) AddRoot(pkgpath string, rootdir string) error {
 func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 	if pkgpath == "/" || !strings.HasPrefix(pkgpath, "/") {
 		fpath := filepath.Join(r.RootDirs["/"], pkgpath)
-		if DEBUG {
-			log.Printf("\tresolve filepath %q -> %q", pkgpath, fpath)
+		if r.Debug {
+			r.Log.Printf("\tresolve filepath %q -> %q", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
 
 	if fpath, ok := r.RootDirs[pkgpath]; ok {
-		if DEBUG {
-			log.Printf("\tresolve filepath %q -> %q (cached)", pkgpath, fpath)
+		if r.Debug {
+			r.Log.Printf("\tresolve filepath %q -> %q (cached)", pkgpath, fpath)
 		}
 		return fpath, nil
 	}
@@ -142,25 +186,25 @@ func (r *PathResolver) ResolvePath(pkgpath string) (string, error) {
 		}
 
 		parent, ok := r.RootDirs[prefix]
-		if DEBUG {
-			log.Printf("\t\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
+		if r.Debug {
+			r.Log.Printf("\t\tlookup pkgpath=%s, prefix=%s -> ok=%v", pkgpath, prefix, ok)
 		}
 		if ok {
 			fpath := filepath.Join(parent, strings.Join(parts[i:], "/"))
 			r.RootDirs[pkgpath] = fpath
-			if DEBUG {
-				log.Printf("\tresolve filepath %q -> %q (registered)", pkgpath, fpath)
+			if r.Debug {
+				r.Log.Printf("\tresolve filepath %q -> %q (registered)", pkgpath, fpath)
 			}
 			return fpath, nil
 		}
 	}
 
-	if DEBUG {
+	if r.Debug {
 		saved := make([]string, 0, len(r.RootDirs))
 		for k := range r.RootDirs {
 			saved = append(saved, k)
 		}
-		log.Printf("\terror, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
+		r.Log.Printf("\terror, not found, input pkgpath=%s ... saved=%v", pkgpath, saved)
 	}
 	return "", ErrNotFound
 }

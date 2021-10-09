@@ -5,6 +5,10 @@ import (
 	"testing"
 )
 
+type fakeLogger struct{}
+
+func (l *fakeLogger) Printf(fmt string, args ...interface{}) {}
+
 func TestPathResolver(t *testing.T) {
 	cases := []struct {
 		rootdir string
@@ -89,7 +93,7 @@ func TestPathResolver(t *testing.T) {
 	for _, c := range cases {
 		c := c
 		t.Run(c.pkgpath, func(t *testing.T) {
-			r := newPathResolver(c.rootdir)
+			r := newPathResolver(c.rootdir, &Config{Log: &fakeLogger{}})
 			if c.modify != nil {
 				c.modify(r)
 			}

@@ -20,6 +20,10 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 	}
 	t.Tracker.Track(def)
 
+	if t.Config.Verbose {
+		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
+	}
+
 	c := &code.Code{
 		Name: name,
 		Here: here,
