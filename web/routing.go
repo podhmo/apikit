@@ -47,29 +47,30 @@ func (r *Router) Group(pattern string, use func(*Router)) *Router {
 }
 
 func (r *Router) Connect(pattern string, fn T) *Node {
-	return r.Method("CONNECT", r.FullPrefix+pattern, fn)
+	return r.Method("CONNECT", pattern, fn)
 }
 func (r *Router) Delete(pattern string, fn T) *Node {
-	return r.Method("DELETE", r.FullPrefix+pattern, fn)
+	return r.Method("DELETE", pattern, fn)
 }
 func (r *Router) Get(pattern string, fn T) *Node {
-	return r.Method("GET", r.FullPrefix+pattern, fn)
+	return r.Method("GET", pattern, fn)
 }
 func (r *Router) Head(pattern string, fn T) *Node {
-	return r.Method("HEAD", r.FullPrefix+pattern, fn)
+	return r.Method("HEAD", pattern, fn)
 }
 func (r *Router) Options(pattern string, fn T) *Node {
-	return r.Method("OPTIONS", r.FullPrefix+pattern, fn)
+	return r.Method("OPTIONS", pattern, fn)
 }
 func (r *Router) Patch(pattern string, fn T) *Node {
-	return r.Method("PATCH", r.FullPrefix+pattern, fn)
+	return r.Method("PATCH", pattern, fn)
 }
 func (r *Router) Post(pattern string, fn T) *Node {
-	return r.Method("POST", r.FullPrefix+pattern, fn)
+	return r.Method("POST", pattern, fn)
 }
 func (r *Router) Put(pattern string, fn T) *Node {
-	return r.Method("PUT", r.FullPrefix+pattern, fn)
+	return r.Method("PUT", pattern, fn)
 }
 func (r *Router) Trace(pattern string, fn T) *Node {
-	return r.Method("TRACE", r.FullPrefix+pattern, fn)
+	return r.Method("TRACE", pattern, fn)
 }
+
