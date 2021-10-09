@@ -3,6 +3,7 @@ package genchi
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
@@ -85,7 +86,7 @@ func WriteHandlerFunc(w io.Writer,
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
-	pathParamFunc, err := runtimeModule.Symbol(here, "PathParam")
+	bindPathParamsFunc, err := runtimeModule.Symbol(here, "BindPathParams")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
@@ -106,6 +107,7 @@ func WriteHandlerFunc(w io.Writer,
 	type pathBinding struct {
 		Name string // go's name
 		Var  *web.PathVar
+		Sym  tinypkg.Node
 	}
 	var pathBindings []*pathBinding
 
@@ -119,8 +121,6 @@ func WriteHandlerFunc(w io.Writer,
 
 	// TODO: handling path info
 	for _, x := range def.Args {
-		argNames = append(argNames, x.Name)
-
 		shape := x.Shape
 		sym := resolver.Symbol(here, shape)
 		switch x.Kind {
@@ -130,6 +130,7 @@ func WriteHandlerFunc(w io.Writer,
 				seen[k] = true
 				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			}
+			argNames = append(argNames, x.Name)
 		case resolve.KindComponent:
 			shape := tracker.ExtractComponentFactoryShape(x)
 
@@ -165,14 +166,17 @@ func WriteHandlerFunc(w io.Writer,
 			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
 			componentBindings = append(componentBindings, binding)
-		case resolve.KindPrimitive:
+			argNames = append(argNames, x.Name)
+		case resolve.KindPrimitive: // handle pathParams
 			if v, ok := info.Vars[x.Name]; ok {
-				pathBindings = append(pathBindings, &pathBinding{Name: x.Name, Var: v})
+				pathBindings = append(pathBindings, &pathBinding{Name: x.Name, Var: v, Sym: resolver.Symbol(here, v.Shape)})
 			}
+			argNames = append(argNames, "pathParams."+x.Name)
 		case resolve.KindData: // handle request.Body
 			dataBindings = append(dataBindings, x)
+			argNames = append(argNames, x.Name)
 		default:
-			// args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
+			argNames = append(argNames, x.Name)
 		}
 	}
 
@@ -187,12 +191,23 @@ func WriteHandlerFunc(w io.Writer,
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
 		defer fmt.Fprintln(w, "\t}")
 
-		// <path name> := runtime.PathParam(req, "<path name>")
+		// handling path params
+		//
+		// var pathParams struct { <var 1> string `path:"<var 1>,required"`; ... }
+		// runtime.BindPathParams(&pathParams, req, "<var 1>", ...);
 		if len(pathBindings) > 0 {
-			for _, b := range pathBindings {
-				// TODO: type check
-				fmt.Fprintf(w, "\t\t%s := %s(req, %q)\n", b.Name, pathParamFunc, b.Var.Name)
+			indent := "\t\t"
+			fmt.Fprintf(w, "%svar pathParams struct {\n", indent)
+			varNames := make([]string, len(pathBindings))
+			for i, b := range pathBindings {
+				fmt.Fprintf(w, "%s\t%s %s `query:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Var.Name)
+				varNames[i] = strconv.Quote(b.Var.Name)
 			}
+			fmt.Fprintf(w, "%s}\n", indent)
+			fmt.Fprintf(w, "%sif err := %s(&pathParams, req, %s); err != nil {\n", indent, bindPathParamsFunc, strings.Join(varNames, ", "))
+			fmt.Fprintf(w, "%s\tw.WriteHeader(404)\n", indent)
+			fmt.Fprintf(w, "\t%s%s(w, req, nil, err); return\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "%s}\n", indent)
 		}
 
 		// var <component> <type>
