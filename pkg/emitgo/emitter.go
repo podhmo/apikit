@@ -10,7 +10,9 @@ import (
 )
 
 type Config struct {
-	RootPkg *tinypkg.Package
+	RootPkg        *tinypkg.Package
+	FilenamePrefix string
+
 	*emitfile.Config
 }
 
@@ -53,6 +55,9 @@ func (e *Emitter) Emit() error {
 func (e *Emitter) Register(pkg *tinypkg.Package, name string, target emitfile.Emitter) *emitfile.EmitAction {
 	if !strings.HasSuffix(name, ".go") {
 		name = name + ".go"
+	}
+	if e.Config.FilenamePrefix != "" {
+		name = e.Config.FilenamePrefix + name
 	}
 	return e.FileEmitter.Register("/"+path.Join(pkg.Path, name), target)
 }
