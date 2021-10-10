@@ -36,6 +36,12 @@ func PostArticleComment(getProvider func(*http.Request) (*http.Request, Provider
 		}
 		var data design.Comment
 		if err := runtime.BindBody(&data, req.Body); err != nil {
+			w.WriteHeader(400)
+			runtime.HandleResult(w, req, nil, err)
+			return
+		}
+		if err := runtime.ValidateStruct(&data); err != nil {
+			w.WriteHeader(422)
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}

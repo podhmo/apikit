@@ -1,22 +1,36 @@
 package webruntime
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/gorilla/schema"
 	"github.com/morikuni/failure"
+
+	"github.com/go-playground/locales/en"
+	ut "github.com/go-playground/universal-translator"
+	"github.com/go-playground/validator/v10"
 )
 
-var mu sync.Mutex
-var decoder = schema.NewDecoder()
+var (
+	// for parameters binding
+	mu      sync.Mutex
+	decoder = schema.NewDecoder()
+
+	// for validation
+	uni        *ut.UniversalTranslator
+	translator ut.Translator
+	validate   *validator.Validate
+)
 
 // TODO: performance
 func BindPathParams(dst interface{}, req *http.Request, keys ...string) error {
@@ -56,6 +70,17 @@ func BindBody(dst interface{}, r io.ReadCloser) error {
 	return nil
 }
 
+func ValidateStruct(ob interface{}) error {
+	// TODO: wrap
+	if err := validate.Struct(ob); err != nil {
+		return err
+	}
+	if v, ok := ob.(interface{ Validate() error }); ok {
+		return v.Validate() // TODO: 422
+	}
+	return nil
+}
+
 type HandleResultFunc func(w http.ResponseWriter, req *http.Request, v interface{}, err error)
 
 var HandleResult HandleResultFunc
@@ -66,11 +91,24 @@ func CreateHandleResultFunction(getHTTPStatus func(error) int) HandleResultFunc 
 		target := v
 
 		if err != nil {
-			// log if 5xx ? (or middleware?)
-			target = &errorRender{
-				HTTPStatusCode: getHTTPStatus(err),
-				Message:        messageOf(err),
-				DebugContext:   debugContextOf(err),
+			var validationErr validator.ValidationErrors
+			if errors.As(err, &validationErr) {
+				r := make([]fieldError, len(err.(validator.ValidationErrors)))
+				for i, fe := range err.(validator.ValidationErrors) {
+					r[i] = fieldError{Field: fe.Field(), Path: fe.StructNamespace(), Message: fe.Translate(translator)}
+				}
+				target = &errorRender{
+					HTTPStatusCode: http.StatusUnprocessableEntity,
+					Error:          []fieldError{{Message: messageOf(err)}},
+					DebugContext:   debugContextOf(err),
+				}
+			} else {
+				// log if 5xx ? (or middleware?)
+				target = &errorRender{
+					HTTPStatusCode: getHTTPStatus(err),
+					Error:          []fieldError{{Message: messageOf(err)}},
+					DebugContext:   debugContextOf(err),
+				}
 			}
 		} else {
 			// Force to return empty JSON array [] instead of null in case of zero slice.
@@ -86,14 +124,20 @@ func CreateHandleResultFunction(getHTTPStatus func(error) int) HandleResultFunc 
 // error
 
 type errorRender struct {
-	HTTPStatusCode int    `json:"-"`
-	Message        string `json:"message"`
-	DebugContext   string `json:"debug-context,omitempty"`
+	HTTPStatusCode int          `json:"-"`
+	Error          []fieldError `json:"error"`
+	DebugContext   string       `json:"debug-context,omitempty"`
 }
 
 func (e *errorRender) Render(w http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
+}
+
+type fieldError struct {
+	Field   string `json:"field"`
+	Path    string `json:"path"`
+	Message string `json:"message"`
 }
 
 func messageOf(err error) string {
@@ -117,4 +161,25 @@ func init() {
 	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
 		DEBUG = v
 	}
+
+	// todo: fix
+	en := en.New()
+	uni := ut.New(en, en)
+
+	// this is usually know or extracted from http 'Accept-Language' header
+	// also see uni.FindTranslator(...)
+	var found bool
+	translator, found = uni.GetTranslator("en")
+	if !found {
+		panic("translator is not found")
+	}
+
+	validate = validator.New()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
 }

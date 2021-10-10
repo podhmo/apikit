@@ -102,6 +102,10 @@ func WriteHandlerFunc(w io.Writer,
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
 	}
+	validateStructFunc, err := runtimeModule.Symbol(here, "ValidateStruct")
+	if err != nil {
+		return fmt.Errorf("in runtime module, %w", err)
+	}
 
 	actionFunc := tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 
@@ -264,11 +268,22 @@ func WriteHandlerFunc(w io.Writer,
 			}
 		}
 
+		// handling request body
+		// var data <struct>
+		// runtime.Bind(data, req.Body)
+		// runtime.ValidateStruct(data)
 		if len(dataBindings) > 0 {
 			indent := "\t\t"
 			x := dataBindings[0]
 			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, resolver.Symbol(here, x.Shape)) // todo: depenency?
+
 			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
+			fmt.Fprintf(w, "\t%sw.WriteHeader(400)\n", indent)
+			fmt.Fprintf(w, "\t%s%s(w, req, nil, err); return\n", indent, handleResultFunc)
+			fmt.Fprintf(w, "%s}\n", indent)
+
+			fmt.Fprintf(w, "%sif err := %s(&%s); err != nil {\n", indent, validateStructFunc, x.Name)
+			fmt.Fprintf(w, "\t%sw.WriteHeader(422)\n", indent)
 			fmt.Fprintf(w, "\t%s%s(w, req, nil, err); return\n", indent, handleResultFunc)
 			fmt.Fprintf(w, "%s}\n", indent)
 		}
