@@ -6,7 +6,6 @@ import (
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
@@ -16,42 +15,42 @@ func (t *Translator) TranslateToInterface(here *tinypkg.Package, ob interface{},
 	if name == "" {
 		name = shape.GetName()
 	}
+	var iface *tinypkg.Interface // bound by EmitCode()
 	c := &code.Code{
 		Name:   name,
 		Here:   here,
 		Config: t.Config,
-		// ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-		// 	return nil, nil // TODO: implement
-		// },
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
+			return iface.OnWalk(collector.Collect)
+		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-			return writeInterface(w, here, t.Resolver, shape, name)
+			resolver := t.Resolver
+			here := c.Here
+
+			s, ok := shape.(reflectshape.Struct)
+			if !ok {
+				return fmt.Errorf("%s is not struct or pointer of struct", shape)
+			}
+
+			var methods []*tinypkg.Func
+			fnset := s.Methods()
+			for _, name := range fnset.Names {
+				fn := fnset.Functions[name]
+
+				// omit recv info
+				fn.Params.Keys = make([]string, len(fn.Params.Keys)-1)
+				fn.Params.Values = fn.Params.Values[1:]
+
+				sym := resolver.Symbol(here, fn)
+				f, ok := sym.(*tinypkg.Func)
+				if !ok {
+					return fmt.Errorf("%s's %s is not function", shape, sym)
+				}
+				methods = append(methods, f)
+			}
+			iface = here.NewInterface(name, methods)
+			return tinypkg.WriteInterface(w, here, name, iface)
 		},
 	}
 	return &code.CodeEmitter{Code: c}
-}
-
-func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, shape reflectshape.Shape, name string) error {
-	s, ok := shape.(reflectshape.Struct)
-	if !ok {
-		return fmt.Errorf("%s is not struct or pointer of struct", shape)
-	}
-
-	var methods []*tinypkg.Func
-	fnset := s.Methods()
-	for _, name := range fnset.Names {
-		fn := fnset.Functions[name]
-
-		// omit recv info
-		fn.Params.Keys = make([]string, len(fn.Params.Keys)-1)
-		fn.Params.Values = fn.Params.Values[1:]
-
-		sym := resolver.Symbol(here, fn) // todo: (method support @reflect-shape )
-		f, ok := sym.(*tinypkg.Func)
-		if !ok {
-			return fmt.Errorf("%s's %s is not function", shape, sym)
-		}
-		methods = append(methods, f)
-	}
-	iface := here.NewInterface(name, methods)
-	return tinypkg.WriteInterface(w, here, name, iface)
 }
