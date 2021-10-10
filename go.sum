@@ -8,8 +8,8 @@ github.com/gookit/color v1.4.2/go.mod h1:fqRyamkC1W8uxl+lxCQxOT09l/vYfZ+QeiX3rKQ
 github.com/nsf/jsondiff v0.0.0-20210303162244-6ea32392771e/go.mod h1:uFMI8w+ref4v2r9jz+c9i1IfIttS/OkmLfrk1jne5hs=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/podhmo/reflect-shape v0.3.4 h1:d7cyRFf8ui3oB9n565f+34dGhk3pyVTUEQT/rHYHUUk=
-github.com/podhmo/reflect-shape v0.3.4/go.mod h1:GCE0vFG0rWA4hAbaOwmZcpwKUEkDIzcm/2T0Y89N1PE=
+github.com/podhmo/reflect-shape v0.3.5 h1:ppM22IUANFAtb1x8BnDpunR7OzyiOJf3oCCnJgl84R4=
+github.com/podhmo/reflect-shape v0.3.5/go.mod h1:GCE0vFG0rWA4hAbaOwmZcpwKUEkDIzcm/2T0Y89N1PE=
 github.com/sergi/go-diff v1.0.0 h1:Kpca3qRNrduNnOQeazBd0ysaKrUJiIuISHxogkT9RPQ=
 github.com/sergi/go-diff v1.0.0/go.mod h1:0CfEIISq7TuYL3j771MWULgwwjU+GofnZX9QAmXWZgo=
 github.com/shibukawa/cdiff v0.1.3 h1:0ren00CxjQKvP0IqS1aVDZ/eFIcLXNZ9cmru22t6CTU=
