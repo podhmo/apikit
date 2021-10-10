@@ -23,7 +23,8 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewFromRelativePath(action.Hello, "..")
+	emitter := emitgo.NewConfigFromRelativePath(action.Hello, "..").NewEmitter()
+	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	r := web.NewRouter()

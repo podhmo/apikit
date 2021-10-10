@@ -48,8 +48,9 @@ func New() *clilib.Command {
 			designpkg := rootpkg.Relative("design", "")
 			actionpkg := rootpkg.Relative("action", "")
 
-			emitter := emitgo.New(filepath.Base(rootpkgPath), rootpkg)
-			emitter.FileEmitter.Config.Verbose = cfg.Verbose
+			ecfg := emitgo.NewConfig(filepath.Base(rootpkgPath), rootpkg)
+			ecfg.Verbose = cfg.Verbose
+			emitter := ecfg.NewEmitter()
 			defer emitter.EmitWith(&err)
 
 			{
@@ -135,7 +136,8 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewFromRelativePath(action.Hello, "..")
+	emitter := emitgo.NewConfigFromRelativePath(action.Hello, "..").NewEmitter()
+	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	r := web.NewRouter()
