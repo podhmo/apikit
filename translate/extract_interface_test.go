@@ -20,7 +20,7 @@ func ListUserWithError(db *DB) ([]User, error) { return nil, nil }
 
 func ListUserFromAnotherDB(anotherDb *DB) []User { return nil }
 
-func TestInterface(t *testing.T) {
+func TestProviderInterface(t *testing.T) {
 	resolver := resolve.NewResolver()
 
 	main := resolver.NewPackage("main", "main")
@@ -142,7 +142,7 @@ type Component interface {
 				c.modifyTracker(translator.Tracker)
 			}
 
-			code := translator.TranslateToInterface(c.here, "Component")
+			code := translator.ExtractProviderInterface(c.here, "Component")
 			var buf strings.Builder
 			if err := code.Emit(&buf); err != nil {
 				if c.wantError == nil || c.wantError != err {

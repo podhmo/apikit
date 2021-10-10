@@ -187,7 +187,7 @@ func (g *Generator) Generate(
 	{
 		here := g.ProviderPkg
 		name := g.Config.ProviderName // xxx
-		code := translator.TranslateToInterface(here, name)
+		code := translator.ExtractProviderInterface(here, name)
 		g.Emitter.Register(here, code.Name, code)
 	}
 
