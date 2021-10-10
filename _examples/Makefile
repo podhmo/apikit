@@ -35,4 +35,4 @@ init-check:
 clean:
 	rm -rf 00*/runner/
 	rm -rf 01*/runner/ 01*/component
-	rm -rf 11*/handler/
+	rm -rf 11*/handler/ 11*/runtime/
