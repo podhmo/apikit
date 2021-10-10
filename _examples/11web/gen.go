@@ -27,7 +27,8 @@ func main() {
 // TODO: gentle message ( extract path info: expected variables are [], but want variables are [articleId] (in def GetArticle): mismatch-number-of-variables)
 
 func run() (err error) {
-	emitter := emitgo.NewFromRelativePath(design.ListArticle, "..")
+	emitter := emitgo.NewConfigFromRelativePath(design.ListArticle, "..").NewEmitter()
+	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	r := web.NewRouter()

@@ -9,25 +9,38 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-type Emitter struct {
-	FileEmitter *emitfile.Executor
-	RootPkg     *tinypkg.Package
-	RootDir     string
+type Config struct {
+	RootPkg        *tinypkg.Package
+	FilenamePrefix string
+
+	*emitfile.Config
 }
 
-func NewFromRelativePath(fn interface{}, relative string) *Emitter {
+func NewConfigFromRelativePath(fn interface{}, relative string) *Config {
 	rootdir := filepath.Join(DefinedDir(fn), relative)
 	rootpkg := tinypkg.NewPackage(path.Join(PackagePath(fn), relative), "")
-	return New(rootdir, rootpkg)
+	return NewConfig(rootdir, rootpkg)
 }
-func New(rootdir string, rootpkg *tinypkg.Package) *Emitter {
-	emitter := &Emitter{
-		FileEmitter: emitfile.New(rootdir),
-		RootPkg:     rootpkg,
-		RootDir:     rootdir,
+
+func NewConfig(rootdir string, rootpkg *tinypkg.Package) *Config {
+	return &Config{
+		RootPkg: rootpkg,
+		Config:  emitfile.NewConfig(rootdir),
 	}
-	emitter.FileEmitter.PathResolver.AddRoot("/"+rootpkg.Path, rootdir)
+}
+
+func (c *Config) NewEmitter() *Emitter {
+	emitter := &Emitter{
+		FileEmitter: c.Config.NewEmitter(),
+		Config:      c,
+	}
+	emitter.FileEmitter.PathResolver.AddRoot("/"+c.RootPkg.Path, c.RootDir)
 	return emitter
+}
+
+type Emitter struct {
+	*Config
+	FileEmitter *emitfile.Executor
 }
 
 func (e *Emitter) EmitWith(errptr *error) {
@@ -42,6 +55,9 @@ func (e *Emitter) Emit() error {
 func (e *Emitter) Register(pkg *tinypkg.Package, name string, target emitfile.Emitter) *emitfile.EmitAction {
 	if !strings.HasSuffix(name, ".go") {
 		name = name + ".go"
+	}
+	if e.Config.FilenamePrefix != "" {
+		name = e.Config.FilenamePrefix + name
 	}
 	return e.FileEmitter.Register("/"+path.Join(pkg.Path, name), target)
 }

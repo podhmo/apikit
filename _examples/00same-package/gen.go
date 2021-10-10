@@ -18,7 +18,8 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewFromRelativePath(design.ListUser, "..")
+	emitter := emitgo.NewConfigFromRelativePath(design.ListUser, "..").NewEmitter()
+	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	config := translate.DefaultConfig()

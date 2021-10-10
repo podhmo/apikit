@@ -33,9 +33,38 @@ type Config struct {
 	Debug       bool
 	AlwaysWrite bool
 
-	CurDir string
+	RootDir string // root directory for file-generation
+	CurDir  string // use for relative-path calculation in logging
 
 	Log Logger
+}
+
+func NewConfig(rootdir string) *Config {
+	c := &Config{
+		Debug:       DEBUG,
+		Verbose:     VERBOSE,
+		Log:         log.New(os.Stderr, "", 0),
+		AlwaysWrite: true,
+		RootDir:     rootdir,
+	}
+	if c.Debug {
+		c.Verbose = true
+		c.AlwaysWrite = true
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		c.CurDir = cwd
+	}
+	return c
+}
+
+func (c *Config) NewEmitter() *Executor {
+	r := newPathResolver(c)
+	r.Config = c
+	return &Executor{
+		PathResolver: r,
+		saver:        newfileSaver(c),
+		Config:       c,
+	}
 }
 
 type Executor struct {
@@ -64,29 +93,6 @@ func (f EmitFunc) Emit(w io.Writer) error {
 
 type Emitter interface {
 	Emit(w io.Writer) error
-}
-
-func New(rootdir string) *Executor {
-	c := &Config{
-		Debug:       DEBUG,
-		Verbose:     VERBOSE,
-		Log:         log.New(os.Stderr, "", 0),
-		AlwaysWrite: true,
-	}
-	if c.Debug {
-		c.Verbose = true
-		c.AlwaysWrite = true
-	}
-	if cwd, err := os.Getwd(); err == nil {
-		c.CurDir = cwd
-	}
-	r := newPathResolver(rootdir, c)
-	r.Config = c
-	return &Executor{
-		PathResolver: r,
-		saver:        newfileSaver(c),
-		Config:       c,
-	}
 }
 
 func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
@@ -145,9 +151,9 @@ type PathResolver struct {
 	RootDirs map[string]string
 }
 
-func newPathResolver(rootdir string, config *Config) *PathResolver {
+func newPathResolver(config *Config) *PathResolver {
 	return &PathResolver{
-		RootDirs: map[string]string{"/": rootdir},
+		RootDirs: map[string]string{"/": config.RootDir},
 		Config:   config,
 	}
 }
