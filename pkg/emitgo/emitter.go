@@ -9,24 +9,35 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-type Emitter struct {
-	FileEmitter *emitfile.Executor
-	RootPkg     *tinypkg.Package
-	RootDir     string
+type Config struct {
+	RootPkg *tinypkg.Package
+	*emitfile.Config
 }
 
-func NewFromRelativePath(fn interface{}, relative string) *Emitter {
+func NewConfigFromRelativePath(fn interface{}, relative string) *Config {
 	rootdir := filepath.Join(DefinedDir(fn), relative)
 	rootpkg := tinypkg.NewPackage(path.Join(PackagePath(fn), relative), "")
-	return New(rootdir, rootpkg)
+	return NewConfig(rootdir, rootpkg)
 }
-func New(rootdir string, rootpkg *tinypkg.Package) *Emitter {
-	emitter := &Emitter{
-		FileEmitter: emitfile.New(rootdir),
-		RootPkg:     rootpkg,
-		RootDir:     rootdir,
+
+func NewConfig(rootdir string, rootpkg *tinypkg.Package) *Config {
+	return &Config{
+		RootPkg: rootpkg,
+		Config:  emitfile.NewConfig(rootdir),
 	}
-	emitter.FileEmitter.PathResolver.AddRoot("/"+rootpkg.Path, rootdir)
+}
+
+type Emitter struct {
+	*Config
+	FileEmitter *emitfile.Executor
+}
+
+func New(config *Config) *Emitter {
+	emitter := &Emitter{
+		FileEmitter: emitfile.New(config.Config),
+		Config:      config,
+	}
+	emitter.FileEmitter.PathResolver.AddRoot("/"+config.RootPkg.Path, config.RootDir)
 	return emitter
 }
 
