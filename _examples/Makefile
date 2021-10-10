@@ -1,11 +1,13 @@
 export DEBUG ?= 0
 export VERBOSE ?= 1
 
-default: 00 01 10 11
+default: 00 01 02 10 11
 
 00:
 	go run $(shell echo $@*/)gen.go
 01:
+	go run $(shell echo $@*/)gen.go
+02:
 	go run $(shell echo $@*/)gen.go
 
 # web
@@ -19,6 +21,7 @@ default: 00 01 10 11
 check:
 	go install -v ./$(shell echo 00*/)/runner/...
 	go install -v ./$(shell echo 01*/)/runner/...
+	go install -v ./$(shell echo 02*/)/component/...
 	go install -v ./$(shell echo 11*/)/handler/...
 
 # apikit
@@ -35,4 +38,5 @@ init-check:
 clean:
 	rm -rf 00*/runner/
 	rm -rf 01*/runner/ 01*/component
+	rm -rf 02*/component
 	rm -rf 11*/handler/ 11*/runtime/

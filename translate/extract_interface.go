@@ -1,13 +1,11 @@
 package translate
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
 )
 
 func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
@@ -18,32 +16,25 @@ func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string
 		// priority: code.PriorityFirst,
 		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
-			return collectImportsForProviderInterface(collector, t.Resolver, t.Tracker)
+			resolver := t.Resolver
+			use := collector.Collect
+			here := collector.Here
+			for _, need := range t.Needs {
+				shape := need.Shape
+				if need.OverrideDef != nil {
+					shape = need.OverrideDef.Shape
+				}
+				sym := resolver.Symbol(here, shape)
+				if err := tinypkg.Walk(sym, use); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-			return writeProviderInterface(w, here, t.Resolver, t.Tracker, name)
+			iface := t.Tracker.ExtractInterface(here, t.Resolver, name)
+			return tinypkg.WriteInterface(w, here, name, iface)
 		},
 	}
 	return &code.CodeEmitter{Code: c}
-}
-
-func collectImportsForProviderInterface(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, t *resolve.Tracker) error {
-	here := collector.Here
-	use := collector.Collect
-	for _, need := range t.Needs {
-		shape := need.Shape
-		if need.OverrideDef != nil {
-			shape = need.OverrideDef.Shape
-		}
-		sym := resolver.Symbol(here, shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return fmt.Errorf("on walk %s: %w", sym, err)
-		}
-	}
-	return nil
-}
-
-func writeProviderInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {
-	iface := t.ExtractInterface(here, resolver, name)
-	return tinypkg.WriteInterface(w, here, name, iface)
 }
