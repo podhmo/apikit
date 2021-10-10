@@ -119,10 +119,6 @@ type symbolCacheItem struct {
 	Node  tinypkg.Node
 }
 
-func (r *Resolver) Shape(ob interface{}) reflectshape.Shape {
-	return r.extractor.Extract(ob)
-}
-
 func (r *Resolver) Symbol(here *tinypkg.Package, s reflectshape.Shape) tinypkg.Node {
 	r.mu.RLock()
 	k := s.GetIdentity()
