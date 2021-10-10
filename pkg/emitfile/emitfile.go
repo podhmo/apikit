@@ -57,6 +57,16 @@ func NewConfig(rootdir string) *Config {
 	return c
 }
 
+func (c *Config) NewEmitter() *Executor {
+	r := newPathResolver(c)
+	r.Config = c
+	return &Executor{
+		PathResolver: r,
+		saver:        newfileSaver(c),
+		Config:       c,
+	}
+}
+
 type Executor struct {
 	*Config
 
@@ -83,16 +93,6 @@ func (f EmitFunc) Emit(w io.Writer) error {
 
 type Emitter interface {
 	Emit(w io.Writer) error
-}
-
-func New(config *Config) *Executor {
-	r := newPathResolver(config)
-	r.Config = config
-	return &Executor{
-		PathResolver: r,
-		saver:        newfileSaver(config),
-		Config:       config,
-	}
 }
 
 func (e *Executor) Register(path string, emitter Emitter) *EmitAction {

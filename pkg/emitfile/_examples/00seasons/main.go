@@ -12,8 +12,7 @@ import (
 
 func main() {
 	rootdir := DefinedDir(main)
-	config := emitfile.NewConfig(rootdir)
-	emitter := emitfile.New(config)
+	emitter := emitfile.NewConfig(rootdir).NewEmitter()
 	defer emitter.Emit()
 
 	emitter.Register("docs/spring.md", &Content{Text: "# 春"})

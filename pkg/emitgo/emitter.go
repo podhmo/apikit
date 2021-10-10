@@ -29,18 +29,18 @@ func NewConfig(rootdir string, rootpkg *tinypkg.Package) *Config {
 	}
 }
 
+func (c *Config) NewEmitter() *Emitter {
+	emitter := &Emitter{
+		FileEmitter: c.Config.NewEmitter(),
+		Config:      c,
+	}
+	emitter.FileEmitter.PathResolver.AddRoot("/"+c.RootPkg.Path, c.RootDir)
+	return emitter
+}
+
 type Emitter struct {
 	*Config
 	FileEmitter *emitfile.Executor
-}
-
-func New(config *Config) *Emitter {
-	emitter := &Emitter{
-		FileEmitter: emitfile.New(config.Config),
-		Config:      config,
-	}
-	emitter.FileEmitter.PathResolver.AddRoot("/"+config.RootPkg.Path, config.RootDir)
-	return emitter
 }
 
 func (e *Emitter) EmitWith(errptr *error) {
