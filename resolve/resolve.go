@@ -40,6 +40,10 @@ func NewResolver() *Resolver {
 	}
 }
 
+func (r *Resolver) UnsafeShapeExtractor() *reflectshape.Extractor {
+	return r.extractor
+}
+
 func (r *Resolver) NewPackage(path, name string) *tinypkg.Package {
 	return r.universe.NewPackage(path, name)
 }
