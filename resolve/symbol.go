@@ -63,7 +63,7 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 			v := ExtractSymbol(universe, here, s.Args[0])
 			return &tinypkg.Slice{V: v}
 		default:
-			panic(fmt.Sprintf("unsupported container shape %+v", s))
+			panic(fmt.Sprintf("unsupported container shape %s, %+v", name, s.GetReflectType()))
 		}
 	case reflectshape.Function:
 		args := make([]*tinypkg.Var, 0, s.Params.Len())
@@ -109,6 +109,6 @@ func extractSymbol(universe *tinypkg.Universe, here *tinypkg.Package, s reflects
 			Returns: returns,
 		}
 	default:
-		panic(fmt.Sprintf("unsupported shape %+v", s))
+		panic(fmt.Sprintf("unsupported shape %T %+v", s, s.GetReflectType()))
 	}
 }
