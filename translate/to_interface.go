@@ -11,22 +11,23 @@ import (
 )
 
 // TranslateToInterface translates to interface from concrete struct
-func (t *Translator) TranslateToInterface(here *tinypkg.Package, ob interface{}, name string) *code.Code {
+func (t *Translator) TranslateToInterface(here *tinypkg.Package, ob interface{}, name string) *code.CodeEmitter {
 	shape := t.Resolver.Shape(ob)
 	if name == "" {
 		name = shape.GetName()
 	}
-	return &code.Code{
+	c := &code.Code{
 		Name:   name,
 		Here:   here,
 		Config: t.Config,
 		// ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
 		// 	return nil, nil // TODO: implement
 		// },
-		EmitCode: func(w io.Writer) error {
+		EmitCode: func(w io.Writer, c *code.Code) error {
 			return writeInterface(w, here, t.Resolver, shape, name)
 		},
 	}
+	return &code.CodeEmitter{Code: c}
 }
 
 func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, shape reflectshape.Shape, name string) error {
@@ -39,7 +40,7 @@ func writeInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolv
 	fnset := s.Methods()
 	for _, name := range fnset.Names {
 		fn := fnset.Functions[name]
-		
+
 		// omit recv info
 		fn.Params.Keys = make([]string, len(fn.Params.Keys)-1)
 		fn.Params.Values = fn.Params.Values[1:]

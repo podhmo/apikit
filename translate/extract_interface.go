@@ -6,42 +6,35 @@ import (
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
 )
 
-func (t *Translator) ExtractInterface(here *tinypkg.Package, name string) *code.Code {
+func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string) *code.CodeEmitter {
 	t.providerVar = &tinypkg.Var{Name: strings.ToLower(name), Node: here.NewSymbol(name)}
-	return &code.Code{
+	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PriorityFirst,
 		Config: t.Config,
-		ImportPackages: func() ([]*tinypkg.ImportedPackage, error) {
-			return collectImportsForProviderInterface(here, t.Resolver, t.Tracker)
+		ImportPackages: func(collector *tinypkg.ImportCollector) error {
+			resolver := t.Resolver
+			use := collector.Collect
+			here := collector.Here
+			for _, need := range t.Needs {
+				shape := need.Shape
+				if need.OverrideDef != nil {
+					shape = need.OverrideDef.Shape
+				}
+				sym := resolver.Symbol(here, shape)
+				if err := tinypkg.Walk(sym, use); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
-		EmitCode: func(w io.Writer) error {
-			return writeProviderInterface(w, here, t.Resolver, t.Tracker, name)
+		EmitCode: func(w io.Writer, c *code.Code) error {
+			iface := t.Tracker.ExtractInterface(here, t.Resolver, name)
+			return tinypkg.WriteInterface(w, here, name, iface)
 		},
 	}
-}
-
-func collectImportsForProviderInterface(here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker) ([]*tinypkg.ImportedPackage, error) {
-	collector := tinypkg.NewImportCollector(here)
-	use := collector.Collect
-	for _, need := range t.Needs {
-		shape := need.Shape
-		if need.OverrideDef != nil {
-			shape = need.OverrideDef.Shape
-		}
-		sym := resolver.Symbol(here, shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return nil, err
-		}
-	}
-	return collector.Imports, nil
-}
-
-func writeProviderInterface(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver, t *resolve.Tracker, name string) error {
-	iface := t.ExtractInterface(here, resolver, name)
-	return tinypkg.WriteInterface(w, here, name, iface)
+	return &code.CodeEmitter{Code: c}
 }
