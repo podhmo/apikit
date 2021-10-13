@@ -182,3 +182,55 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 	}
 	return nil
 }
+
+type BindingList []*Binding
+type topoState struct {
+	sorted []*Binding
+
+	seen  map[string]bool
+	deps  map[string][]string
+	nodes map[string]*Binding
+}
+
+func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
+	s := &topoState{
+		sorted: make([]*Binding, 0, len(bl)),
+		seen:   make(map[string]bool, len(bl)),
+		deps:   make(map[string][]string, len(bl)),
+		nodes:  make(map[string]*Binding, len(bl)),
+	}
+	for _, b := range bl {
+		var deps []string
+		for _, x := range b.Provider.Args {
+			deps = append(deps, x.Name)
+		}
+		s.nodes[b.Name] = b
+		s.deps[b.Name] = deps
+	}
+	for _, b := range bl {
+		if err := b.topoWalk(s, b); err != nil {
+			return s.sorted, err
+		}
+	}
+	return s.sorted, nil
+}
+
+func (bl *Binding) topoWalk(s *topoState, b *Binding) error {
+	if deps, ok := s.deps[b.Name]; ok {
+		for _, name := range deps {
+			b, ok := s.nodes[name]
+			if !ok {
+				return fmt.Errorf("node %q is not found in binding[name=%q, type=%s]", name, b.Name, b.Provider)
+			}
+			if err := bl.topoWalk(s, s.nodes[name]); err != nil {
+				return err
+			}
+		}
+	}
+	if _, ok := s.seen[b.Name]; ok {
+		return nil
+	}
+	s.seen[b.Name] = true
+	s.sorted = append(s.sorted, b)
+	return nil
+}
