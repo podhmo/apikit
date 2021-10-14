@@ -212,21 +212,33 @@ func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
 		s.deps[b.Name] = deps
 	}
 	for _, b := range bl {
-		if err := b.topoWalk(s, b); err != nil {
+		if err := bl.topoWalk(s, b, nil); err != nil {
 			return s.sorted, err
 		}
 	}
 	return s.sorted, nil
 }
 
-func (bl *Binding) topoWalk(s *topoState, b *Binding) error {
+func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) error {
+	history = append(history, b)
 	if deps, ok := s.deps[b.Name]; ok {
 		for _, name := range deps {
 			b, ok := s.nodes[name]
 			if !ok {
-				return fmt.Errorf("node %q is not found in binding[name=%q, type=%s]", name, b.Name, b.Provider)
+				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, b.Name, b.Provider)
 			}
-			if err := bl.topoWalk(s, s.nodes[name]); err != nil {
+
+			for _, x := range history {
+				if x == b {
+					history = append(history, x)
+					hs := make([]string, len(history))
+					for i, y := range history {
+						hs[i] = fmt.Sprintf("binding[name=%q, need=%s]", y.Name, y.Provider)
+					}
+					return fmt.Errorf("circular dependency is detected, history=%v", hs)
+				}
+			}
+			if err := bl.topoWalk(s, s.nodes[name], history); err != nil {
 				return err
 			}
 		}

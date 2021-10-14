@@ -17,9 +17,11 @@ func TestBindingSort(t *testing.T) {
 		return b
 	}
 	cases := []struct {
-		msg    string
-		input  BindingList
+		msg   string
+		input BindingList
+
 		output []string
+		hasErr bool
 	}{
 		{
 			msg:    "empty",
@@ -114,13 +116,34 @@ func TestBindingSort(t *testing.T) {
 				"Z <- getZ(X)",
 			},
 		},
+		{
+			msg: "ng-three,deps,circular-dependency",
+			input: BindingList{
+				mustBinding("Z", pkg.NewFunc("getZ", []*Var{{Name: "X", Node: pkg.NewSymbol("X")}}, []*Var{{Node: pkg.NewSymbol("Z")}})),
+				mustBinding("X", pkg.NewFunc("getX", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("X")}})),
+				mustBinding("Y", pkg.NewFunc("getY", []*Var{{Name: "Z", Node: pkg.NewSymbol("Z")}}, []*Var{{Node: pkg.NewSymbol("Y")}})),
+			},
+			hasErr: true,
+			output: []string{
+				"Y <- getY(Z)",
+				"X <- getX(Y)",
+				"Z <- getZ(X)",
+			},
+		},
 	}
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			sorted, err := c.input.TopologicalSorted()
+			if c.hasErr {
+				if err == nil {
+					t.Error("expected error, but not occured")
+				}
+				return
+			}
+
 			if err != nil {
-				t.Fatalf("unexpected error %+v", err)
+				t.Fatalf("unexpected error: %+v", err)
 			}
 
 			var got []string
