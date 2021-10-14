@@ -24,6 +24,9 @@ func UseBoo(boo *Boo) error                                    { return nil }
 func NewBoo(store *Store) *Boo                                 { return nil }
 func NewBooWithContext(ctx context.Context, store *Store) *Boo { return nil }
 
+func UseBooWithStore(boo *Boo, store *Store) error               { return nil }
+func UseBooWithAnotherStore(boo *Boo, anotherStore *Store) error { return nil }
+
 func TestTrackerExtractInterface(t *testing.T) {
 	resolver := NewResolver()
 
@@ -99,6 +102,35 @@ type Provider interface {
 			want: `
 type Provider interface {
 	Boo(ctx context.Context, store *Store) *Boo
+	Store() *Store
+}
+			`,
+		},
+		{
+			msg:  "with-override-no-effect-veersion",
+			here: resolvePkg,
+			modify: func(tracker *Tracker) {
+				tracker.Track(resolver.Def(UseBooWithStore)) // func(*Boo, *Store)
+				tracker.Override("", NewBoo)                 // func(*Store) *Boo
+			},
+			want: `
+type Provider interface {
+	Boo(store *Store) *Boo
+	Store() *Store
+}
+			`,
+		},
+		{
+			msg:  "with-override-with-another-name",
+			here: resolvePkg,
+			modify: func(tracker *Tracker) {
+				tracker.Track(resolver.Def(UseBooWithAnotherStore)) // func(*Boo, anotherDB *Store)
+				tracker.Override("", NewBoo)                        // func(*Store) *Boo
+			},
+			want: `
+type Provider interface {
+	Boo(store *Store) *Boo
+	AnotherStore() *Store
 	Store() *Store
 }
 			`,
