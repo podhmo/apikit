@@ -293,7 +293,7 @@ func WriteHandlerFunc(w io.Writer,
 				zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
 				sorted, err := componentBindings.TopologicalSorted()
 				if err != nil {
-					return fmt.Errorf("failed component gen (toposort): %w", err)
+					return fmt.Errorf("failed component binding (toposort): %w", err)
 				}
 				for _, binding := range sorted {
 					binding.ZeroReturnsDefault = zeroReturnsDefault
