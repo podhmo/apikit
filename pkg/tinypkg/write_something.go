@@ -56,6 +56,7 @@ type Binding struct {
 
 	Provider      *Func
 	ProviderAlias string
+	argsAliases   []string // args in call alias
 
 	ZeroReturnsDefault string
 
@@ -123,9 +124,12 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 		var callRHS string
 		{
 			provider := b.Provider
-			args := make([]string, 0, len(provider.Args))
-			for _, x := range provider.Args {
-				args = append(args, x.Name)
+			args := b.argsAliases
+			if args == nil {
+				args = make([]string, 0, len(provider.Args))
+				for _, x := range provider.Args {
+					args = append(args, x.Name)
+				}
 			}
 			providerName := provider.Name
 			if b.ProviderAlias != "" {
@@ -202,7 +206,7 @@ func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
 	for _, b := range bl {
 		var deps []string
 		for _, x := range b.Provider.Args {
-			deps = append(deps, x.Name)
+			deps = append(deps, x.Name) // normalize
 		}
 		s.nodes[b.Name] = b
 		s.deps[b.Name] = deps

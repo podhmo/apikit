@@ -3,6 +3,7 @@ package tinypkg
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -28,7 +29,7 @@ func TestBindingSort(t *testing.T) {
 		{
 			msg:    "one",
 			input:  BindingList{mustBinding("X", pkg.NewFunc("getX", nil, []*Var{{Node: pkg.NewSymbol("X")}}))},
-			output: []string{"X <- getX(...)"},
+			output: []string{"X <- getX()"},
 		},
 		{
 			msg: "two,no-deps",
@@ -37,8 +38,8 @@ func TestBindingSort(t *testing.T) {
 				mustBinding("Y", pkg.NewFunc("getY", nil, []*Var{{Node: pkg.NewSymbol("Y")}})),
 			},
 			output: []string{
-				"X <- getX(...)",
-				"Y <- getY(...)",
+				"X <- getX()",
+				"Y <- getY()",
 			},
 		},
 		// {
@@ -59,8 +60,8 @@ func TestBindingSort(t *testing.T) {
 				mustBinding("Y", pkg.NewFunc("getY", nil, []*Var{{Node: pkg.NewSymbol("Y")}})),
 			},
 			output: []string{
-				"Y <- getY(...)",
-				"X <- getX(...)",
+				"Y <- getY()",
+				"X <- getX(Y)",
 			},
 		},
 		{
@@ -70,8 +71,47 @@ func TestBindingSort(t *testing.T) {
 				mustBinding("X", pkg.NewFunc("getX", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("X")}})),
 			},
 			output: []string{
-				"Y <- getY(...)",
-				"X <- getX(...)",
+				"Y <- getY()",
+				"X <- getX(Y)",
+			},
+		},
+		{
+			msg: "three,deps,shared",
+			input: BindingList{
+				mustBinding("Y", pkg.NewFunc("getY", nil, []*Var{{Node: pkg.NewSymbol("Y")}})),
+				mustBinding("X", pkg.NewFunc("getX", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("X")}})),
+				mustBinding("Z", pkg.NewFunc("getZ", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("Z")}})),
+			},
+			output: []string{
+				"Y <- getY()",
+				"X <- getX(Y)",
+				"Z <- getZ(Y)",
+			},
+		},
+		{
+			msg: "three,deps,chained",
+			input: BindingList{
+				mustBinding("Y", pkg.NewFunc("getY", nil, []*Var{{Node: pkg.NewSymbol("Y")}})),
+				mustBinding("X", pkg.NewFunc("getX", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("X")}})),
+				mustBinding("Z", pkg.NewFunc("getZ", []*Var{{Name: "X", Node: pkg.NewSymbol("X")}}, []*Var{{Node: pkg.NewSymbol("Z")}})),
+			},
+			output: []string{
+				"Y <- getY()",
+				"X <- getX(Y)",
+				"Z <- getZ(X)",
+			},
+		},
+		{
+			msg: "three,deps,chained,reorder",
+			input: BindingList{
+				mustBinding("Z", pkg.NewFunc("getZ", []*Var{{Name: "X", Node: pkg.NewSymbol("X")}}, []*Var{{Node: pkg.NewSymbol("Z")}})),
+				mustBinding("X", pkg.NewFunc("getX", []*Var{{Name: "Y", Node: pkg.NewSymbol("Y")}}, []*Var{{Node: pkg.NewSymbol("X")}})),
+				mustBinding("Y", pkg.NewFunc("getY", nil, []*Var{{Node: pkg.NewSymbol("Y")}})),
+			},
+			output: []string{
+				"Y <- getY()",
+				"X <- getX(Y)",
+				"Z <- getZ(X)",
 			},
 		},
 	}
@@ -85,7 +125,13 @@ func TestBindingSort(t *testing.T) {
 
 			var got []string
 			for _, b := range sorted {
-				got = append(got, fmt.Sprintf("%s <- %s(...)", b.Name, b.Provider.Name))
+				args := b.argsAliases
+				if args == nil {
+					for _, x := range b.Provider.Args {
+						args = append(args, x.Name)
+					}
+				}
+				got = append(got, fmt.Sprintf("%s <- %s(%s)", b.Name, b.Provider.Name, strings.Join(args, ", ")))
 			}
 			if want := c.output; !reflect.DeepEqual(want, got) {
 				t.Errorf("want:\n\t%v\nbut got:\n\t%v", want, got)
