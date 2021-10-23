@@ -25,6 +25,7 @@ type Config struct {
 
 func DefaultConfig() *Config {
 	c := code.DefaultConfig()
+	c.Config.IgnoreMap["net/http.Request"] = true // xxx:
 	return &Config{
 		Config:       c,
 		Tracker:      resolve.NewTracker(c.Resolver),

@@ -121,6 +121,7 @@ type Handler interface {
 
 func TestWriteBinding(t *testing.T) {
 	main := NewPackage("main", "")
+	pkg := NewPackage("github.com/podhmo/apikit/pkg/tinypkg", "")
 
 	// func(ctx context.Context) (*DB, func(), error) { ... }
 	newDB := main.NewFunc(
@@ -159,6 +160,27 @@ func TestWriteBinding(t *testing.T) {
 var db *DB
 {
 	db = NewDB(ctx)
+}
+`,
+		},
+		{
+			msg:  "ok-provider-return-1--external-return-1--with-package",
+			here: main,
+			binding: &Binding{
+				Name: "db",
+				// func(ctx context.Context) *DB { ... }
+				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
+					Returns: []*Var{newDB.Returns[0]},
+					Package: pkg,
+				},
+			},
+			returns: []*Var{
+				{Node: &Pointer{Lv: 1, V: main.NewSymbol("Foo")}},
+			},
+			want: `
+var db *DB
+{
+	db = tinypkg.NewDB(ctx)
 }
 `,
 		},

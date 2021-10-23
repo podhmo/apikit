@@ -14,6 +14,8 @@ type Config struct {
 	Log     Logger
 	Verbose bool
 	Debug   bool
+
+	IgnoreMap map[string]bool
 }
 
 func DefaultConfig() *Config {
@@ -27,8 +29,9 @@ func DefaultConfig() *Config {
 	}
 
 	return &Config{
-		Log:     log.New(os.Stderr, "", 0),
-		Verbose: verbose,
-		Debug:   debug,
+		Log:       log.New(os.Stderr, "", 0),
+		Verbose:   verbose,
+		Debug:     debug,
+		IgnoreMap: map[string]bool{"context.Context": true},
 	}
 }
