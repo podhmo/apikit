@@ -114,7 +114,7 @@ func WriteHandlerFunc(w io.Writer,
 		name = info.Def.Name
 	}
 
-	var componentBindings []*tinypkg.Binding
+	var componentBindings tinypkg.BindingList
 
 	type pathBinding struct {
 		Name string // go's name
@@ -135,34 +135,22 @@ func WriteHandlerFunc(w io.Writer,
 
 	argNames := make([]string, 0, len(def.Args))
 
-	// TODO: handling path info
+	var subDepends []reflectshape.Function
 	for _, x := range def.Args {
 		shape := x.Shape
 		sym := resolver.Symbol(here, shape)
 		switch x.Kind {
 		case resolve.KindIgnored: // e.g. context.Context
-			k := x.Shape.GetIdentity()
-			if _, ok := seen[k]; !ok {
-				seen[k] = true
-				ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
-			}
+			seen[x.Shape.GetIdentity()] = true
+
+			ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
 			argNames = append(argNames, x.Name)
 		case resolve.KindComponent:
-			shape := tracker.ExtractComponentFactoryShape(x)
+			seen[x.Shape.GetIdentity()] = true
 
+			shape := tracker.ExtractComponentFactoryShape(x)
 			if v, ok := shape.(reflectshape.Function); ok {
-				for i, p := range v.Params.Values {
-					switch resolve.DetectKind(p) {
-					case resolve.KindIgnored: // e.g. context.Context
-						k := p.GetIdentity()
-						if _, ok := seen[k]; !ok {
-							seen[k] = true
-							xname := v.Params.Keys[i]
-							sym := resolver.Symbol(here, p)
-							ignored = append(ignored, &tinypkg.Var{Name: xname, Node: sym})
-						}
-					}
-				}
+				subDepends = append(subDepends, v)
 			}
 
 			sym := resolver.Symbol(here, shape)
@@ -196,6 +184,50 @@ func WriteHandlerFunc(w io.Writer,
 			argNames = append(argNames, x.Name)
 		default:
 			argNames = append(argNames, x.Name)
+		}
+	}
+
+	if len(subDepends) > 0 {
+		for _, v := range subDepends {
+			for i, name := range v.Params.Keys {
+				subShape := v.Params.Values[i]
+				k := subShape.GetIdentity() // todo: with name
+				if _, ok := seen[k]; !ok {
+					seen[k] = true
+					continue
+				}
+				seen[k] = true
+
+				switch kind := resolve.DetectKind(subShape); kind {
+				case resolve.KindIgnored: // e.g. context.Context
+					ignored = append(ignored, &tinypkg.Var{
+						Name: name,
+						Node: resolver.Symbol(here, subShape),
+					})
+				case resolve.KindComponent:
+					sym := resolver.Symbol(here, tracker.ExtractComponentFactoryShape(resolve.Item{
+						Kind:  kind,
+						Name:  name,
+						Shape: subShape,
+					}))
+					factory, ok := sym.(*tinypkg.Func)
+					if !ok {
+						// func() <component>
+						factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
+					}
+
+					binding, err := tinypkg.NewBinding(name, factory)
+					if err != nil {
+						return err
+					}
+
+					rt := subShape.GetReflectType() // not shape.GetRefectType()
+					methodName := tracker.ExtractMethodName(rt, name)
+					binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
+
+					componentBindings = append(componentBindings, binding)
+				}
+			}
 		}
 	}
 
@@ -259,7 +291,11 @@ func WriteHandlerFunc(w io.Writer,
 				indent := "\t\t"
 				var returns []*tinypkg.Var
 				zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
-				for _, binding := range componentBindings {
+				sorted, err := componentBindings.TopologicalSorted()
+				if err != nil {
+					return fmt.Errorf("failed component binding (toposort): %w", err)
+				}
+				for _, binding := range sorted {
 					binding.ZeroReturnsDefault = zeroReturnsDefault
 					if err := binding.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
 						return err

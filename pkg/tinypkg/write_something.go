@@ -56,6 +56,7 @@ type Binding struct {
 
 	Provider      *Func
 	ProviderAlias string
+	argsAliases   []string // args in call alias
 
 	ZeroReturnsDefault string
 
@@ -123,9 +124,12 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 		var callRHS string
 		{
 			provider := b.Provider
-			args := make([]string, 0, len(provider.Args))
-			for _, x := range provider.Args {
-				args = append(args, x.Name)
+			args := b.argsAliases
+			if args == nil {
+				args = make([]string, 0, len(provider.Args))
+				for _, x := range provider.Args {
+					args = append(args, x.Name)
+				}
 			}
 			providerName := provider.Name
 			if b.ProviderAlias != "" {
@@ -180,5 +184,69 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 			fmt.Fprintf(w, "%s\t}\n", indent)
 		}
 	}
+	return nil
+}
+
+type BindingList []*Binding
+type topoState struct {
+	sorted []*Binding
+
+	seen  map[string]bool
+	deps  map[string][]string
+	nodes map[string]*Binding
+}
+
+func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
+	s := &topoState{
+		sorted: make([]*Binding, 0, len(bl)),
+		seen:   make(map[string]bool, len(bl)),
+		deps:   make(map[string][]string, len(bl)),
+		nodes:  make(map[string]*Binding, len(bl)),
+	}
+	for _, b := range bl {
+		var deps []string
+		for _, x := range b.Provider.Args {
+			deps = append(deps, x.Name) // normalize
+		}
+		s.nodes[b.Name] = b
+		s.deps[b.Name] = deps
+	}
+	for _, b := range bl {
+		if err := bl.topoWalk(s, b, nil); err != nil {
+			return s.sorted, err
+		}
+	}
+	return s.sorted, nil
+}
+
+func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) error {
+	history = append(history, b)
+	if deps, ok := s.deps[b.Name]; ok {
+		for _, name := range deps {
+			b, ok := s.nodes[name]
+			if !ok {
+				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, b.Name, b.Provider)
+			}
+
+			for _, x := range history {
+				if x == b {
+					history = append(history, x)
+					hs := make([]string, len(history))
+					for i, y := range history {
+						hs[i] = fmt.Sprintf("binding[name=%q, need=%s]", y.Name, y.Provider)
+					}
+					return fmt.Errorf("circular dependency is detected, history=%v", hs)
+				}
+			}
+			if err := bl.topoWalk(s, s.nodes[name], history); err != nil {
+				return err
+			}
+		}
+	}
+	if _, ok := s.seen[b.Name]; ok {
+		return nil
+	}
+	s.seen[b.Name] = true
+	s.sorted = append(s.sorted, b)
 	return nil
 }
