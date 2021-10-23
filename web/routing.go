@@ -3,6 +3,7 @@ package web
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/podhmo/apikit/web/pathpattern"
 )
@@ -28,7 +29,27 @@ func NewRouter() *Router {
 	}
 }
 
-func (r *Router) Method(method, pattern string, fn T) *Node {
+var (
+	mu      sync.Mutex
+	needMap = map[*Node][]interface{}{}
+)
+
+type RoutingOption func(*Node)
+
+func WithExtraDependencies(deps ...interface{}) RoutingOption {
+	return func(node *Node) {
+		mu.Lock()
+		defer mu.Unlock()
+		needMap[node] = append(needMap[node], deps...)
+	}
+}
+func ExtraDependencies(node *Node) []interface{} {
+	mu.Lock()
+	defer mu.Unlock()
+	return needMap[node]
+}
+
+func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
 	path := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
 	node, err := r.Root.CreateNode(path, nil)
 	if err != nil {
@@ -36,6 +57,9 @@ func (r *Router) Method(method, pattern string, fn T) *Node {
 		return nil
 	}
 	node.Value = fn
+	for _, opt := range options {
+		opt(node)
+	}
 	return node
 }
 
@@ -46,31 +70,30 @@ func (r *Router) Group(pattern string, use func(*Router)) *Router {
 	return child
 }
 
-func (r *Router) Connect(pattern string, fn T) *Node {
-	return r.Method("CONNECT", pattern, fn)
+func (r *Router) Connect(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("CONNECT", pattern, fn, options...)
 }
-func (r *Router) Delete(pattern string, fn T) *Node {
-	return r.Method("DELETE", pattern, fn)
+func (r *Router) Delete(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("DELETE", pattern, fn, options...)
 }
-func (r *Router) Get(pattern string, fn T) *Node {
-	return r.Method("GET", pattern, fn)
+func (r *Router) Get(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("GET", pattern, fn, options...)
 }
-func (r *Router) Head(pattern string, fn T) *Node {
-	return r.Method("HEAD", pattern, fn)
+func (r *Router) Head(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("HEAD", pattern, fn, options...)
 }
-func (r *Router) Options(pattern string, fn T) *Node {
-	return r.Method("OPTIONS", pattern, fn)
+func (r *Router) Options(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("OPTIONS", pattern, fn, options...)
 }
-func (r *Router) Patch(pattern string, fn T) *Node {
-	return r.Method("PATCH", pattern, fn)
+func (r *Router) Patch(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("PATCH", pattern, fn, options...)
 }
-func (r *Router) Post(pattern string, fn T) *Node {
-	return r.Method("POST", pattern, fn)
+func (r *Router) Post(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("POST", pattern, fn, options...)
 }
-func (r *Router) Put(pattern string, fn T) *Node {
-	return r.Method("PUT", pattern, fn)
+func (r *Router) Put(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("PUT", pattern, fn, options...)
 }
-func (r *Router) Trace(pattern string, fn T) *Node {
-	return r.Method("TRACE", pattern, fn)
+func (r *Router) Trace(pattern string, fn T, options ...RoutingOption) *Node {
+	return r.Method("TRACE", pattern, fn, options...)
 }
-
