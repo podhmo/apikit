@@ -275,7 +275,7 @@ func WriteHandlerFunc(w io.Writer,
 				}
 				seen[k] = true
 
-				switch kind := resolve.DetectKind(subShape); kind {
+				switch kind := resolver.DetectKind(subShape); kind {
 				case resolve.KindIgnored: // e.g. context.Context
 					ignored = append(ignored, &tinypkg.Var{
 						Name: name,
@@ -353,13 +353,12 @@ func WriteHandlerFunc(w io.Writer,
 			fmt.Fprintf(w, "%s\t%s(w, req, nil, err); return\n", indent, handleResultFunc)
 			fmt.Fprintf(w, "%s}\n", indent)
 
-			// handling ignored (context.COntext)
+			// handling ignored (context.Context, *http.Request)
 			if len(ignored) > 0 {
 				for _, x := range ignored {
-					if x.Name != "ctx" {
-						return fmt.Errorf("unsupported %+v", x)
+					if x.Name == "ctx" {
+						fmt.Fprintf(w, "\t\tvar %s context.Context = req.Context()\n", x.Name)
 					}
-					fmt.Fprintf(w, "\t\tvar %s context.Context = req.Context()\n", x.Name)
 				}
 			}
 
