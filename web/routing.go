@@ -30,23 +30,26 @@ func NewRouter() *Router {
 }
 
 var (
-	mu      sync.Mutex
-	needMap = map[*Node][]interface{}{}
+	mu                   sync.Mutex
+	extraDependenciesMap = map[*Node][]interface{}{}
 )
 
 type RoutingOption func(*Node)
 
 func WithExtraDependencies(deps ...interface{}) RoutingOption {
 	return func(node *Node) {
-		mu.Lock()
-		defer mu.Unlock()
-		needMap[node] = append(needMap[node], deps...)
+		SetExtraDependencies(node, deps)
 	}
 }
-func ExtraDependencies(node *Node) []interface{} {
+func SetExtraDependencies(node *Node, deps []interface{}) {
 	mu.Lock()
 	defer mu.Unlock()
-	return needMap[node]
+	extraDependenciesMap[node] = append(extraDependenciesMap[node], deps...)
+}
+func GetExtraDependencies(node *Node) []interface{} {
+	mu.Lock()
+	defer mu.Unlock()
+	return extraDependenciesMap[node]
 }
 
 func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
