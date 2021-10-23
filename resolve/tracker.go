@@ -39,7 +39,6 @@ func (t *Tracker) Track(def *Def) {
 		return
 	}
 	t.visitedDef[path] = true
-toplevel:
 	for _, arg := range def.Args {
 		arg := arg
 		switch arg.Kind {
@@ -48,26 +47,30 @@ toplevel:
 		case KindData:
 			continue
 		case KindComponent:
-			k := arg.Shape.GetReflectType()
-			needs := t.seen[k]
-
-			for _, n := range needs {
-				if n.Name == arg.Name {
-					continue toplevel
-				}
-			}
-			need := &Need{
-				rt:   k,
-				Item: &arg,
-			}
-			t.seen[k] = append(t.seen[k], need)
-			t.Needs = append(t.Needs, need)
+			t.track(arg)
 		case KindPrimitive, KindPrimitivePointer:
 			continue
 		default:
 			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))
 		}
 	}
+}
+
+func (t *Tracker) track(arg Item) {
+	k := arg.Shape.GetReflectType()
+	needs := t.seen[k]
+
+	for _, n := range needs {
+		if n.Name == arg.Name {
+			return
+		}
+	}
+	need := &Need{
+		rt:   k,
+		Item: &arg,
+	}
+	t.seen[k] = append(t.seen[k], need)
+	t.Needs = append(t.Needs, need)
 }
 
 func (t *Tracker) Override(name string, providerFunc interface{}) (prev *Def, err error) {
@@ -118,6 +121,15 @@ func (t *Tracker) overrideByDef(rt reflect.Type, name string, def *Def) (prev *D
 	}
 	prev = target.OverrideDef
 	target.OverrideDef = def
+
+	if len(def.Args) > 0 {
+		for _, x := range def.Args {
+			if x.Kind == KindComponent {
+				t.track(x)
+			}
+		}
+	}
+
 	return prev
 }
 
