@@ -243,12 +243,15 @@ type topoState struct {
 	nodes map[string]*Binding
 }
 
-func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
+func (bl BindingList) TopologicalSorted(vars ...*Var) ([]*Binding, error) {
 	s := &topoState{
 		sorted: make([]*Binding, 0, len(bl)),
 		seen:   make(map[string]bool, len(bl)),
 		deps:   make(map[string][]string, len(bl)),
 		nodes:  make(map[string]*Binding, len(bl)),
+	}
+	for _, v := range vars {
+		s.nodes[v.Name] = &Binding{Name: v.Name, ProviderAlias: v.Name} // TODO: support type
 	}
 	for _, b := range bl {
 		var deps []string
@@ -274,7 +277,9 @@ func (bl *BindingList) topoWalk(s *topoState, current *Binding, history []*Bindi
 			if !ok {
 				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, current.Name, current.Provider)
 			}
-
+			if b.Provider == nil {
+				continue // reference vars
+			}
 			for _, x := range history {
 				if x == b {
 					history = append(history, x)
@@ -285,7 +290,7 @@ func (bl *BindingList) topoWalk(s *topoState, current *Binding, history []*Bindi
 					return fmt.Errorf("circular dependency is detected, history=%v", hs)
 				}
 			}
-			if err := bl.topoWalk(s, s.nodes[name], history); err != nil {
+			if err := bl.topoWalk(s, b, history); err != nil {
 				return err
 			}
 		}
