@@ -75,7 +75,9 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 	}
 	switch len(provider.Returns) {
 	case 1:
-		// noop
+		if provider.Returns[0].Node.String() == "error" {
+			b.HasError = true
+		}
 	case 2:
 		if provider.Returns[1].Node.String() == "error" {
 			b.HasError = true
@@ -105,11 +107,75 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 // TODO: support non-pointer zero value
 // TODO: name-check (when calling provider function)
 
+// WriteWithCleanaupAndError writes binding-code
+// support:
+// - func(...) <T>
+// - func(...) error
+// - func(...) (<T>, error)
+// - func(...) (<T>, func())
+// - func(...) (<T>, func(), error)
 func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent string, returns []*Var) error {
 	if 3 < len(returns) {
 		return fmt.Errorf("sorry the maximum value of supported number-of-return-value is 3, but %s is passed, %w", returns, ErrUnexpectedExternalReturnType)
 	}
 
+	// similify: <lhs> := <call-rhs>; return <lhs>
+
+	var callRHS string // <fn>(...)
+	{
+		provider := b.Provider
+		args := b.argsAliases
+		if args == nil {
+			args = make([]string, 0, len(provider.Args))
+			for _, x := range provider.Args {
+				args = append(args, x.Name)
+			}
+		}
+		providerName := provider.Name
+		if b.ProviderAlias != "" {
+			providerName = b.ProviderAlias
+		}
+		callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
+	}
+
+	// TODO: support zero-value
+	returnValue := b.ZeroReturnsDefault
+	if returnValue == "" {
+		returnValue = "panic(err) // TODO: fix-it"
+	}
+
+	// special optimization for func(...) error.
+	if b.HasError && len(b.Provider.Returns) == 1 {
+		// generated code is something like this.
+		// if err := <call-rhs>; err != nil {
+		//     <return-value>
+		// }
+		if len(returns) > 0 {
+			if returns[len(returns)-1].Node.String() == "error" {
+				values := []string{"nil", "nil", "nil"}
+				values[len(returns)-1] = "err"
+				returnValue = "return " + strings.Join(values[:len(returns)], ", ")
+			}
+		}
+		fmt.Fprintf(w, "%sif err := %s; err != nil {\n", indent, callRHS)
+		fmt.Fprintf(w, "%s\t%s\n", indent, returnValue)
+		fmt.Fprintf(w, "%s}\n", indent)
+		return nil
+	}
+
+	// generated code (full-set) is something like this.
+	// var <name> <T>
+	// {
+	//     var cleanup func() // if hasCleanup is true
+	//     var err error      // if hasError is true
+	//     <name>, cleanup, err = <call-rhs>
+	//     if cleanup != nil {
+	//	        defer cleanup()
+	//     }
+	//     if err != nil {
+	//	        <return-value>
+	//     }
+	// }
 	fmt.Fprintf(w, "%svar %s %s\n", indent, b.Name, ToRelativeTypeString(here, b.Provider.Returns[0].Node))
 	fmt.Fprintf(w, "%s{\n", indent)
 	defer fmt.Fprintf(w, "%s}\n", indent)
@@ -119,23 +185,6 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 		}
 		if b.HasError {
 			fmt.Fprintf(w, "%s\tvar err error\n", indent)
-		}
-
-		var callRHS string
-		{
-			provider := b.Provider
-			args := b.argsAliases
-			if args == nil {
-				args = make([]string, 0, len(provider.Args))
-				for _, x := range provider.Args {
-					args = append(args, x.Name)
-				}
-			}
-			providerName := provider.Name
-			if b.ProviderAlias != "" {
-				providerName = b.ProviderAlias
-			}
-			callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
 		}
 
 		switch len(b.Provider.Returns) {
@@ -164,23 +213,18 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 			fmt.Fprintf(w, "%s\t\tdefer cleanup()\n", indent)
 			fmt.Fprintf(w, "%s\t}\n", indent)
 		}
+
 		if b.HasError { // TODO: support zero-value
-			var returnRHS string
-			if len(returns) == 0 {
-				returnRHS = b.ZeroReturnsDefault
-				if returnRHS == "" {
-					returnRHS = "panic(err) // TODO: fix-it"
-				}
-			} else {
+			if len(returns) > 0 {
 				values := []string{"nil", "nil", "nil"}
 				if returns[len(returns)-1].Node.String() == "error" {
 					values[len(returns)-1] = "err"
 				}
-				returnRHS = "return " + strings.Join(values[:len(returns)], ", ")
+				returnValue = "return " + strings.Join(values[:len(returns)], ", ")
 			}
 
 			fmt.Fprintf(w, "%s\tif err != nil {\n", indent)
-			fmt.Fprintf(w, "%s\t\t%s\n", indent, returnRHS)
+			fmt.Fprintf(w, "%s\t\t%s\n", indent, returnValue)
 			fmt.Fprintf(w, "%s\t}\n", indent)
 		}
 	}
