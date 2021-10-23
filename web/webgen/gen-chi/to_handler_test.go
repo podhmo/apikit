@@ -56,6 +56,9 @@ func LoginRequiredWithContext(ctx context.Context, db *DB) error {
 func LoginRequiredWithRequest(db *DB, req *http.Request) error {
 	return nil
 }
+func LoginRequiredWithRequest2(db *DB, r *http.Request) error {
+	return nil
+}
 
 func TestWriteHandlerFunc(t *testing.T) {
 	handlerName := "Handler"
@@ -474,6 +477,40 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err); return
 		}
 		result, err := genchi.Ping()
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		{
+			msg:  "one-deps-with-external-dep-with-request-with-normalized-name",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Get("/articles", ListArticleWithContext, web.WithExtraDependencies(LoginRequiredWithRequest2))
+			},
+			want: `package main
+
+import (
+	"context"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"net/http"
+	"m/runtime"
+)
+
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		req, provider, err := getProvider(req)
+		if err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		var ctx context.Context = req.Context()
+		var db *genchi.DB
+		{
+			db = provider.DB()
+		}
+		if err := genchi.LoginRequiredWithRequest2(db, req); err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		result, err := genchi.ListArticleWithContext(ctx, db)
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
