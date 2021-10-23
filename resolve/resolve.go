@@ -44,6 +44,10 @@ func (r *Resolver) NewPackage(path, name string) *tinypkg.Package {
 	return r.universe.NewPackage(path, name)
 }
 
+func (r *Resolver) DetectKind(s reflectshape.Shape) Kind {
+	return DetectKind(s, r.Config.IgnoreMap)
+}
+
 func (r *Resolver) NewPackageFromInterface(ob interface{}, name string) *tinypkg.Package {
 	rv := reflect.TypeOf(ob)
 	for {
@@ -105,7 +109,7 @@ func (r *Resolver) Def(fn interface{}) *Def {
 		return cached
 	}
 
-	def := ExtractDef(r.universe, r.extractor, fn)
+	def := ExtractDef(r.universe, r.extractor, fn, r.Config.IgnoreMap)
 	r.mu.Lock()
 	r.defCache[k] = def
 	r.mu.Unlock()

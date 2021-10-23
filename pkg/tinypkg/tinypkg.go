@@ -54,7 +54,7 @@ type Package struct {
 }
 
 func (p *Package) String() string {
-	return fmt.Sprintf("Package[name=%q, path=%q, u=%p]", p.Path, p.Name, p.universe)
+	return fmt.Sprintf("Package[name=%q, path=%q, u=%p]", p.Name, p.Path, p.universe)
 }
 
 func (p *Package) Relative(pkgpath string, name string) *Package {

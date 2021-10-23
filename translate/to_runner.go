@@ -92,7 +92,7 @@ func writeRunner(w io.Writer, here *tinypkg.Package, resolver *resolve.Resolver,
 
 			if v, ok := shape.(reflectshape.Function); ok {
 				for i, p := range v.Params.Values {
-					switch resolve.DetectKind(p) {
+					switch resolver.DetectKind(p) {
 					case resolve.KindIgnored: // e.g. context.Context
 						k := p.GetIdentity()
 						if _, ok := seen[k]; !ok {

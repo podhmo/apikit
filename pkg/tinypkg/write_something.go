@@ -53,6 +53,7 @@ func WriteInterface(w io.Writer, here *Package, name string, iface *Interface) e
 
 type Binding struct {
 	Name string
+	typ  Node
 
 	Provider      *Func
 	ProviderAlias string
@@ -75,10 +76,12 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 	}
 	switch len(provider.Returns) {
 	case 1:
+		b.typ = provider.Returns[0].Node
 		if provider.Returns[0].Node.String() == "error" {
 			b.HasError = true
 		}
 	case 2:
+		b.typ = provider.Returns[0].Node
 		if provider.Returns[1].Node.String() == "error" {
 			b.HasError = true
 		} else if _, ok := provider.Returns[1].Node.(*Func); ok {
@@ -88,6 +91,7 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 			return nil, fmt.Errorf("invalid signature(2) %s, supported return type are (<T>, error) and (<T>, func(), %w", provider, ErrUnexpectedReturnType)
 		}
 	case 3:
+		b.typ = provider.Returns[0].Node
 		if provider.Returns[2].Node.String() == "error" {
 			b.HasError = true
 		}
@@ -131,9 +135,12 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 				args = append(args, x.Name)
 			}
 		}
+
 		providerName := provider.Name
 		if b.ProviderAlias != "" {
 			providerName = b.ProviderAlias
+		} else if provider.Package != nil && provider.Package != here {
+			providerName = ToRelativeTypeString(here, provider.Package.NewSymbol(provider.Name))
 		}
 		callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
 	}
@@ -240,17 +247,20 @@ type topoState struct {
 	nodes map[string]*Binding
 }
 
-func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
+func (bl BindingList) TopologicalSorted(vars ...*Var) ([]*Binding, error) {
 	s := &topoState{
 		sorted: make([]*Binding, 0, len(bl)),
 		seen:   make(map[string]bool, len(bl)),
 		deps:   make(map[string][]string, len(bl)),
 		nodes:  make(map[string]*Binding, len(bl)),
 	}
+	for _, v := range vars {
+		s.nodes[v.Name] = &Binding{Name: v.Name, ProviderAlias: v.Name, typ: v.Node}
+	}
 	for _, b := range bl {
 		var deps []string
 		for _, x := range b.Provider.Args {
-			deps = append(deps, x.Name) // normalize
+			deps = append(deps, x.Name) // todo: normalize
 		}
 		s.nodes[b.Name] = b
 		s.deps[b.Name] = deps
@@ -263,15 +273,22 @@ func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
 	return s.sorted, nil
 }
 
-func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) error {
-	history = append(history, b)
-	if deps, ok := s.deps[b.Name]; ok {
-		for _, name := range deps {
+func (bl *BindingList) topoWalk(s *topoState, current *Binding, history []*Binding) error {
+	history = append(history, current)
+	if deps, ok := s.deps[current.Name]; ok {
+		for i, name := range deps {
 			b, ok := s.nodes[name]
 			if !ok {
-				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, b.Name, b.Provider)
+				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, current.Name, current.Provider)
+			}
+			if b.typ != nil && !TypeEqual(current.Provider.Args[i].Node, b.typ) {
+				// TODO: if DEBUG=1, logging message but keep going.
+				return fmt.Errorf("node %q is conflict type in binding[name=%q, need=%s], expected type is %s, but got type is %s", name, current.Name, current.Provider, current.Provider.Args[i].Node, b.typ)
 			}
 
+			if b.Provider == nil {
+				continue // reference vars
+			}
 			for _, x := range history {
 				if x == b {
 					history = append(history, x)
@@ -282,15 +299,15 @@ func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) er
 					return fmt.Errorf("circular dependency is detected, history=%v", hs)
 				}
 			}
-			if err := bl.topoWalk(s, s.nodes[name], history); err != nil {
+			if err := bl.topoWalk(s, b, history); err != nil {
 				return err
 			}
 		}
 	}
-	if _, ok := s.seen[b.Name]; ok {
+	if _, ok := s.seen[current.Name]; ok {
 		return nil
 	}
-	s.seen[b.Name] = true
-	s.sorted = append(s.sorted, b)
+	s.seen[current.Name] = true
+	s.sorted = append(s.sorted, current)
 	return nil
 }
