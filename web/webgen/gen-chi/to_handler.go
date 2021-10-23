@@ -368,7 +368,7 @@ func WriteHandlerFunc(w io.Writer,
 				indent := "\t\t"
 				var returns []*tinypkg.Var
 				zeroReturnsDefault := fmt.Sprintf("%s(w, req, nil, err); return", handleResultFunc)
-				sorted, err := componentBindings.TopologicalSorted(&tinypkg.Var{Name: "ctx", Node: resolver.NewPackage("context", "").NewSymbol("Context")})
+				sorted, err := componentBindings.TopologicalSorted(ignored...)
 				if err != nil {
 					return fmt.Errorf("failed component binding (toposort): %w", err)
 				}
