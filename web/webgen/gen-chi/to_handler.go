@@ -24,6 +24,14 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
 	}
 
+	extraDeps := web.GetExtraDependencies(node.Node)
+	extraDefs := make([]*resolve.Def, len(extraDeps))
+	for i, fn := range extraDeps {
+		extraDef := t.Resolver.Def(fn)
+		t.Tracker.Track(extraDef)
+		extraDefs[i] = extraDef
+	}
+
 	c := &code.Code{
 		Name: name,
 		Here: here,
@@ -31,7 +39,17 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			// todo: support provider *tinypkg.Var
-			return collectImportsForHandler(collector, t.Resolver, t.Tracker, def)
+			if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, def); err != nil {
+				return err
+			}
+			if len(extraDefs) > 0 {
+				for _, extraDef := range extraDefs {
+					if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, extraDef); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
 			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
@@ -40,7 +58,12 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			}
 			c.AddDependency(t.ProviderModule)
 			c.AddDependency(t.RuntimeModule)
-			return WriteHandlerFunc(w, here, t.Resolver, t.Tracker, pathinfo, t.ProviderModule, t.RuntimeModule, name)
+			return WriteHandlerFunc(w, here,
+				t.Resolver, t.Tracker,
+				pathinfo, extraDefs,
+				t.ProviderModule, t.RuntimeModule,
+				name,
+			)
 		},
 	}
 	return &code.CodeEmitter{Code: c}
@@ -73,6 +96,7 @@ func WriteHandlerFunc(w io.Writer,
 	resolver *resolve.Resolver,
 	tracker *resolve.Tracker,
 	info *web.PathInfo,
+	extraDefs []*resolve.Def,
 	providerModule *resolve.Module,
 	runtimeModule *resolve.Module,
 	name string,
@@ -187,6 +211,59 @@ func WriteHandlerFunc(w io.Writer,
 		}
 	}
 
+	if len(extraDefs) > 0 {
+		for i, extraDef := range extraDefs {
+			for _, x := range extraDef.Args {
+				k := x.Shape.GetIdentity()
+				if _, ok := seen[k]; ok {
+					continue
+				}
+
+				shape := x.Shape
+				sym := resolver.Symbol(here, shape)
+				switch x.Kind {
+				case resolve.KindIgnored: // e.g. context.Context
+					seen[k] = true
+					ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
+				case resolve.KindComponent:
+					seen[k] = true
+
+					shape := tracker.ExtractComponentFactoryShape(x)
+					if v, ok := shape.(reflectshape.Function); ok {
+						subDepends = append(subDepends, v)
+					}
+
+					sym := resolver.Symbol(here, shape)
+					factory, ok := sym.(*tinypkg.Func)
+					if !ok {
+						// func() <component>
+						factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
+					}
+
+					binding, err := tinypkg.NewBinding(x.Name, factory)
+					if err != nil {
+						return err
+					}
+
+					rt := x.Shape.GetReflectType() // not shape.GetRefectType()
+					methodName := tracker.ExtractMethodName(rt, x.Name)
+					binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
+
+					componentBindings = append(componentBindings, binding)
+				default:
+					// noop
+				}
+			}
+			extraBinding, err := tinypkg.NewBinding(
+				fmt.Sprintf("extra%d", i),
+				resolver.Symbol(here, extraDef.Shape).(*tinypkg.Func),
+			)
+			if err != nil {
+				return err
+			}
+			componentBindings = append(componentBindings, extraBinding)
+		}
+	}
 	if len(subDepends) > 0 {
 		for _, v := range subDepends {
 			for i, name := range v.Params.Keys {

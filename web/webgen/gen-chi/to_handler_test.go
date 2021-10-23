@@ -382,7 +382,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			want: `package main
 
 import (
-	"context"
 	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"net/http"
 	"m/runtime"
@@ -394,7 +393,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 		if err != nil {
 			runtime.HandleResult(w, req, nil, err); return
 		}
-		var ctx context.Context = req.Context()
 		var db *genchi.DB
 		{
 			db = provider.DB()
