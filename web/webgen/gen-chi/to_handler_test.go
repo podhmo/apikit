@@ -46,6 +46,10 @@ func ListArticleWithContext(ctx context.Context, db *DB) ([]*Article, error) {
 	return nil, nil
 }
 
+func LoginRequired(db *DB) error {
+	return nil
+}
+
 func TestWriteHandlerFunc(t *testing.T) {
 	handlerName := "Handler"
 
@@ -334,10 +338,75 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	}
 }`,
 		},
+		// loginRequired (external dependencies)
+		{
+			msg:  "single-dep-with-context-with-external-dep",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Get("/articles", ListArticleWithContext, web.WithExtraDependencies(LoginRequired))
+			},
+			want: `package main
 
-		// TODO: unexpected action
-		// TODO: path binding
-		// TODO: handling error
+import (
+	"context"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"net/http"
+	"m/runtime"
+)
+
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		req, provider, err := getProvider(req)
+		if err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		var ctx context.Context = req.Context()
+		var db *genchi.DB
+		{
+			db = provider.DB()
+		}
+		if err := genchi.LoginRequired(db); err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		result, err := genchi.ListArticleWithContext(ctx, db)
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
+		{
+			msg:  "no-deps-with-external-dep",
+			here: main,
+			mount: func(r *web.Router) {
+				r.Get("/ping", Ping, web.WithExtraDependencies(LoginRequired))
+			},
+			want: `package main
+
+import (
+	"context"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"net/http"
+	"m/runtime"
+)
+
+func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, req *http.Request) {
+		req, provider, err := getProvider(req)
+		if err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		var ctx context.Context = req.Context()
+		var db *genchi.DB
+		{
+			db = provider.DB()
+		}
+		if err := genchi.LoginRequired(db); err != nil {
+			runtime.HandleResult(w, req, nil, err); return
+		}
+		result, err := genchi.Ping()
+		runtime.HandleResult(w, req, result, err)
+	}
+}`,
+		},
 	}
 	for _, c := range cases {
 		c := c
