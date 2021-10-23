@@ -441,6 +441,66 @@ var db *DB
 			},
 			wantErr: ErrUnexpectedExternalReturnType,
 		},
+		// provider function does not return value (error only)
+		{
+			msg:  "ok-provider-return-1-with-error--external-return-1",
+			here: main,
+			binding: &Binding{
+				Name:     "",
+				HasError: true,
+				// func(ctx context.Context) error { ... }
+				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
+					Returns: []*Var{newDB.Returns[2]},
+				},
+			},
+			returns: []*Var{
+				{Node: NewSymbol("error")},
+			},
+			want: `
+if err := NewDB(ctx); err != nil {
+	return err
+}
+`,
+		},
+		{
+			msg:  "ok-provider-return-1-with-error--external-return-0",
+			here: main,
+			binding: &Binding{
+				Name:     "",
+				HasError: true,
+				// func(ctx context.Context) error { ... }
+				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
+					Returns: []*Var{newDB.Returns[2]},
+				},
+			},
+			returns: []*Var{},
+			want: `
+if err := NewDB(ctx); err != nil {
+	panic(err) // TODO: fix-it
+}
+`,
+		},
+		{
+			msg:  "ok-provider-return-1-with-error--external-return-2",
+			here: main,
+			binding: &Binding{
+				Name:     "",
+				HasError: true,
+				// func(ctx context.Context) error { ... }
+				Provider: &Func{Name: newDB.Name, Args: newDB.Args,
+					Returns: []*Var{newDB.Returns[2]},
+				},
+			},
+			returns: []*Var{
+				{Node: NewSymbol("func()")},
+				{Node: NewSymbol("error")},
+			},
+			want: `
+if err := NewDB(ctx); err != nil {
+	return nil, err
+}
+`,
+		},
 	}
 
 	for _, c := range cases {
