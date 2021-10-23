@@ -266,13 +266,13 @@ func (bl BindingList) TopologicalSorted() ([]*Binding, error) {
 	return s.sorted, nil
 }
 
-func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) error {
-	history = append(history, b)
-	if deps, ok := s.deps[b.Name]; ok {
+func (bl *BindingList) topoWalk(s *topoState, current *Binding, history []*Binding) error {
+	history = append(history, current)
+	if deps, ok := s.deps[current.Name]; ok {
 		for _, name := range deps {
 			b, ok := s.nodes[name]
 			if !ok {
-				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, b.Name, b.Provider)
+				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, current.Name, current.Provider)
 			}
 
 			for _, x := range history {
@@ -290,10 +290,10 @@ func (bl *BindingList) topoWalk(s *topoState, b *Binding, history []*Binding) er
 			}
 		}
 	}
-	if _, ok := s.seen[b.Name]; ok {
+	if _, ok := s.seen[current.Name]; ok {
 		return nil
 	}
-	s.seen[b.Name] = true
-	s.sorted = append(s.sorted, b)
+	s.seen[current.Name] = true
+	s.sorted = append(s.sorted, current)
 	return nil
 }
