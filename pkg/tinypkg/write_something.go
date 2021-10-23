@@ -131,9 +131,12 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 				args = append(args, x.Name)
 			}
 		}
+
 		providerName := provider.Name
 		if b.ProviderAlias != "" {
 			providerName = b.ProviderAlias
+		} else if provider.Package != nil && provider.Package != here {
+			providerName = ToRelativeTypeString(here, provider.Package.NewSymbol(provider.Name))
 		}
 		callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
 	}
