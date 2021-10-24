@@ -32,6 +32,7 @@ func NewRouter() *Router {
 var (
 	mu                   sync.Mutex
 	extraDependenciesMap = map[*Node][]interface{}{}
+	nameMap              = map[*Node]string{}
 )
 
 type RoutingOption func(*Node)
@@ -41,6 +42,19 @@ func WithExtraDependencies(deps ...interface{}) RoutingOption {
 		SetExtraDependencies(node, deps)
 	}
 }
+func WithRename(name string) RoutingOption {
+	return func(node *Node) {
+		mu.Lock()
+		defer mu.Unlock()
+		nameMap[node] = name
+	}
+}
+func GetName(node *Node) string {
+	mu.Lock()
+	defer mu.Unlock()
+	return nameMap[node]
+}
+
 func SetExtraDependencies(node *Node, deps []interface{}) {
 	mu.Lock()
 	defer mu.Unlock()
