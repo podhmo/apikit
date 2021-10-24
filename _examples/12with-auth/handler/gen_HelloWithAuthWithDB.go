@@ -4,7 +4,6 @@ package handler
 
 import (
 	"context"
-	"log"
 	"m/12with-auth/action"
 	"m/12with-auth/auth"
 	"m/12with-auth/database"
@@ -20,10 +19,6 @@ func HelloWithAuthWithDB(getProvider func(*http.Request) (*http.Request, Provide
 			return
 		}
 		var ctx context.Context = req.Context()
-		var logger *log.Logger
-		{
-			logger = provider.Logger()
-		}
 		var db *database.DB
 		{
 			db = provider.DB()
@@ -32,7 +27,7 @@ func HelloWithAuthWithDB(getProvider func(*http.Request) (*http.Request, Provide
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
-		result, err := action.Hello(ctx, logger)
+		result, err := action.Hello(ctx)
 		runtime.HandleResult(w, req, result, err)
 	}
 }
