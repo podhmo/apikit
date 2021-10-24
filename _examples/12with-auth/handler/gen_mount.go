@@ -8,5 +8,7 @@ import (
 )
 
 func Mount(r chi.Router, getProvider func(*http.Request) (*http.Request, Provider, error)) {
+	r.Get("/hello-with-auth-with-db", HelloWithAuthWithDB(getProvider))
+	r.Get("/hello-with-auth", HelloWithAuth(getProvider))
 	r.Get("/hello", Hello(getProvider))
 }

@@ -4,8 +4,10 @@ package handler
 
 import (
 	"log"
+	"m/12with-auth/database"
 )
 
 type Provider interface {
 	Logger() *log.Logger
+	DB() *database.DB
 }
