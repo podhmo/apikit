@@ -1,3 +1,5 @@
+default: test lint
+
 test:
 	go test ./...
 .PHONY: test
