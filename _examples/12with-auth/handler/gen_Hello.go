@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"m/12with-auth/action"
+	"m/12with-auth/auth"
 	"m/12with-auth/runtime"
 	"net/http"
 )
@@ -21,6 +22,10 @@ func Hello(getProvider func(*http.Request) (*http.Request, Provider, error)) fun
 		var logger *log.Logger
 		{
 			logger = provider.Logger()
+		}
+		if err := auth.LoginRequired(req); err != nil {
+			runtime.HandleResult(w, req, nil, err)
+			return
 		}
 		result, err := action.Hello(ctx, logger)
 		runtime.HandleResult(w, req, result, err)
