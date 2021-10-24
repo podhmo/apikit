@@ -6,9 +6,10 @@ import (
 
 // error codes for your application.
 const (
-	NotFound        failure.StringCode = "NotFound"
-	Forbidden       failure.StringCode = "Forbidden"
-	ValidationError failure.StringCode = "ValidationError"
+	CodeNotFound        failure.StringCode = "NotFound"
+	CodeUnauthorized    failure.StringCode = "Unauthorized"
+	CodeForbidden       failure.StringCode = "Forbidden"
+	CodeValidationError failure.StringCode = "ValidationError"
 )
 
 func HTTPStatusOf(err error) int {
@@ -21,11 +22,13 @@ func HTTPStatusOf(err error) int {
 		return 500 // http.StatusInternalServerError
 	}
 	switch c {
-	case NotFound:
-		return 404 // http.StatusNotFound
-	case Forbidden:
+	case CodeUnauthorized:
+		return 401
+	case CodeForbidden:
 		return 403 // http.StatusForbidden
-	case ValidationError:
+	case CodeNotFound:
+		return 404 // http.StatusNotFound
+	case CodeValidationError:
 		return 422 // http.StatusUnprocessableEntity // or http.StatusBadRequest?
 	default:
 		return 500 // http.StatusInternalServerError
