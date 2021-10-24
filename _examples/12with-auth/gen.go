@@ -30,7 +30,10 @@ func run() (err error) {
 	defer emitter.EmitWith(&err)
 
 	r := web.NewRouter()
-	r.Get("/hello", action.Hello, web.WithExtraDependencies(auth.LoginRequired))
+	// todo: conflict-check
+	r.Get("/hello", action.Hello)
+	r.Get("/hello-with-auth", action.Hello, web.WithExtraDependencies(auth.LoginRequired), web.WithRename("HelloWithAuth"))
+	r.Get("/hello-with-auth-with-db", action.Hello, web.WithExtraDependencies(auth.LoginRequiredWithDB), web.WithRename("HelloWithAuthWithDB"))
 
 	c := genchi.DefaultConfig()
 	// c.Override("logger", action.NewLogger)
