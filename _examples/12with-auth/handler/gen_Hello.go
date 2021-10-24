@@ -23,7 +23,7 @@ func Hello(getProvider func(*http.Request) (*http.Request, Provider, error)) fun
 		{
 			logger = provider.Logger()
 		}
-		if err := auth.LoginRequired(req); err != nil {
+		if err := auth.LoginRequired(w, req); err != nil {
 			runtime.HandleResult(w, req, nil, err)
 			return
 		}
