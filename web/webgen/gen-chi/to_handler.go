@@ -343,7 +343,7 @@ func WriteHandlerFunc(w io.Writer,
 		// 	<component> = <provider>.<method>()
 		// }
 		if len(componentBindings) > 0 || len(ignored) > 0 {
-			if len(componentBindings) == 0 {
+			if len(componentBindings)-len(extraDefs) == 0 {
 				provider.Name = "_"
 			}
 
