@@ -269,8 +269,7 @@ func WriteHandlerFunc(w io.Writer,
 			for i, name := range v.Params.Keys {
 				subShape := v.Params.Values[i]
 				k := subShape.GetIdentity() // todo: with name
-				if _, ok := seen[k]; !ok {
-					seen[k] = true
+				if _, ok := seen[k]; ok {
 					continue
 				}
 				seen[k] = true
