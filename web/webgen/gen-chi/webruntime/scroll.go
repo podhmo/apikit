@@ -87,5 +87,9 @@ type ScrollState struct {
 }
 
 func (s *ScrollState) DecodeContext() (*ScrollContext, error) {
-	return DecodeScrollContext(s.ScrollID)
+	var sc ScrollContext
+	if err := sc.Decode(s.ScrollID); err != nil {
+		return nil, err
+	}
+	return &sc, nil
 }
