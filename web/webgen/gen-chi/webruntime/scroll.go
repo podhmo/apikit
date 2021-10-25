@@ -7,9 +7,6 @@ import (
 	"reflect"
 )
 
-// scroll (pagination)
-type ScrollT = int // generics?
-
 type ScrollContext struct {
 	Key     string   `json:"key"`     // e.g. pk
 	OrderBy []string `json:"orderBy"` // e.g. {-createdAt, -pk}
