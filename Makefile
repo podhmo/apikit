@@ -2,6 +2,7 @@ default: test lint
 
 test:
 	go test ./...
+	cd web/webgen/gen-chi/webruntime && go test ./...
 .PHONY: test
 
 lint:
