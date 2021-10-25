@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
@@ -308,7 +309,20 @@ func (g *Generator) Generate(
 
 			fmt.Fprintln(w, "// todo: generics?")
 			fmt.Fprintf(w, "type ScrollT = %s\n\n", scrollT)
-
+			fmt.Fprintln(w, "")
+			fmt.Fprintf(w, "func coerceScrollT(v reflect.Value) %s {\n", scrollT)
+			switch reflect.TypeOf(latestIDValue).Kind() {
+			case reflect.Int, reflect.Int32, reflect.Int16, reflect.Int64, reflect.Int8:
+				fmt.Fprintf(w, "return %s(v.Int())\n", scrollT)
+			case reflect.Uint, reflect.Uint32, reflect.Uint16, reflect.Uint64, reflect.Uint8:
+				fmt.Fprintf(w, "return %s(v.Uint())\n", scrollT)
+			case reflect.String:
+				fmt.Fprintf(w, "return %s(v.String())\n", scrollT)
+			default:
+				rt := reflect.TypeOf(latestIDValue)
+				return fmt.Errorf("unexpected latestValueType %v, kind=%v", rt, rt.Kind())
+			}
+			fmt.Fprintln(w, "}")
 			return nil
 		})}
 		g.Emitter.Register(here, c.Name, c)
