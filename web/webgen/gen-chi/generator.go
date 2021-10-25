@@ -228,29 +228,57 @@ func (g *Generator) Generate(
 			return nil
 		})}
 		g.Emitter.Register(here, c.Name, c)
+	}
 
-		// generate HandleResult = CreateGenerateHandleResult
+	// runtime-handle (copy)
+	{
+		here := g.RuntimePkg
+
 		pkg := resolver.NewPackage(emitgo.PackagePath(getHTTPStatusFromError), "")
 		getStatusFunc := here.Import(pkg).Lookup(pkg.NewSymbol(resolver.Shape(getHTTPStatusFromError).GetName()))
 		if g.Verbose {
-			g.Log.Printf("\t+ generate HandleResult() with %s", getStatusFunc)
+			g.Log.Printf("\t+ generate runtime-handle [getStatus=%s]", getStatusFunc)
 		}
-		g.Emitter.Register(here, "HandleResult", &code.CodeEmitter{Code: g.Config.NewCode(here, "runtime", func(w io.Writer, c *code.Code) error {
+
+		// handle.go
+		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "handle", func(w io.Writer, c *code.Code) error {
+			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/handle.go")
+			f, err := os.Open(fpath)
+			if err != nil {
+				return err
+			}
+
+			defer f.Close()
+			r := bufio.NewReader(f)
+			for {
+				line, _, err := r.ReadLine()
+				if err != nil {
+					return err
+				}
+				if strings.HasPrefix(string(line), "package ") {
+					break
+				}
+			}
+			if _, err := io.Copy(w, r); err != nil {
+				return err
+			}
+
 			c.Import(pkg)
 			fmt.Fprintln(w, "func init(){")
 			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n", createHandleResultFunc, getStatusFunc)
 			fmt.Fprintln(w, "}")
 			return nil
-		})})
+		})}
+		g.Emitter.Register(here, c.Name, c)
 	}
 
-	// runtime (copy)
+	// runtime-scroll (copy)
 	{
 		here := g.RuntimePkg
 
 		scrollT := resolver.Symbol(here, resolver.Shape(latestIDValue))
 		if g.Verbose {
-			g.Log.Printf("\t+ generate runtime scroll [scrollT=%s]", scrollT)
+			g.Log.Printf("\t+ generate runtime-scroll [scrollT=%s]", scrollT)
 		}
 
 		// scroll.go
