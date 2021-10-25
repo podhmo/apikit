@@ -5,7 +5,7 @@ package handler
 import (
 	"context"
 	"m/12with-auth/action"
-	"m/12with-auth/runtime"
+	"m/12with-auth/handler/runtime"
 	"net/http"
 )
 
