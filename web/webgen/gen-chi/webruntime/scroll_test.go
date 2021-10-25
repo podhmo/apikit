@@ -85,12 +85,12 @@ func TestScroll(t *testing.T) {
 			more: true,
 		}
 
-		sc, err := DecodeScrollContext(scrollID)
-		if err != nil {
+		var sc ScrollContext
+		if err := sc.Decode(scrollID); err != nil {
 			t.Errorf("unexpected error, decode context: %+v", err)
 		}
 
-		result := fetch(sc)
+		result := fetch(&sc)
 		ns, err := sc.NextState(result)
 		if err != nil {
 			t.Fatalf("unexpected error, bindState: %+v", err)
@@ -119,12 +119,12 @@ func TestScroll(t *testing.T) {
 			more: true,
 		}
 
-		sc, err := DecodeScrollContext(scrollID)
-		if err != nil {
+		var sc ScrollContext
+		if err := sc.Decode(scrollID); err != nil {
 			t.Errorf("unexpected error, decode context: %+v", err)
 		}
 
-		result := fetch(sc)
+		result := fetch(&sc)
 		ns, err := sc.NextState(result)
 		if err != nil {
 			t.Fatalf("unexpected error, bindState: %+v", err)
@@ -153,12 +153,12 @@ func TestScroll(t *testing.T) {
 			more: false,
 		}
 
-		sc, err := DecodeScrollContext(scrollID)
-		if err != nil {
+		var sc ScrollContext
+		if err := sc.Decode(scrollID); err != nil {
 			t.Errorf("unexpected error, decode context: %+v", err)
 		}
 
-		result := fetch(sc)
+		result := fetch(&sc)
 		ns, err := sc.NextState(result)
 		if err != nil {
 			t.Fatalf("unexpected error, bindState: %+v", err)
@@ -185,12 +185,12 @@ func TestScroll(t *testing.T) {
 			more:   false,
 		}
 
-		sc, err := DecodeScrollContext(scrollID)
-		if err != nil {
+		var sc ScrollContext
+		if err := sc.Decode(scrollID); err != nil {
 			t.Errorf("unexpected error, decode context: %+v", err)
 		}
 
-		result := fetch(sc)
+		result := fetch(&sc)
 		ns, err := sc.NextState(result)
 		if err != nil {
 			t.Fatalf("unexpected error, bindState: %+v", err)

@@ -25,24 +25,23 @@ func NewScrollContext(key string, size int) *ScrollContext {
 		Size: size,
 	}
 }
-func EncodeScrollContext(s *ScrollContext) (string, error) {
-	b, err := json.Marshal(s)
+func (sc *ScrollContext) Encode() (string, error) {
+	b, err := json.Marshal(sc)
 	if err != nil {
 		return "", fmt.Errorf("marshal-json is failed: %w", err)
 	}
 	return base64.StdEncoding.EncodeToString(b), nil
 }
 
-func DecodeScrollContext(scrollID string) (*ScrollContext, error) {
+func (sc *ScrollContext) Decode(scrollID string) error {
 	b, err := base64.StdEncoding.DecodeString(scrollID)
 	if err != nil {
-		return nil, fmt.Errorf("decode base64 is failed: %w", err)
+		return fmt.Errorf("decode base64 is failed: %w", err)
 	}
-	var c ScrollContext
-	if err := json.Unmarshal(b, &c); err != nil {
-		return nil, fmt.Errorf("unmarshal-json is failed: %w", err)
+	if err := json.Unmarshal(b, sc); err != nil {
+		return fmt.Errorf("unmarshal-json is failed: %w", err)
 	}
-	return &c, nil
+	return nil
 }
 
 func (sc *ScrollContext) NextState(ob interface{}) (*ScrollState, error) {
@@ -69,7 +68,7 @@ func (sc *ScrollContext) NextState(ob interface{}) (*ScrollState, error) {
 		More:     more,
 		Size:     size,
 	}
-	scrollID, err := EncodeScrollContext(newSC)
+	scrollID, err := newSC.Encode()
 	if err != nil {
 		return nil, fmt.Errorf("invalid value: %w", err)
 	}
