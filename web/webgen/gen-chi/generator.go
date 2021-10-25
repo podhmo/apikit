@@ -75,11 +75,11 @@ func (g *Generator) Generate(
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
 ) error {
-	if g.RuntimePkg == nil {
-		g.RuntimePkg = g.RootPkg.Relative("runtime", "")
-	}
 	if g.HandlerPkg == nil {
 		g.HandlerPkg = g.RootPkg.Relative("handler", "")
+	}
+	if g.RuntimePkg == nil {
+		g.RuntimePkg = g.HandlerPkg.Relative("runtime", "")
 	}
 	if g.ProviderPkg == nil {
 		g.ProviderPkg = g.HandlerPkg
