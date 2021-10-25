@@ -60,7 +60,7 @@ func (sc *ScrollContext) NextState(ob interface{}) (*ScrollState, error) {
 
 	if more {
 		rv = rv.Slice(0, n-1)
-		latestIDValue := int(rv.Index(n - 2).FieldByName(sc.Key).Int())
+		latestIDValue := coerceScrollT(rv.Index(n - 2).FieldByName(sc.Key))
 		latestID = &latestIDValue
 	}
 	newSC := &ScrollContext{
@@ -98,3 +98,7 @@ func (s *ScrollState) DecodeContext() (*ScrollContext, error) {
 
 // todo: generics?
 type ScrollT = int
+
+func coerceScrollT(v reflect.Value) int {
+	return int(v.Int())
+}
