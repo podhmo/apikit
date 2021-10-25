@@ -1,7 +1,7 @@
 export DEBUG ?= 0
 export VERBOSE ?= 1
 
-default: 00 01 02 10 11
+default: 00 01 02 10 11 12
 
 00:
 	go run $(shell echo $@*/)gen.go
@@ -40,4 +40,5 @@ clean:
 	rm -rf 00*/runner/
 	rm -rf 01*/runner/ 01*/component
 	rm -rf 02*/component
-	rm -rf 11*/handler/ 11*/runtime/
+	rm -rf 11*/handler/
+	rm -rf 12*/handler/
