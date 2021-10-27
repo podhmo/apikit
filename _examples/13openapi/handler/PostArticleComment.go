@@ -4,8 +4,8 @@ package handler
 
 import (
 	"context"
-	"m/12openapi/design"
-	"m/12openapi/runtime"
+	"m/13openapi/design"
+	"m/13openapi/handler/runtime"
 	"net/http"
 )
 

@@ -51,7 +51,7 @@
     "/articles/": {
       "get": {
         "description": "lists articles",
-        "operationId": "m/12openapi/design.ListArticle",
+        "operationId": "m/13openapi/design.ListArticle",
         "parameters": [
           {
             "in": "query",
@@ -84,7 +84,7 @@
     },
     "/articles/{articleId}": {
       "get": {
-        "operationId": "m/12openapi/design.GetArticle",
+        "operationId": "m/13openapi/design.GetArticle",
         "parameters": [
           {
             "in": "path",
@@ -114,7 +114,7 @@
     },
     "/articles/{articleId}/comments": {
       "post": {
-        "operationId": "m/12openapi/design.PostArticleComment",
+        "operationId": "m/13openapi/design.PostArticleComment",
         "parameters": [
           {
             "in": "path",
