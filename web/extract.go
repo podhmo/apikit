@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/podhmo/apikit/namelib"
+	"github.com/podhmo/apikit/pkg/namelib"
 	"github.com/podhmo/apikit/resolve"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
