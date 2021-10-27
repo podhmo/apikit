@@ -77,8 +77,8 @@ func GetExtraDependencies(node *Node) []interface{} {
 }
 
 func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
-	path := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
-	node, err := r.Root.CreateNode(path, nil)
+	k := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
+	node, err := r.Root.CreateNode(k, nil)
 	if err != nil {
 		r.ErrorHandler(err)
 		return nil
@@ -87,7 +87,7 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 	mu.Lock()
 	metadataMap[node] = &MetaData{
 		Method: method,
-		Path:   path,
+		Path:   r.FullPrefix + pattern,
 	}
 	mu.Unlock()
 
