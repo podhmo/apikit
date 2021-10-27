@@ -24,7 +24,7 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
 	}
 
-	extraDeps := web.GetExtraDependencies(node.Node)
+	extraDeps := web.GetMetaData(node.Node).ExtraDependencies
 	extraDefs := make([]*resolve.Def, len(extraDeps))
 	for i, fn := range extraDeps {
 		extraDef := t.Resolver.Def(fn)
