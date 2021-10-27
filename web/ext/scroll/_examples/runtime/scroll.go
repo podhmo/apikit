@@ -97,8 +97,8 @@ func (s *ScrollState) DecodeContext() (*ScrollContext, error) {
 }
 
 // todo: generics?
-type ScrollT = string
+type ScrollT = int
 
-func coerceScrollT(v reflect.Value) string {
-	return string(v.String())
+func coerceScrollT(v reflect.Value) int {
+	return int(v.Int())
 }

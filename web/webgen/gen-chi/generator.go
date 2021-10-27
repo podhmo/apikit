@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
@@ -16,6 +15,7 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
+	"github.com/podhmo/apikit/web/ext"
 )
 
 type Config struct {
@@ -41,20 +41,6 @@ func (c *Config) Override(name string, fn interface{}) (*resolve.Def, error) {
 func (c *Config) NewPackage(path, name string) *tinypkg.Package {
 	return c.Resolver.NewPackage(path, name)
 }
-
-type Generator struct {
-	*Config
-
-	Emitter *emitgo.Emitter
-	Tracker *resolve.Tracker
-
-	RootPkg     *tinypkg.Package
-	ProviderPkg *tinypkg.Package
-	RouterPkg   *tinypkg.Package
-	HandlerPkg  *tinypkg.Package
-	RuntimePkg  *tinypkg.Package
-}
-
 func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	rootpkg := emitter.RootPkg
 	g := &Generator{
@@ -71,11 +57,32 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	return g
 }
 
+type Generator struct {
+	*Config
+
+	Emitter *emitgo.Emitter
+	Tracker *resolve.Tracker
+
+	RootPkg     *tinypkg.Package
+	ProviderPkg *tinypkg.Package
+	RouterPkg   *tinypkg.Package
+	HandlerPkg  *tinypkg.Package
+	RuntimePkg  *tinypkg.Package
+}
+
+// type GeneratorOption func(*Generator) error
+// func (g *Generator) WithPlugin()
+
+func (g *Generator) IncludePlugin(here *tinypkg.Package, plugin ext.Plugin) error {
+	// TODO: fix panic using before Generate()
+	pc := &ext.PluginContext{Config: g.Config.Config, Emitter: g.Emitter, Resolver: g.Resolver}
+	return pc.IncludePlugin(here, plugin)
+}
+
 func (g *Generator) Generate(
 	ctx context.Context,
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
-	latestIDValue interface{}, // e.g. int,string
 ) error {
 	if g.HandlerPkg == nil {
 		g.HandlerPkg = g.RootPkg.Relative("handler", "")
@@ -267,61 +274,6 @@ func (g *Generator) Generate(
 			c.Import(pkg)
 			fmt.Fprintln(w, "func init(){")
 			fmt.Fprintf(w, "\tHandleResult = %s(%s)\n", createHandleResultFunc, getStatusFunc)
-			fmt.Fprintln(w, "}")
-			return nil
-		})}
-		g.Emitter.Register(here, c.Name, c)
-	}
-
-	// runtime-scroll (copy)
-	{
-		here := g.RuntimePkg
-
-		scrollT := resolver.Symbol(here, resolver.Shape(latestIDValue))
-		if g.Verbose {
-			g.Log.Printf("\t+ generate runtime-scroll [scrollT=%s]", scrollT)
-		}
-
-		// scroll.go
-		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "scroll", func(w io.Writer, c *code.Code) error {
-			c.AddDependency(scrollT)
-
-			fpath := filepath.Join(emitgo.DefinedDir(DefaultConfig), "webruntime/scroll.go")
-			f, err := os.Open(fpath)
-			if err != nil {
-				return err
-			}
-
-			defer f.Close()
-			r := bufio.NewReader(f)
-			for {
-				line, _, err := r.ReadLine()
-				if err != nil {
-					return err
-				}
-				if strings.HasPrefix(string(line), "package ") {
-					break
-				}
-			}
-			if _, err := io.Copy(w, r); err != nil {
-				return err
-			}
-
-			fmt.Fprintln(w, "// todo: generics?")
-			fmt.Fprintf(w, "type ScrollT = %s\n\n", scrollT)
-			fmt.Fprintln(w, "")
-			fmt.Fprintf(w, "func coerceScrollT(v reflect.Value) %s {\n", scrollT)
-			switch reflect.TypeOf(latestIDValue).Kind() {
-			case reflect.Int, reflect.Int32, reflect.Int16, reflect.Int64, reflect.Int8:
-				fmt.Fprintf(w, "return %s(v.Int())\n", scrollT)
-			case reflect.Uint, reflect.Uint32, reflect.Uint16, reflect.Uint64, reflect.Uint8:
-				fmt.Fprintf(w, "return %s(v.Uint())\n", scrollT)
-			case reflect.String:
-				fmt.Fprintf(w, "return %s(v.String())\n", scrollT)
-			default:
-				rt := reflect.TypeOf(latestIDValue)
-				return fmt.Errorf("unexpected latestValueType %v, kind=%v", rt, rt.Kind())
-			}
 			fmt.Fprintln(w, "}")
 			return nil
 		})}
