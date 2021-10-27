@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/podhmo/apikit/code"
@@ -16,6 +15,7 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/web"
+	"github.com/podhmo/apikit/web/ext"
 )
 
 type Config struct {
@@ -41,20 +41,6 @@ func (c *Config) Override(name string, fn interface{}) (*resolve.Def, error) {
 func (c *Config) NewPackage(path, name string) *tinypkg.Package {
 	return c.Resolver.NewPackage(path, name)
 }
-
-type Generator struct {
-	*Config
-
-	Emitter *emitgo.Emitter
-	Tracker *resolve.Tracker
-
-	RootPkg     *tinypkg.Package
-	ProviderPkg *tinypkg.Package
-	RouterPkg   *tinypkg.Package
-	HandlerPkg  *tinypkg.Package
-	RuntimePkg  *tinypkg.Package
-}
-
 func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	rootpkg := emitter.RootPkg
 	g := &Generator{
@@ -71,11 +57,32 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 	return g
 }
 
+type Generator struct {
+	*Config
+
+	Emitter *emitgo.Emitter
+	Tracker *resolve.Tracker
+
+	RootPkg     *tinypkg.Package
+	ProviderPkg *tinypkg.Package
+	RouterPkg   *tinypkg.Package
+	HandlerPkg  *tinypkg.Package
+	RuntimePkg  *tinypkg.Package
+}
+
+// type GeneratorOption func(*Generator) error
+// func (g *Generator) WithPlugin()
+
+func (g *Generator) IncludePlugin(here *tinypkg.Package, plugin ext.Plugin) error {
+	// TODO: fix panic using before Generate()
+	pc := &ext.PluginContext{Config: g.Config.Config, Emitter: g.Emitter, Resolver: g.Resolver}
+	return pc.IncludePlugin(here, plugin)
+}
+
 func (g *Generator) Generate(
 	ctx context.Context,
 	r *web.Router,
 	getHTTPStatusFromError func(error) int,
-	latestIDValue interface{}, // e.g. int,string
 ) error {
 	if g.HandlerPkg == nil {
 		g.HandlerPkg = g.RootPkg.Relative("handler", "")
