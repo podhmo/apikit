@@ -10,6 +10,7 @@ import (
 
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
+	"github.com/podhmo/apikit/web/ext/scroll"
 	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
 )
 
@@ -44,10 +45,12 @@ func run() (err error) {
 	c.Override("db", design.NewDB)
 
 	g := c.New(emitter)
-	return g.Generate(
+	if err := g.Generate(
 		context.Background(),
 		r,
 		design.HTTPStatusOf,
-		0, // latestIDType is int
-	)
+	); err != nil {
+		return err
+	}
+	return g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: 0}) // latestIDType is int
 }
