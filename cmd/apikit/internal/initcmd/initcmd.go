@@ -147,15 +147,16 @@ func run() (err error) {
 	r.Get("/hello", action.Hello)
 
 	c := genchi.DefaultConfig()
-	// c.Override("logger", action.NewLogger)
+	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
 	g := c.New(emitter)
-	return g.Generate(
-		context.Background(),
-		r,
-		design.HTTPStatusOf,
-		"", // latestIDType is string
-	)
+	if err := g.Generate(context.Background(), r, design.HTTPStatusOf); err != nil {
+		return err
+	}
+	
+	// use scroll plugin (string type version)
+	// g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: ""}) // latestId is string
+	return nil
 }
 `
 					fmt.Fprintln(w, source)
