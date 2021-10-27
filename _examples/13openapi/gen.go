@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"m/12openapi/design"
+	"m/13openapi/design"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/podhmo/apikit/pkg/emitfile"
@@ -48,10 +48,7 @@ func run() (err error) {
 			v, _ := strconv.ParseBool(tag.Get("required"))
 			return v
 		},
-		Selector: &struct {
-			MergeParamsInputSelector
-			reflectopenapi.FirstParamOutputSelector
-		}{},
+		Selector: &MergeParamsSelector{resolver: c.Resolver},
 	}
 	////////////////////////////////////////
 
@@ -63,31 +60,9 @@ func run() (err error) {
 		r = web.NewRouter()
 		r.Group("/articles", func(r *web.Router) {
 			// TODO: set tag
-
-			{
-				path := "/"
-				method := "GET"
-				node := r.Method(method, path, design.ListArticle)
-				m.RegisterFunc(node.Value).After(func(op *openapi3.Operation) {
-					m.Doc.AddOperation(r.FullPrefix+path, method, op)
-				})
-			}
-			{
-				path := "/{articleId}"
-				method := "GET"
-				node := r.Method(method, path, design.GetArticle)
-				m.RegisterFunc(node.Value).After(func(op *openapi3.Operation) {
-					m.Doc.AddOperation(r.FullPrefix+path, method, op)
-				})
-			}
-			{
-				path := "/{articleId}/comments"
-				method := "POST"
-				node := r.Method(method, path, design.PostArticleComment)
-				m.RegisterFunc(node.Value).After(func(op *openapi3.Operation) {
-					m.Doc.AddOperation(r.FullPrefix+path, method, op)
-				})
-			}
+			r.Get("/", design.ListArticle, WithOpenAPIOperation(m))
+			r.Get("/{articleId}", design.GetArticle, WithOpenAPIOperation(m))
+			r.Post("/{articleId}/comments", design.PostArticleComment, WithOpenAPIOperation(m))
 		})
 	})
 	if err != nil {
@@ -111,11 +86,22 @@ func run() (err error) {
 	return nil
 }
 
-type MergeParamsInputSelector struct{}
-
-func (s *MergeParamsInputSelector) useArglist() {
+func WithOpenAPIOperation(m *reflectopenapi.Manager) web.RoutingOption {
+	return func(node *web.Node, metadata *web.MetaData) {
+		m.RegisterFunc(node.Value).After(func(op *openapi3.Operation) {
+			m.Doc.AddOperation(metadata.Path, metadata.Method, op)
+		})
+	}
 }
-func (s *MergeParamsInputSelector) SelectInput(fn reflectshape.Function) reflectshape.Shape {
+
+type MergeParamsSelector struct {
+	resolver *resolve.Resolver
+	reflectopenapi.FirstParamOutputSelector
+}
+
+func (s *MergeParamsSelector) useArglist() {
+}
+func (s *MergeParamsSelector) SelectInput(fn reflectshape.Function) reflectshape.Shape {
 	if len(fn.Params.Values) == 0 {
 		return nil
 	}
@@ -124,7 +110,7 @@ func (s *MergeParamsInputSelector) SelectInput(fn reflectshape.Function) reflect
 	metadata := make([]reflectshape.FieldMetadata, 0, fn.Params.Len())
 	for i, name := range fn.Params.Keys {
 		p := fn.Params.Values[i]
-		switch kind := resolve.DetectKind(p); kind {
+		switch kind := s.resolver.DetectKind(p); kind {
 		case resolve.KindIgnored, resolve.KindUnsupported, resolve.KindComponent:
 			continue
 		case resolve.KindData, resolve.KindPrimitive, resolve.KindPrimitivePointer:
