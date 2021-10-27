@@ -141,7 +141,7 @@ func (g *Generator) Generate(
 		here := g.RouterPkg
 
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
-			name := web.GetName(node.Node)
+			name := web.GetMetaData(node.Node).Name
 			code := translator.TranslateToHandler(here, node, name)
 			g.Emitter.Register(here, code.Name, code)
 

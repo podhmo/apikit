@@ -44,36 +44,22 @@ var (
 	metadataMap = map[*Node]*MetaData{}
 )
 
-type RoutingOption func(*Node)
+type RoutingOption func(*Node, *MetaData)
 
 func WithExtraDependencies(deps ...interface{}) RoutingOption {
-	return func(node *Node) {
-		SetExtraDependencies(node, deps)
+	return func(node *Node, metadata *MetaData) {
+		metadata.ExtraDependencies = append(metadata.ExtraDependencies, deps...)
 	}
 }
 func WithRename(name string) RoutingOption {
-	return func(node *Node) {
-		mu.Lock()
-		defer mu.Unlock()
-		metadataMap[node].Name = name
+	return func(node *Node, metadata *MetaData) {
+		metadata.Name = name
 	}
 }
-func GetName(node *Node) string {
+func GetMetaData(node *Node) MetaData {
 	mu.Lock()
 	defer mu.Unlock()
-	return metadataMap[node].Name
-}
-
-func SetExtraDependencies(node *Node, deps []interface{}) {
-	mu.Lock()
-	defer mu.Unlock()
-	m := metadataMap[node]
-	m.ExtraDependencies = append(m.ExtraDependencies, deps...)
-}
-func GetExtraDependencies(node *Node) []interface{} {
-	mu.Lock()
-	defer mu.Unlock()
-	return metadataMap[node].ExtraDependencies
+	return *metadataMap[node]
 }
 
 func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
@@ -85,14 +71,15 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 	}
 	node.Value = fn
 	mu.Lock()
-	metadataMap[node] = &MetaData{
+	metadata := &MetaData{
 		Method: method,
 		Path:   r.FullPrefix + pattern,
 	}
+	metadataMap[node] = metadata
 	mu.Unlock()
 
 	for _, opt := range options {
-		opt(node)
+		opt(node, metadata)
 	}
 	return node
 }
