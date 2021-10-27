@@ -12,6 +12,6 @@ if err := pc.IncludePlugin(pkg, &scroll.Options{LatestID: ""}); err != nil {
 }
 ```
 
-## generated runtime
+## how to use in runtime
 
-TODO:
+see [tests](./internal/scroll_test.go)
