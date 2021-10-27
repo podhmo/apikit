@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/podhmo/apikit/namelib"
+	"github.com/podhmo/apikit/pkg/namelib"
 )
 
 func TestToNormalizedOK(t *testing.T) {
