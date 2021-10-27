@@ -38,5 +38,6 @@ func run() (err error) {
 		context.Background(),
 		r,
 		design.HTTPStatusOf,
+		"", // latestIDType is string
 	)
 }
