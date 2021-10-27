@@ -30,7 +30,12 @@ func NewRouter() *Router {
 }
 
 type MetaData struct {
+	Method string
+	Path   string
+
+	// additional
 	Name              string // if not renamed, the value is  ""
+	Description       string
 	ExtraDependencies []interface{}
 }
 
@@ -80,7 +85,10 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 	}
 	node.Value = fn
 	mu.Lock()
-	metadataMap[node] = &MetaData{}
+	metadataMap[node] = &MetaData{
+		Method: method,
+		Path:   path,
+	}
 	mu.Unlock()
 
 	for _, opt := range options {
