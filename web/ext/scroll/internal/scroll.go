@@ -1,4 +1,4 @@
-package webruntime
+package internal
 
 import (
 	"encoding/base64"
