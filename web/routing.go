@@ -30,7 +30,12 @@ func NewRouter() *Router {
 }
 
 type MetaData struct {
+	Method string
+	Path   string
+
+	// additional
 	Name              string // if not renamed, the value is  ""
+	Description       string
 	ExtraDependencies []interface{}
 }
 
@@ -72,15 +77,18 @@ func GetExtraDependencies(node *Node) []interface{} {
 }
 
 func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
-	path := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
-	node, err := r.Root.CreateNode(path, nil)
+	k := fmt.Sprintf("%s %s%s", method, r.FullPrefix, pattern)
+	node, err := r.Root.CreateNode(k, nil)
 	if err != nil {
 		r.ErrorHandler(err)
 		return nil
 	}
 	node.Value = fn
 	mu.Lock()
-	metadataMap[node] = &MetaData{}
+	metadataMap[node] = &MetaData{
+		Method: method,
+		Path:   r.FullPrefix + pattern,
+	}
 	mu.Unlock()
 
 	for _, opt := range options {
