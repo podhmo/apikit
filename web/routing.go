@@ -29,10 +29,14 @@ func NewRouter() *Router {
 	}
 }
 
+type MetaData struct {
+	Name              string // if not renamed, the value is  ""
+	ExtraDependencies []interface{}
+}
+
 var (
-	mu                   sync.Mutex
-	extraDependenciesMap = map[*Node][]interface{}{}
-	nameMap              = map[*Node]string{}
+	mu          sync.Mutex
+	metadataMap = map[*Node]*MetaData{}
 )
 
 type RoutingOption func(*Node)
@@ -46,24 +50,25 @@ func WithRename(name string) RoutingOption {
 	return func(node *Node) {
 		mu.Lock()
 		defer mu.Unlock()
-		nameMap[node] = name
+		metadataMap[node].Name = name
 	}
 }
 func GetName(node *Node) string {
 	mu.Lock()
 	defer mu.Unlock()
-	return nameMap[node]
+	return metadataMap[node].Name
 }
 
 func SetExtraDependencies(node *Node, deps []interface{}) {
 	mu.Lock()
 	defer mu.Unlock()
-	extraDependenciesMap[node] = append(extraDependenciesMap[node], deps...)
+	m := metadataMap[node]
+	m.ExtraDependencies = append(m.ExtraDependencies, deps...)
 }
 func GetExtraDependencies(node *Node) []interface{} {
 	mu.Lock()
 	defer mu.Unlock()
-	return extraDependenciesMap[node]
+	return metadataMap[node].ExtraDependencies
 }
 
 func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) *Node {
@@ -74,6 +79,10 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 		return nil
 	}
 	node.Value = fn
+	mu.Lock()
+	metadataMap[node] = &MetaData{}
+	mu.Unlock()
+
 	for _, opt := range options {
 		opt(node)
 	}
