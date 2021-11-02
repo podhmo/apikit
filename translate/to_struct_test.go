@@ -1,24 +1,72 @@
 package translate
 
 import (
-	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/podhmo/apikit/pkg/difftest"
+	"github.com/podhmo/apikit/pkg/tinypkg"
 )
+
+type Color string
 
 func TestStructFromFunc(t *testing.T) {
 	config := DefaultConfig()
 	config.Header = ""
 	translator := NewTranslator(config)
 	resolver := translator.Resolver
-
-	fn := func(name string, age int) error { return nil }
 	main := resolver.NewPackage("main", "")
 
-	var buf strings.Builder
-	code := translator.TranslateToStruct(main, fn, "S")
-	if err := code.Emit(&buf); err != nil {
-		t.Errorf("unexpected error, write %+v", err)
+	cases := []struct {
+		msg   string
+		here  *tinypkg.Package
+		input interface{}
+		want  string
+	}{
+		{
+			msg:   "funcToStruct",
+			here:  main,
+			input: func(name string, age int) error { return nil },
+			want: `package main
+
+
+type S struct {
+	Name string ` + "`json:\"name\"`" + `
+	Age int ` + "`json:\"age\"`" + `
+}
+			`,
+		},
+		{
+			msg:   "funcToStruct-with-new-type",
+			here:  main,
+			input: func(name string, age int, color Color) error { return nil },
+			want: `package main
+
+import (
+	"github.com/podhmo/apikit/translate"
+)
+
+type S struct {
+	Name string ` + "`json:\"name\"`" + `
+	Age int ` + "`json:\"age\"`" + `
+	Color translate.Color ` + "`json:\"color\"`" + `
+}
+		`,
+		},
 	}
-	fmt.Println(buf.String())
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.msg, func(t *testing.T) {
+			var buf strings.Builder
+			code := translator.TranslateToStruct(c.here, c.input, "S")
+
+			if err := code.Emit(&buf); err != nil {
+				t.Errorf("unexpected error, write %+v", err)
+			}
+			if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
+				difftest.LogDiffGotStringAndWantString(t, got, want)
+			}
+		})
+	}
 }
