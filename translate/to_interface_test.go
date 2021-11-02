@@ -35,7 +35,7 @@ func TestStructToInterface(t *testing.T) {
 			msg:   "same-package",
 			here:  pkg,
 			input: &something{},
-			want:  `package translate
+			want: `package translate
 
 import (
 	"io"
@@ -50,7 +50,7 @@ type Generated interface {
 			msg:   "other-package",
 			here:  main,
 			input: &something{},
-			want:  `package main
+			want: `package main
 
 import (
 	"io"
