@@ -7,7 +7,11 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-func StructFromShape(resolver *Resolver, fn reflectshape.Function) (reflectshape.Struct, error) {
+type StructFromShapeOptions struct {
+	SquashEmbedded bool
+}
+
+func StructFromShape(resolver *Resolver, fn reflectshape.Function, options StructFromShapeOptions) (reflectshape.Struct, error) {
 	fields := reflectshape.ShapeMap{}
 	tags := make([]reflect.StructTag, 0, fn.Params.Len())
 	metadata := make([]reflectshape.FieldMetadata, 0, fn.Params.Len())
@@ -20,10 +24,21 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function) (reflectshape
 			switch kind {
 			case KindData:
 				s := p.(reflectshape.Struct)
-				fields.Keys = append(fields.Keys, s.Fields.Keys...)
-				fields.Values = append(fields.Values, s.Fields.Values...)
-				metadata = append(metadata, s.Metadata...)
-				tags = append(tags, s.Tags...)
+				if options.SquashEmbedded {
+					fields.Keys = append(fields.Keys, s.Fields.Keys...)
+					fields.Values = append(fields.Values, s.Fields.Values...)
+					metadata = append(metadata, s.Metadata...)
+					tags = append(tags, s.Tags...)
+				} else {
+					fields.Keys = append(fields.Keys, name)
+					fields.Values = append(fields.Values, p)
+					metadata = append(metadata, reflectshape.FieldMetadata{
+						FieldName: name,
+						Required:  true,
+						Anonymous: true,
+					})
+					tags = append(tags, "")
+				}
 			case KindPrimitive:
 				fields.Keys = append(fields.Keys, name)
 				fields.Values = append(fields.Values, p)

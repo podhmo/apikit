@@ -17,6 +17,10 @@ func TestStructFromFunc(t *testing.T) {
 	resolver := translator.Resolver
 	main := resolver.NewPackage("main", "")
 
+	type Point struct {
+		X int `json:"x"`
+		Y int `json:"y"`
+	}
 	cases := []struct {
 		msg   string
 		here  *tinypkg.Package
@@ -50,6 +54,22 @@ type S struct {
 	Name string ` + "`json:\"name\"`" + `
 	Age int ` + "`json:\"age\"`" + `
 	Color translate.Color ` + "`json:\"color\"`" + `
+}
+		`,
+		},
+		{
+			msg:   "funcToStruct-with-struct",
+			here:  main,
+			input: func(point Point, verbose *bool) error { return nil },
+			want: `package main
+
+import (
+	"github.com/podhmo/apikit/translate"
+)
+
+type S struct {
+	translate.Point
+	Verbose *bool ` + "`json:\"verbose\"`" + `
 }
 		`,
 		},

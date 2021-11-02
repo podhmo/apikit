@@ -13,7 +13,7 @@ import (
 	reflectshape "github.com/podhmo/reflect-shape"
 )
 
-// TranslateToInterface translates to interface from concrete struct
+// TranslateToStruct translates to struct from function or concrete struct
 func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, name string) *code.CodeEmitter {
 	shape := t.Resolver.Shape(ob)
 	if name == "" {
@@ -38,7 +38,9 @@ func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, na
 				}
 				return nil
 			case reflectshape.Function:
-				structShape, err := resolve.StructFromShape(resolver, shape)
+				structShape, err := resolve.StructFromShape(resolver, shape, resolve.StructFromShapeOptions{
+					SquashEmbedded: false,
+				})
 				if err != nil {
 					return fmt.Errorf("transform function to struct: %w", err)
 				}
@@ -68,11 +70,17 @@ func writeStruct(
 	fmt.Fprintf(w, "type %s struct {\n", name)
 	defer fmt.Fprintln(w, "}")
 	for _, field := range s.Fields {
-		if len(field.Tags) == 0 {
-			fmt.Fprintf(w, "\t%s %s\n", field.Name, tinypkg.ToRelativeTypeString(here, field.Type))
+		parts := make([]string, 0, 3)
+		if field.Embedded {
+			parts = append(parts, tinypkg.ToRelativeTypeString(here, field.Type))
 		} else {
-			fmt.Fprintf(w, "\t%s %s `%s`\n", field.Name, tinypkg.ToRelativeTypeString(here, field.Type), strings.Join(field.Tags, " "))
+			parts = append(parts, field.Name)
+			parts = append(parts, tinypkg.ToRelativeTypeString(here, field.Type))
+			if len(field.Tags) > 0 {
+				parts = append(parts, fmt.Sprintf("`%s`", strings.Join(field.Tags, " ")))
+			}
 		}
+		fmt.Fprintf(w, "\t%s\n", strings.Join(parts, " "))
 	}
 	return nil
 }
@@ -93,9 +101,10 @@ func (s *Struct) OnWalk(use func(*tinypkg.Symbol) error) error {
 }
 
 type StructField struct {
-	Name string
-	Type tinypkg.Node
-	Tags []string
+	Name     string
+	Type     tinypkg.Node
+	Tags     []string
+	Embedded bool
 }
 
 func toStruct(here *tinypkg.Package, resolver *resolve.Resolver, name string, s reflectshape.Struct) *Struct {
@@ -110,9 +119,10 @@ func toStruct(here *tinypkg.Package, resolver *resolve.Resolver, name string, s 
 			tags = append(tags, fmt.Sprintf("json:"+strconv.Quote(fieldname)))
 		}
 		fields[i] = StructField{
-			Name: namelib.ToExported(fieldname),
-			Type: resolver.Symbol(here, f),
-			Tags: tags,
+			Name:     namelib.ToExported(fieldname),
+			Type:     resolver.Symbol(here, f),
+			Tags:     tags,
+			Embedded: s.Metadata[i].Anonymous,
 		}
 	}
 	return &Struct{
