@@ -38,7 +38,7 @@ func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, na
 				}
 				return nil
 			case reflectshape.Function:
-				structShape, err := resolve.StructFromShape(resolver, shape, resolve.StructFromShapeOptions{
+				structShape, _, err := resolve.StructFromShape(resolver, shape, resolve.StructFromShapeOptions{
 					SquashEmbedded: false,
 				})
 				if err != nil {

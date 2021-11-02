@@ -11,13 +11,22 @@ type StructFromShapeOptions struct {
 	SquashEmbedded bool
 }
 
-func StructFromShape(resolver *Resolver, fn reflectshape.Function, options StructFromShapeOptions) (reflectshape.Struct, error) {
+type StructFromShapeInfo struct {
+	GroupedByKind map[Kind][]int
+}
+
+func StructFromShape(resolver *Resolver, fn reflectshape.Function, options StructFromShapeOptions) (reflectshape.Struct, StructFromShapeInfo, error) {
 	fields := reflectshape.ShapeMap{}
 	tags := make([]reflect.StructTag, 0, fn.Params.Len())
 	metadata := make([]reflectshape.FieldMetadata, 0, fn.Params.Len())
+
+	kindMap := map[Kind][]int{}
+
 	for i, name := range fn.Params.Keys {
 		p := fn.Params.Values[i]
-		switch kind := resolver.DetectKind(p); kind {
+		kind := resolver.DetectKind(p)
+
+		switch kind {
 		case KindIgnored, KindUnsupported, KindComponent:
 			continue
 		case KindData, KindPrimitive, KindPrimitivePointer:
@@ -25,10 +34,16 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function, options Struc
 			case KindData:
 				s := p.(reflectshape.Struct)
 				if options.SquashEmbedded {
-					fields.Keys = append(fields.Keys, s.Fields.Keys...)
-					fields.Values = append(fields.Values, s.Fields.Values...)
-					metadata = append(metadata, s.Metadata...)
-					tags = append(tags, s.Tags...)
+					for i, k := range s.Fields.Keys {
+						v := s.Fields.Values[i]
+						fields.Keys = append(fields.Keys, k)
+						fields.Values = append(fields.Values, v)
+						metadata = append(metadata, s.Metadata[i])
+						tags = append(tags, s.Tags[i])
+
+						kind := resolver.DetectKind(v)
+						kindMap[kind] = append(kindMap[kind], len(tags)-1)
+					}
 				} else {
 					fields.Keys = append(fields.Keys, name)
 					fields.Values = append(fields.Values, p)
@@ -38,6 +53,7 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function, options Struc
 						Anonymous: true,
 					})
 					tags = append(tags, "")
+					kindMap[kind] = append(kindMap[kind], len(tags)-1)
 				}
 			case KindPrimitive:
 				fields.Keys = append(fields.Keys, name)
@@ -47,6 +63,7 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function, options Struc
 					Required:  true,
 				})
 				tags = append(tags, "")
+				kindMap[kind] = append(kindMap[kind], len(tags)-1)
 			case KindPrimitivePointer:
 				fields.Keys = append(fields.Keys, name)
 				fields.Values = append(fields.Values, p)
@@ -55,13 +72,14 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function, options Struc
 					Required:  false,
 				})
 				tags = append(tags, "")
+				kindMap[kind] = append(kindMap[kind], len(tags)-1)
 			}
 		default:
-			return reflectshape.Struct{}, fmt.Errorf("unsupported kind %v", kind)
+			return reflectshape.Struct{}, StructFromShapeInfo{}, fmt.Errorf("unsupported kind %v", kind)
 		}
 	}
 
-	retval := reflectshape.Struct{
+	shape := reflectshape.Struct{
 		Info: &reflectshape.Info{
 			Name:    "", // not ref
 			Kind:    reflectshape.Kind(reflect.Struct),
@@ -71,6 +89,6 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function, options Struc
 		Tags:     tags,
 		Metadata: metadata,
 	}
-	retval.ResetReflectType(reflect.PtrTo(fn.GetReflectType())) // xxx:
-	return retval, nil
+	shape.ResetReflectType(reflect.PtrTo(fn.GetReflectType())) // xxx:
+	return shape, StructFromShapeInfo{GroupedByKind: kindMap}, nil
 }
