@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"reflect"
@@ -105,54 +104,21 @@ func (s *MergeParamsSelector) SelectInput(fn reflectshape.Function) reflectshape
 	if len(fn.Params.Values) == 0 {
 		return nil
 	}
-	fields := reflectshape.ShapeMap{}
-	tags := make([]reflect.StructTag, 0, fn.Params.Len())
-	metadata := make([]reflectshape.FieldMetadata, 0, fn.Params.Len())
-	for i, name := range fn.Params.Keys {
-		p := fn.Params.Values[i]
-		switch kind := s.resolver.DetectKind(p); kind {
-		case resolve.KindIgnored, resolve.KindUnsupported, resolve.KindComponent:
-			continue
-		case resolve.KindData, resolve.KindPrimitive, resolve.KindPrimitivePointer:
-			switch kind {
-			case resolve.KindData:
-				s := p.(reflectshape.Struct)
-				fields.Keys = append(fields.Keys, s.Fields.Keys...)
-				fields.Values = append(fields.Values, s.Fields.Values...)
-				metadata = append(metadata, s.Metadata...)
-				tags = append(tags, s.Tags...)
-			case resolve.KindPrimitive:
-				fields.Keys = append(fields.Keys, name)
-				fields.Values = append(fields.Values, p)
-				metadata = append(metadata, reflectshape.FieldMetadata{
-					FieldName: name,
-					Required:  true,
-				})
-				tags = append(tags, reflect.StructTag(`openapi:"path"`)) // todo: see path param (e.g. articleId)
-			case resolve.KindPrimitivePointer:
-				fields.Keys = append(fields.Keys, name)
-				fields.Values = append(fields.Values, p)
-				metadata = append(metadata, reflectshape.FieldMetadata{
-					FieldName: name,
-					Required:  false,
-				})
-				tags = append(tags, reflect.StructTag(`openapi:"query"`))
-			}
-		default:
-			panic(fmt.Sprintf("unsupported kind %v", kind))
-		}
+	shape, info, err := resolve.StructFromShape(s.resolver, fn, resolve.StructFromShapeOptions{SquashEmbedded: false})
+	if err != nil {
+		panic(err) // xxx
 	}
 
-	retval := reflectshape.Struct{
-		Info: &reflectshape.Info{
-			Name:    "", // not ref
-			Kind:    reflectshape.Kind(reflect.Struct),
-			Package: fn.Info.Package,
-		},
-		Fields:   fields,
-		Tags:     tags,
-		Metadata: metadata,
+	// add openapi tag
+	if indices, ok := info.GroupedByKind[resolve.KindPrimitive]; ok {
+		for _, i := range indices {
+			shape.Tags[i] = reflect.StructTag(string(shape.Tags[i]) + ` openapi:"path"`)
+		}
 	}
-	retval.ResetReflectType(reflect.PtrTo(fn.GetReflectType()))
-	return retval
+	if indices, ok := info.GroupedByKind[resolve.KindPrimitivePointer]; ok {
+		for _, i := range indices {
+			shape.Tags[i] = reflect.StructTag(string(shape.Tags[i]) + ` openapi:"query"`)
+		}
+	}
+	return shape
 }
