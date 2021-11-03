@@ -10,7 +10,7 @@ import (
 
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/web/ext/scroll"
+	"github.com/podhmo/apikit/ext/scroll"
 	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
 )
 

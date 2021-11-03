@@ -6,8 +6,8 @@ import (
 	"log"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
-	"github.com/podhmo/apikit/web/ext"
-	"github.com/podhmo/apikit/web/ext/scroll"
+	"github.com/podhmo/apikit/ext"
+	"github.com/podhmo/apikit/ext/scroll"
 )
 
 func main() {
