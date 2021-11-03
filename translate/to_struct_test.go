@@ -93,7 +93,7 @@ type S struct {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			options := ToStructOptions{Name: "S", Tags: map[string]string{}}
+			options := ToStructOptions{Name: "S", Tags: c.tags}
 			code := translator.TranslateToStruct(c.here, c.input, options)
 
 			var buf strings.Builder
