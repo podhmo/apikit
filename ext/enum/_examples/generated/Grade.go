@@ -16,12 +16,15 @@ const (
 	GradeD Grade = "d"
 )
 
+var GradeINVALID Grade // zero value
 var ErrNoGrade = fmt.Errorf("no Grade")
 
 func (v Grade) Validate() error {
 	switch v {
 	case GradeS, GradeA, GradeB, GradeC, GradeD:
 		return nil
+	case GradeINVALID:
+		return fmt.Errorf("invalid zero value %v: %w", ErrNoGrade)
 	default:
 		return fmt.Errorf("unexpected value %v: %w", ErrNoGrade)
 	}

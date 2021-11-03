@@ -85,9 +85,6 @@ func IncludeMe(
 	c := &code.CodeEmitter{Code: config.NewCode(here, enumSet.Name, func(w io.Writer, c *code.Code) error {
 		c.Import(resolver.NewPackage("fmt", ""))
 
-		// todo: zero value
-		// todo: list members
-
 		// type <type> <base>
 		fmt.Fprintf(w, "type %s %s\n", enumSet.Name, baseT)
 		fmt.Fprintln(w, "")
@@ -98,6 +95,8 @@ func IncludeMe(
 			//   <name0> <type> = <value0>
 			//   ...
 			// )
+			// var <type>INVALID <type>  // zero value
+
 			fmt.Fprintln(w, "const (")
 			for _, x := range enumSet.Enums {
 
@@ -121,6 +120,7 @@ func IncludeMe(
 				}
 			}
 			fmt.Fprintln(w, ")")
+			fmt.Fprintf(w, "var %[1]sINVALID %[1]s  // zero value\n", typename)
 		}
 
 		// error value
@@ -147,6 +147,8 @@ func IncludeMe(
 			fmt.Fprintf(w, "\tswitch v {\n")
 			fmt.Fprintf(w, "\tcase %s:\n", strings.Join(members, ", "))
 			fmt.Fprintln(w, "\t\treturn nil")
+			fmt.Fprintf(w, "\tcase %sINVALID:\n", typename)
+			fmt.Fprintf(w, "\t\treturn fmt.Errorf(\"invalid zero value %%v: %%w\", ErrNo%s)\n", typename)
 			fmt.Fprintln(w, "\tdefault:")
 			fmt.Fprintf(w, "\t\treturn fmt.Errorf(\"unexpected value %%v: %%w\", ErrNo%s)\n", typename)
 			fmt.Fprintln(w, "\t}")
