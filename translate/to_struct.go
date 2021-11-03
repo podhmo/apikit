@@ -38,9 +38,7 @@ func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, na
 				}
 				return nil
 			case reflectshape.Function:
-				structShape, err := resolve.StructFromShape(resolver, shape, resolve.StructFromShapeOptions{
-					SquashEmbedded: false,
-				})
+				structShape, _, err := resolve.StructFromShape(resolver, shape)
 				if err != nil {
 					return fmt.Errorf("transform function to struct: %w", err)
 				}
