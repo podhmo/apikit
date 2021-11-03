@@ -22,8 +22,15 @@ type ToStructOptions struct {
 func (t *Translator) TranslateToStruct(
 	here *tinypkg.Package,
 	ob interface{},
-	options ToStructOptions,
+	optionsButUsedFirstElementOnly ...ToStructOptions,
 ) *code.CodeEmitter {
+	var options *ToStructOptions
+	if len(optionsButUsedFirstElementOnly) > 0 {
+		options = &optionsButUsedFirstElementOnly[0]
+	} else {
+		options = &ToStructOptions{}
+	}
+
 	shape := t.Resolver.Shape(ob)
 	if options.Name == "" {
 		options.Name = shape.GetName()
@@ -47,7 +54,7 @@ func (t *Translator) TranslateToStruct(
 			here := c.Here
 			switch shape := shape.(type) {
 			case reflectshape.Struct:
-				s = toStruct(here, resolver, shape, options)
+				s = toStruct(here, resolver, shape, *options)
 				if err := writeStruct(w, here, name, s, resolver); err != nil {
 					return fmt.Errorf("write struct: %w", err)
 				}
@@ -57,7 +64,7 @@ func (t *Translator) TranslateToStruct(
 				if err != nil {
 					return fmt.Errorf("transform function to struct: %w", err)
 				}
-				s = toStruct(here, resolver, structShape, options)
+				s = toStruct(here, resolver, structShape, *options)
 				if err := writeStruct(w, here, name, s, resolver); err != nil {
 					return fmt.Errorf("write struct: %w", err)
 				}
