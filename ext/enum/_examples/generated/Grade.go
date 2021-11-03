@@ -3,3 +3,11 @@
 package generated
 
 type Grade string
+
+const (
+	GradeS Grade = "S"
+	GradeA Grade = "A"
+	GradeB Grade = "B"
+	GradeC Grade = "C"
+	GradeD Grade = "D"
+)

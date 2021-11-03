@@ -9,7 +9,7 @@ the plugin for enum
 // pkg is *tinypkg.Package
 
 members := []enum.Enum{{Name: "Gold"}, {Name: "Silver"}, {Name: "Bronze"}}
-if err := pc.IncludePlugin(pkg, &enum.Options{Name: "Grade", Members: members}); err != nil {
+if err := pc.IncludePlugin(pkg, &enum.Options{Name: "Grade", Enums: members}); err != nil {
     return err
 }
 ```
