@@ -8,12 +8,13 @@ the plugin for enum
 // pc is *ext.PluginContext
 // pkg is *tinypkg.Package
 
-members := []enum.Enum{{Name: "Gold"}, {Name: "Silver"}, {Name: "Bronze"}}
-if err := pc.IncludePlugin(pkg, &enum.Options{Name: "Grade", Enums: members}); err != nil {
+enumSet := enum.EnumSet{Name "Rank", Enums:[]enum.Enum{{Name: "Gold"}, {Name: "Silver"}, {Name: "Bronze"}}}
+// or enumSet := enum.StringEnums("Rank", "Gold", "Silver", "Bronze")
+if err := pc.IncludePlugin(pkg, &enum.Options{EnumSet: enumSet}); err != nil {
     return err
 }
 ```
 
 ## generated code
 
-an example is [here](./_examples)
+an example is [here](./_examples/)
