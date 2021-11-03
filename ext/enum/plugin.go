@@ -79,6 +79,8 @@ func IncludeMe(
 	rt := reflect.TypeOf(enumSet.Enums[0].Value)
 	baseT := resolver.Symbol(here, resolver.Shape(enumSet.Enums[0].Value))
 
+	here.NewSymbol(enumSet.Name)
+
 	// <enumset.name>.go
 	c := &code.CodeEmitter{Code: config.NewCode(here, enumSet.Name, func(w io.Writer, c *code.Code) error {
 		c.Import(resolver.NewPackage("fmt", ""))
@@ -162,6 +164,23 @@ func IncludeMe(
 			fmt.Fprintln(w, "\t\tpanic(err)")
 			fmt.Fprintln(w, "\t}")
 			fmt.Fprintln(w, "\treturn retval")
+			fmt.Fprintln(w, "}")
+		}
+
+		fmt.Fprintln(w, "")
+
+		// list
+		{
+			members := make([]string, len(enumSet.Enums))
+			for i, x := range enumSet.Enums {
+				members[i] = typename + x.Name
+			}
+
+			// func List<type>() []<type> {
+			// return <members...>
+			// }
+			fmt.Fprintf(w, "func List%[1]s() []%[1]s {\n", typename)
+			fmt.Fprintf(w, "\treturn []%s{%s}\n", typename, strings.Join(members, ", "))
 			fmt.Fprintln(w, "}")
 		}
 		return nil

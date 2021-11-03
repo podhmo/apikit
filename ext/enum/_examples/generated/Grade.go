@@ -34,3 +34,7 @@ func MustGrade(v string) Grade {
 	}
 	return retval
 }
+
+func ListGrade() []Grade {
+	return []Grade{GradeS, GradeA, GradeB, GradeC, GradeD}
+}
