@@ -93,6 +93,13 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, c.Name, c)
 	}
 
+	// provider
+	{
+		name := g.Config.ProviderName // xxx
+		code := t.internal.ExtractProviderInterface(here, name)
+		g.Emitter.Register(here, code.Name, code)
+	}
+
 	// handler
 	{
 		// c := &code.CodeEmitter{Code: g.Config.NewCode(here, "Handle", func(w io.Writer, c *code.Code) error {

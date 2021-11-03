@@ -1,6 +1,7 @@
 package genlambda
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,19 +24,23 @@ type Translator struct {
 }
 
 func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*resolve.Module, error) {
+	eventStructName := "Event" // todo: to arguments
+
 	type providerT interface{}
+	type eventT interface{}
 	var moduleSkeleton struct {
 		T             providerT
-		getProvider   func(*http.Request) (*http.Request, providerT, error)
+		EventT        eventT
+		getProvider   func(context.Context) (context.Context, providerT, error)
 		createHandler func(
-			getProvider func(*http.Request) (*http.Request, providerT, error),
-		) http.HandlerFunc
+			getProvider func(context.Context) (context.Context, providerT, error),
+		) func(context.Context, eventT) (interface{}, error)
 	}
 	pm, err := resolver.PreModule(moduleSkeleton)
 	if err != nil {
 		return nil, fmt.Errorf("new provider pre-module: %w", err)
 	}
-	m, err := pm.NewModule(here, here.NewSymbol(providerName))
+	m, err := pm.NewModule(here, here.NewSymbol(providerName), here.NewSymbol(eventStructName))
 	if err != nil {
 		return nil, fmt.Errorf("new provider module: %w", err)
 	}
