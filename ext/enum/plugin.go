@@ -76,6 +76,15 @@ func IncludeMe(
 		fmt.Fprintln(w, "")
 		fmt.Fprintln(w, "const (")
 		for _, x := range enumSet.Enums {
+
+			if x.Description != "" {
+				lines := strings.Split(x.Description, "\n")
+				lines[0] = fmt.Sprintf("%[1]s%[2]s: %s", typename, x.Name, lines[0])
+				for _, line := range lines {
+					fmt.Fprintf(w, "\t// %s\n", line)
+				}
+			}
+
 			switch rt.Kind() {
 			case reflect.Int, reflect.Int32, reflect.Int16, reflect.Int64, reflect.Int8:
 				fmt.Fprintf(w, "\t%[1]s%[2]s %[1]s = %[3]v\n", typename, x.Name, x.Value)
