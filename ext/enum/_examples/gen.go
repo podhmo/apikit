@@ -3,11 +3,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/podhmo/apikit/ext"
+	"github.com/podhmo/apikit/ext/enum"
 	"github.com/podhmo/apikit/pkg/emitgo"
-	"github.com/podhmo/apikit/web/ext"
-	"github.com/podhmo/apikit/web/ext/scroll"
 )
 
 func main() {
@@ -21,9 +22,10 @@ func run() (err error) {
 	defer emitter.EmitWith(&err)
 
 	pc := ext.NewDefaultPluginContext(emitter)
-	pkg := emitter.RootPkg.Relative("runtime", "")
+	pkg := emitter.RootPkg.Relative("generated", "")
 
-	var latestID int = 0 // for scroll implemention
-	pc.IncludePlugin(pkg, scroll.Options{LatestIDTypeZeroValue: latestID})
+	if err := pc.IncludePlugin(pkg, enum.Options{EnumSet: enum.StringEnums("Grade", "s", "a", "b", "c", "d")}); err != nil {
+		return fmt.Errorf("generate Grade: %w", err)
+	}
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/web/ext"
+	"github.com/podhmo/apikit/ext"
 )
 
 type Options struct {
