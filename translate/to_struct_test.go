@@ -26,7 +26,7 @@ func TestStructFromFunc(t *testing.T) {
 		here  *tinypkg.Package
 		input interface{}
 		want  string
-		tags  []string
+		tags  map[string]string
 	}{
 		{
 			msg:   "funcToStruct",
@@ -78,7 +78,7 @@ type S struct {
 			msg:   "funcToStruct-additionalTag",
 			here:  main,
 			input: func(name string, age int) error { return nil },
-			tags:  []string{"name", `required:"true"`},
+			tags:  map[string]string{"name": `required:"true"`},
 			want: `package main
 
 
@@ -93,11 +93,10 @@ type S struct {
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			var buf strings.Builder
-			// transformer.FromFunc(c.input).WithTags("name", `required:true`).WithComments("name", "name of P").ToStruct()
-			option := translator.OptionToStruct()
-			code := translator.TranslateToStruct(c.here, c.input, option.WithName("S"), option.WithTag(c.tags...))
+			options := ToStructOptions{Name: "S", Tags: map[string]string{}}
+			code := translator.TranslateToStruct(c.here, c.input, options)
 
+			var buf strings.Builder
 			if err := code.Emit(&buf); err != nil {
 				t.Errorf("unexpected error, write %+v", err)
 			}
