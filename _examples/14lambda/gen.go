@@ -9,12 +9,8 @@ import (
 	"m/14lambda/design"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
-	"github.com/podhmo/apikit/pkg/tinypkg"
+	genlambda "github.com/podhmo/apikit/web/webgen/gen-lambda"
 )
-
-type Generator interface {
-	Generate(ctx context.Context, pkg *tinypkg.Package, action interface{}) error
-}
 
 func main() {
 	if err := run(); err != nil {
@@ -23,12 +19,16 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(run, "").NewEmitter()
+	emitter := emitgo.NewConfigFromRelativePath(run, ".").NewEmitter()
 	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	ctx := context.Background()
-	var g Generator
+
+	c := genlambda.DefaultConfig()
+	c.Header = "" // todo: remove
+
+	g := c.New(emitter)
 
 	{
 		pkg := emitter.RootPkg.Relative("lambdahandler/postarticlecomment", "")
