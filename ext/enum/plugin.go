@@ -27,24 +27,26 @@ type Enum struct {
 	Description string
 }
 
-type Options EnumSet
+type Options struct {
+	EnumSet EnumSet
+}
 
 func (o Options) IncludeMe(pc *ext.PluginContext, here *tinypkg.Package) error {
 	return IncludeMe(
 		pc.Config, pc.Resolver, pc.Emitter,
 		here,
-		EnumSet(o),
+		Fixup(o.EnumSet),
 	)
 }
 
-func StringEnums(name string, first string, members ...string) Options {
+func StringEnums(name string, first string, members ...string) EnumSet {
 	members = append([]string{first}, members...)
 	enums := make([]Enum, len(members))
 	for i, name := range members {
 		enums[i] = Enum{Name: name}
 	}
 
-	return Options{
+	return EnumSet{
 		Name:  name,
 		Enums: enums,
 	}
@@ -73,8 +75,6 @@ func IncludeMe(
 	if len(enumSet.Enums) == 0 {
 		return fmt.Errorf("need len(enums) > 1, in enum %s", enumSet.Name)
 	}
-
-	enumSet = Fixup(enumSet)
 
 	rt := reflect.TypeOf(enumSet.Enums[0].Value)
 	baseT := resolver.Symbol(here, resolver.Shape(enumSet.Enums[0].Value))
