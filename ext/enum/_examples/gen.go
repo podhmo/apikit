@@ -24,7 +24,7 @@ func run() (err error) {
 	pc := ext.NewDefaultPluginContext(emitter)
 	pkg := emitter.RootPkg.Relative("generated", "")
 
-	if err := pc.IncludePlugin(pkg, enum.StringEnums("Grade", "S", "A", "B", "C", "D")); err != nil {
+	if err := pc.IncludePlugin(pkg, enum.StringEnums("Grade", "s", "a", "b", "c", "d")); err != nil {
 		return fmt.Errorf("generate Grade: %w", err)
 	}
 	return nil
