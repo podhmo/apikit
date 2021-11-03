@@ -26,6 +26,7 @@ func TestStructFromFunc(t *testing.T) {
 		here  *tinypkg.Package
 		input interface{}
 		want  string
+		tags  map[string]string
 	}{
 		{
 			msg:   "funcToStruct",
@@ -73,13 +74,27 @@ type S struct {
 }
 		`,
 		},
+		{
+			msg:   "funcToStruct-additionalTag",
+			here:  main,
+			input: func(name string, age int) error { return nil },
+			tags:  map[string]string{"name": `required:"true"`},
+			want: `package main
+
+
+type S struct {
+	Name string ` + "`json:\"name\" required:\"true\"`" + `
+	Age int ` + "`json:\"age\"`" + `
+}
+		`,
+		},
 	}
 
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
 			var buf strings.Builder
-			code := translator.TranslateToStruct(c.here, c.input, "S")
+			code := translator.TranslateToStruct(c.here, c.input, "S", c.tags)
 
 			if err := code.Emit(&buf); err != nil {
 				t.Errorf("unexpected error, write %+v", err)
