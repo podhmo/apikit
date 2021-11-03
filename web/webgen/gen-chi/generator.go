@@ -10,12 +10,13 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
+	"github.com/podhmo/apikit/ext"
 	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
+	"github.com/podhmo/apikit/translate"
 	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/ext"
 )
 
 type Config struct {
@@ -125,6 +126,11 @@ func (g *Generator) Generate(
 		Config:         g.Config.Config,
 		ProviderModule: providerModule,
 		RuntimeModule:  runtimeModule,
+		internal: &translate.Translator{
+			Tracker:  g.Tracker,
+			Resolver: resolver,
+			Config:   g.Config.Config,
+		},
 	}
 
 	type handler struct {
@@ -199,7 +205,7 @@ func (g *Generator) Generate(
 	{
 		here := g.ProviderPkg
 		name := g.Config.ProviderName // xxx
-		code := translator.ExtractProviderInterface(here, name)
+		code := translator.internal.ExtractProviderInterface(here, name)
 		g.Emitter.Register(here, code.Name, code)
 	}
 
