@@ -14,10 +14,19 @@ import (
 )
 
 // TranslateToStruct translates to struct from function or concrete struct
-func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, name string) *code.CodeEmitter {
+func (t *Translator) TranslateToStruct(
+	here *tinypkg.Package,
+	ob interface{},
+	name string,
+	tagsMap map[string]string,
+) *code.CodeEmitter {
 	shape := t.Resolver.Shape(ob)
+
 	if name == "" {
 		name = shape.GetName()
+	}
+	if tagsMap == nil {
+		tagsMap = map[string]string{}
 	}
 	var s *Struct // bound by EmitCode()
 	c := &code.Code{
@@ -32,7 +41,7 @@ func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, na
 			here := c.Here
 			switch shape := shape.(type) {
 			case reflectshape.Struct:
-				s = toStruct(here, resolver, name, shape)
+				s = toStruct(here, resolver, name, shape, tagsMap)
 				if err := writeStruct(w, here, name, s, resolver); err != nil {
 					return fmt.Errorf("write struct: %w", err)
 				}
@@ -42,7 +51,7 @@ func (t *Translator) TranslateToStruct(here *tinypkg.Package, ob interface{}, na
 				if err != nil {
 					return fmt.Errorf("transform function to struct: %w", err)
 				}
-				s = toStruct(here, resolver, name, structShape)
+				s = toStruct(here, resolver, name, structShape, tagsMap)
 				if err := writeStruct(w, here, name, s, resolver); err != nil {
 					return err
 				}
@@ -105,7 +114,13 @@ type StructField struct {
 	Embedded bool
 }
 
-func toStruct(here *tinypkg.Package, resolver *resolve.Resolver, name string, s reflectshape.Struct) *Struct {
+func toStruct(
+	here *tinypkg.Package,
+	resolver *resolve.Resolver,
+	name string,
+	s reflectshape.Struct,
+	tagsMap map[string]string,
+) *Struct {
 	fields := make([]StructField, s.Fields.Len())
 	for i, fieldname := range s.Fields.Keys {
 		f := s.Fields.Values[i]
@@ -115,6 +130,9 @@ func toStruct(here *tinypkg.Package, resolver *resolve.Resolver, name string, s 
 		}
 		if _, ok := s.Tags[i].Lookup("json"); !ok {
 			tags = append(tags, fmt.Sprintf("json:"+strconv.Quote(fieldname)))
+		}
+		if additional, ok := tagsMap[fieldname]; ok {
+			tags = append(tags, additional)
 		}
 		fields[i] = StructField{
 			Name:     namelib.ToExported(fieldname),
