@@ -2,8 +2,6 @@ package genlambda
 
 import (
 	"context"
-	"fmt"
-	"io"
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/emitfile"
@@ -64,7 +62,23 @@ func (g *Generator) Generate(
 	pkg *tinypkg.Package,
 	actionfunc interface{},
 ) error {
-	t := translate.NewTranslator(g.Config.Config)
+	providerModule, err := ProviderModule(pkg, g.Resolver, g.Config.ProviderName)
+	if err != nil {
+		return err
+	}
+	runtimeModule, err := RuntimeModule(pkg, g.Resolver)
+	if err != nil {
+		return err
+	}
+
+	t := &Translator{
+		Resolver:       g.Resolver,
+		Tracker:        resolve.NewTracker(g.Resolver),
+		Config:         g.Config.Config,
+		ProviderModule: providerModule,
+		RuntimeModule:  runtimeModule,
+		internal:       translate.NewTranslator(g.Config.Config),
+	}
 
 	// TODO: merge files
 
@@ -75,19 +89,22 @@ func (g *Generator) Generate(
 
 	// event
 	{
-		c := t.TranslateToStruct(here, actionfunc, "Event")
+		c := t.internal.TranslateToStruct(here, actionfunc, "Event")
 		g.Emitter.Register(here, c.Name, c)
 	}
 
 	// handler
 	{
-		c := &code.CodeEmitter{Code: g.Config.NewCode(here, "Handle", func(w io.Writer, c *code.Code) error {
-			fmt.Fprintf(w, "func Handle(ctx context.Context, event Event) (interface{}, error) {\n")
-			defer fmt.Fprintf(w, "}\n")
+		// c := &code.CodeEmitter{Code: g.Config.NewCode(here, "Handle", func(w io.Writer, c *code.Code) error {
+		// 	fmt.Fprintln(w, "// see: https://docs.aws.amazon.com/lambda/latest/dg/golang-handler.html")
+		// 	fmt.Fprintln(w, "")
+		// 	fmt.Fprintf(w, "func Handle(ctx context.Context, event Event) (interface{}, error) {\n")
+		// 	defer fmt.Fprintf(w, "}\n")
 
-			fmt.Fprintf(w, "\treturn nil, nil\n")
-			return nil
-		})}
+		// 	fmt.Fprintf(w, "\treturn nil, nil\n")
+		// 	return nil
+		// })}
+		c := t.TranslateToHandler(here, actionfunc, "Handle")
 		g.Emitter.Register(here, c.Name, c)
 	}
 
