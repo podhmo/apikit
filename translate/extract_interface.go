@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -26,7 +27,7 @@ func (t *Translator) ExtractProviderInterface(here *tinypkg.Package, name string
 				}
 				sym := resolver.Symbol(here, shape)
 				if err := tinypkg.Walk(sym, use); err != nil {
-					return err
+					return fmt.Errorf("on walk %s: %w", sym, err)
 				}
 			}
 			return nil

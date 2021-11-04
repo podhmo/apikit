@@ -8,6 +8,7 @@ import (
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
+	"github.com/podhmo/apikit/translate"
 )
 
 type Translator struct {
@@ -17,6 +18,8 @@ type Translator struct {
 
 	ProviderModule *resolve.Module
 	RuntimeModule  *resolve.Module
+
+	internal *translate.Translator
 }
 
 func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.Module, error) {
