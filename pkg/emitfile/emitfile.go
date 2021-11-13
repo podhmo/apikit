@@ -145,7 +145,7 @@ func (e *Executor) Emit() error {
 		return fmt.Errorf("reading history %q is failed: %w", histfilePath, err)
 	}
 	entries := make([]classify.Entry, 0, len(e.Actions))
-	saveFuncMap := map[string]func() error{}
+	saveFuncMap := map[string]func(classify.ResultType) error{}
 
 	for _, action := range e.Actions {
 		fpath, err := e.PathResolver.ResolvePath(action.Path)
@@ -179,8 +179,8 @@ func (e *Executor) Emit() error {
 		if _, alreadyExisted := saveFuncMap[fpath]; alreadyExisted {
 			e.Log.Printf("WARNING: %s is conflicted", fpath)
 		}
-		saveFuncMap[fpath] = func() error {
-			if err := e.saver.SaveOrCreateFile(fpath, b); err != nil {
+		saveFuncMap[fpath] = func(typ classify.ResultType) error {
+			if err := e.saver.SaveOrCreateFile(fpath, b, string(typ)); err != nil {
 				return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 			}
 			return nil
@@ -193,15 +193,15 @@ func (e *Executor) Emit() error {
 	}
 
 	for _, r := range classified {
-		if e.Verbose {
-			e.Log.Printf("\t%s %s", r.Type, r.Name())
-		}
 		switch r.Type {
 		case classify.ResultTypeCreate, classify.ResultTypeUpdate:
-			if err := saveFuncMap[r.Name()](); err != nil {
+			if err := saveFuncMap[r.Name()](r.Type); err != nil {
 				return err
 			}
 		case classify.ResultTypeDelete:
+			if e.Verbose {
+				e.Log.Printf("\t%s %s", r.Type, r.Name())
+			}
 			if err := os.Remove(r.Name()); err != nil {
 				e.Log.Printf("WARNING: remove %q is failed", r.Name())
 			}
