@@ -193,6 +193,9 @@ func (e *Executor) Emit() error {
 	}
 
 	for _, r := range classified {
+		if e.Verbose {
+			e.Log.Printf("\t%s %s", r.Type, r.Name())
+		}
 		switch r.Type {
 		case classify.ResultTypeCreate, classify.ResultTypeUpdate:
 			if err := saveFuncMap[r.Name()](); err != nil {
