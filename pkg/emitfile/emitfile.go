@@ -18,6 +18,7 @@ import (
 
 var DEBUG = false
 var VERBOSE = false
+var CLEAN = false
 
 func init() {
 	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
@@ -25,6 +26,9 @@ func init() {
 	}
 	if v, err := strconv.ParseBool(os.Getenv("VERBOSE")); err == nil {
 		VERBOSE = v
+	}
+	if v, err := strconv.ParseBool(os.Getenv("CLEAN")); err == nil {
+		CLEAN = v
 	}
 }
 
@@ -35,6 +39,7 @@ type Logger interface {
 type Config struct {
 	Verbose     bool
 	Debug       bool
+	Clean       bool
 	AlwaysWrite bool
 
 	RootDir  string // root directory for file-generation
@@ -49,6 +54,7 @@ func NewConfig(rootdir string) *Config {
 	c := &Config{
 		Debug:       DEBUG,
 		Verbose:     VERBOSE,
+		Clean:       CLEAN,
 		Log:         log.New(os.Stderr, "", 0),
 		AlwaysWrite: true,
 		RootDir:     rootdir,
@@ -193,6 +199,10 @@ func (e *Executor) Emit() error {
 	}
 
 	for _, r := range classified {
+		if e.Config.Clean && r.Type != classify.ResultTypeDelete {
+			r.Type = classify.ResultTypeCreate
+		}
+
 		switch r.Type {
 		case classify.ResultTypeCreate, classify.ResultTypeUpdate:
 			if err := saveFuncMap[r.Name()](r.Type); err != nil {
