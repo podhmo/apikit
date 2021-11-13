@@ -68,7 +68,7 @@ func Classify(
 			return nil, fmt.Errorf("get hash of previous entry=%s: %w", name, err)
 		}
 		if bytes.Equal(currentHash, prevHash) {
-			Results[i] = Result{Type: ResultTypeNotChanged, Entry: entry}
+			Results[i] = Result{Type: ResultTypeNotChanged, Entry: prev} // use prev for mtime
 			continue
 		}
 		Results[i] = Result{Type: ResultTypeUpdate, Entry: entry}
@@ -88,10 +88,10 @@ func Classify(
 type ResultType string
 
 const (
-	ResultTypeUNKNOWN     ResultType = ""
-	ResultTypeCreate      ResultType = "C"
-	ResultTypeUpdate      ResultType = "U"
-	ResultTypeDelete      ResultType = "D"
+	ResultTypeUNKNOWN    ResultType = ""
+	ResultTypeCreate     ResultType = "C"
+	ResultTypeUpdate     ResultType = "U"
+	ResultTypeDelete     ResultType = "D"
 	ResultTypeNotChanged ResultType = "-"
 )
 
