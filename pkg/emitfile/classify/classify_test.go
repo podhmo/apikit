@@ -14,11 +14,11 @@ func TestCommit(t *testing.T) {
 		want []string // "<Result>:<name>"
 	}{
 		{prev: nil, cur: nil, want: nil},
-		{prev: nil, cur: lines("hello@"), want: lines("C:hello")},                            // create
-		{prev: lines("hello@1"), cur: lines("hello@1"), want: lines("-:hello")},              // not modified
-		{prev: lines("hello@1"), cur: lines("hello@2"), want: lines("U:hello")},              // update
-		{prev: lines("hello@"), cur: nil, want: lines("D:hello")},                            // deleted
-		{prev: lines("hello@1"), cur: lines("hello2@2"), want: lines("C:hello2", "D:hello")}, // deleted (renamed)
+		{prev: nil, cur: lines("hello@"), want: lines("create:hello")},                                 // create
+		{prev: lines("hello@1"), cur: lines("hello@1"), want: lines("not-changed:hello")},              // not modified
+		{prev: lines("hello@1"), cur: lines("hello@2"), want: lines("update:hello")},                   // update
+		{prev: lines("hello@"), cur: nil, want: lines("delete:hello")},                                 // deleted
+		{prev: lines("hello@1"), cur: lines("hello2@2"), want: lines("create:hello2", "delete:hello")}, // deleted (renamed)
 	}
 
 	for i, c := range cases {

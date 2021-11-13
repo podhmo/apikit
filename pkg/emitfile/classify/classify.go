@@ -89,10 +89,10 @@ type ResultType string
 
 const (
 	ResultTypeUNKNOWN    ResultType = ""
-	ResultTypeCreate     ResultType = "C"
-	ResultTypeUpdate     ResultType = "U"
-	ResultTypeDelete     ResultType = "D"
-	ResultTypeNotChanged ResultType = "-"
+	ResultTypeCreate     ResultType = "create" // or emoji: plus (U+2795)
+	ResultTypeUpdate     ResultType = "update"
+	ResultTypeDelete     ResultType = "delete" // or emoji: minus (U+2796)
+	ResultTypeNotChanged ResultType = "not-changed"
 )
 
 type Result struct {
