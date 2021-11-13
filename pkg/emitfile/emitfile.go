@@ -177,7 +177,7 @@ func (e *Executor) Emit() error {
 		}))
 
 		if _, alreadyExisted := saveFuncMap[fpath]; alreadyExisted {
-			log.Printf("WARNING: %s is conflicted", fpath)
+			e.Log.Printf("WARNING: %s is conflicted", fpath)
 		}
 		saveFuncMap[fpath] = func() error {
 			if err := e.saver.SaveOrCreateFile(fpath, b); err != nil {
@@ -203,12 +203,15 @@ func (e *Executor) Emit() error {
 			}
 		case classify.ResultTypeDelete:
 			if err := os.Remove(r.Name()); err != nil {
-				log.Printf("WARNING: remove %q is failed", r.Name())
+				e.Log.Printf("WARNING: remove %q is failed", r.Name())
 			}
 		case classify.ResultTypeNotChanged:
 			// noop
 		default:
-			return fmt.Errorf("unexpected result type %v, file=%q", r.Type, r.Name())
+			if !e.AlwaysWrite {
+				return fmt.Errorf("unexpected result type %v, file=%q", r.Type, r.Name())
+			}
+			e.Log.Printf("unexpected result type %v, file=%q", r.Type, r.Name())
 		}
 	}
 
