@@ -10,6 +10,8 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
+var DefaultHistFileName = ".apikit.hist.json"
+
 type Config struct {
 	RootPkg        *tinypkg.Package
 	FilenamePrefix string
@@ -24,10 +26,12 @@ func NewConfigFromRelativePath(fn interface{}, relative string) *Config {
 }
 
 func NewConfig(rootdir string, rootpkg *tinypkg.Package) *Config {
-	return &Config{
+	c := &Config{
 		RootPkg: rootpkg,
 		Config:  emitfile.NewConfig(rootdir),
 	}
+	c.HistFile = DefaultHistFileName
+	return c
 }
 
 func (c *Config) NewEmitter() *Emitter {
