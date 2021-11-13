@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
-	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/plugins"
@@ -51,10 +50,9 @@ func (c *Config) New(emitter *emitgo.Emitter) *Generator {
 		RootPkg: rootpkg,
 	}
 
-	g.Emitter.FileEmitter.Config = &emitfile.Config{
-		Verbose: g.Verbose,
-		Log:     g.Log,
-	}
+	g.Emitter.FileEmitter.Config.Verbose = g.Verbose
+	g.Emitter.FileEmitter.Config.Log = g.Log
+
 	return g
 }
 
