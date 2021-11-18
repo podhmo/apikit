@@ -40,12 +40,14 @@ func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
 	if c.Here != collector.Here {
 		collector.Add(collector.Here.Import(c.Here))
 	}
-	return c.collectImportsInner(collector, make(map[tinypkg.Node]bool, len(c.Depends)))
+	return c.collectImportsInner(collector, nil, nil)
 }
 
-func (c *Code) collectImportsInner(collector *tinypkg.ImportCollector, seen map[tinypkg.Node]bool) error {
-	seen[c] = true
-
+func (c *Code) collectImportsInner(
+	collector *tinypkg.ImportCollector,
+	seen map[tinypkg.Node]bool,
+	history []*Code,
+) error {
 	if len(c.imported) > 0 {
 		if err := collector.Merge(c.imported); err != nil {
 			return err
@@ -60,13 +62,18 @@ func (c *Code) collectImportsInner(collector *tinypkg.ImportCollector, seen map[
 			return fmt.Errorf("in import package : %w", err)
 		}
 	}
-	if c.Depends != nil { // TODO: cache
+	if c.Depends != nil {
+		seen = make(map[tinypkg.Node]bool, len(c.Depends)+len(history))
+		for _, x := range history {
+			seen[x] = true
+		}
+		seen[c] = true
 		for _, dep := range c.Depends {
 			if _, ok := seen[dep]; ok {
 				continue
 			}
 			if child, ok := dep.(*Code); ok {
-				if err := child.collectImportsInner(collector, seen); err != nil {
+				if err := child.collectImportsInner(collector, seen, append(history, c)); err != nil {
 					return fmt.Errorf("in child code %s: %w", child, err)
 				}
 			}
