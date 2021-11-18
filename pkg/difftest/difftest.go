@@ -2,6 +2,7 @@ package difftest
 
 import (
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"unsafe"
@@ -74,3 +75,9 @@ func LogDiffGotStringAndWantString(t *testing.T, gotString, wantString string) {
 		t.Logf("but got\n%s", gotString)
 	}
 }
+
+func NormalizeString(s string) string {
+	return strings.TrimSpace(spaceonlyRX.ReplaceAllString(s, "\n"))
+}
+
+var spaceonlyRX = regexp.MustCompile(`(?m)^\s+`)
