@@ -4,7 +4,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/podhmo/apikit/ext"
 	"github.com/podhmo/apikit/ext/enum"
@@ -12,20 +11,14 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
+	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		pc := ext.NewDefaultPluginContext(emitter)
+		pkg := emitter.RootPkg.Relative("generated", "")
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(main, ".").NewEmitter()
-	defer emitter.EmitWith(&err)
-
-	pc := ext.NewDefaultPluginContext(emitter)
-	pkg := emitter.RootPkg.Relative("generated", "")
-
-	if err := pc.IncludePlugin(pkg, enum.Options{EnumSet: enum.StringEnums("Grade", "s", "a", "b", "c", "d")}); err != nil {
-		return fmt.Errorf("generate Grade: %w", err)
-	}
-	return nil
+		enumset := enum.StringEnums("Grade", "s", "a", "b", "c", "d")
+		if err := pc.IncludePlugin(pkg, enum.Options{EnumSet: enumset}); err != nil {
+			return fmt.Errorf("generate Grade: %w", err)
+		}
+		return nil
+	})
 }
