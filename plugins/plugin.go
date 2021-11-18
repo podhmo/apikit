@@ -1,4 +1,4 @@
-package ext
+package plugins
 
 import (
 	"github.com/podhmo/apikit/code"

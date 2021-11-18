@@ -3,11 +3,8 @@
 package runtime
 
 import (
-	"m/foo/design"
-)
-
-import (
 	"errors"
+	"m/foo/design"
 	"net/http"
 	"reflect"
 

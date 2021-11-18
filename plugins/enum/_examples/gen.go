@@ -1,3 +1,4 @@
+//go:build apikit
 // +build apikit
 
 package main
@@ -5,14 +6,14 @@ package main
 import (
 	"fmt"
 
-	"github.com/podhmo/apikit/ext"
-	"github.com/podhmo/apikit/ext/enum"
 	"github.com/podhmo/apikit/pkg/emitgo"
+	"github.com/podhmo/apikit/plugins"
+	"github.com/podhmo/apikit/plugins/enum"
 )
 
 func main() {
 	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
-		pc := ext.NewDefaultPluginContext(emitter)
+		pc := plugins.NewDefaultPluginContext(emitter)
 		pkg := emitter.RootPkg.Relative("generated", "")
 
 		enumset := enum.StringEnums("Grade", "s", "a", "b", "c", "d")
