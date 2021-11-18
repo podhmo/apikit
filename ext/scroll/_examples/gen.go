@@ -3,27 +3,17 @@
 package main
 
 import (
-	"log"
-
-	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/ext"
 	"github.com/podhmo/apikit/ext/scroll"
+	"github.com/podhmo/apikit/pkg/emitgo"
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
+	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		pc := ext.NewDefaultPluginContext(emitter)
+		pkg := emitter.RootPkg.Relative("runtime", "")
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(main, ".").NewEmitter()
-	defer emitter.EmitWith(&err)
-
-	pc := ext.NewDefaultPluginContext(emitter)
-	pkg := emitter.RootPkg.Relative("runtime", "")
-
-	var latestID int = 0 // for scroll implemention
-	pc.IncludePlugin(pkg, scroll.Options{LatestIDTypeZeroValue: latestID})
-	return nil
+		var latestID int = 0 // for scroll implemention
+		return pc.IncludePlugin(pkg, scroll.Options{LatestIDTypeZeroValue: latestID})
+	})
 }
