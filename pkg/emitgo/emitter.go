@@ -1,6 +1,7 @@
 package emitgo
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"strings"
@@ -36,6 +37,17 @@ func (c *Config) NewEmitter() *Emitter {
 	}
 	emitter.FileEmitter.PathResolver.AddRoot("/"+c.RootPkg.Path, c.RootDir)
 	return emitter
+}
+
+func (c *Config) EmitWith(fn func(*Emitter) error) (err error) {
+	emitter := c.NewEmitter()
+	defer emitter.EmitWith(&err)
+	return fn(emitter)
+}
+func (c *Config) MustEmitWith(fn func(*Emitter) error) {
+	if err := c.EmitWith(fn); err != nil {
+		panic(fmt.Sprintf("!! %+v", err))
+	}
 }
 
 type Emitter struct {
