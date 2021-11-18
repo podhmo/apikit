@@ -53,7 +53,8 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 
 	// first, emit code
 	buf := new(bytes.Buffer)
-	if err := code.EmitCode(buf, code.Code); err != nil {
+	seen := make(map[tinypkg.Node]bool, len(code.Code.Depends))
+	if err := c.defaultEmitCodeInner(buf, code.Code, seen); err != nil {
 		return fmt.Errorf("emit code in code %q : %w", code.Name, err)
 	}
 
@@ -76,6 +77,25 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 	}
 	return nil
 
+}
+
+func (c *Config) defaultEmitCodeInner(w io.Writer, code *Code, seen map[tinypkg.Node]bool) error {
+	if _, ok := seen[code]; ok {
+		return nil
+	}
+	seen[code] = true
+
+	if err := code.EmitCode(w, code); err != nil {
+		return fmt.Errorf("emit code in code %q : %w", code.Name, err)
+	}
+	for _, x := range code.Depends {
+		if code, ok := x.(*Code); ok {
+			if err := c.defaultEmitCodeInner(w, code, seen); err != nil {
+				return fmt.Errorf("emit code in code %q : %w", code.Name, err)
+			}
+		}
+	}
+	return nil
 }
 
 func (c *Config) NewCode(
