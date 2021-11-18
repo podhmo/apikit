@@ -11,8 +11,7 @@ import (
 )
 
 func main() {
-	c := emitgo.NewConfigFromRelativePath(main, ".")
-	c.MustEmitWith(func(emitter *emitgo.Emitter) error {
+	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
 		pc := ext.NewDefaultPluginContext(emitter)
 		pkg := emitter.RootPkg.Relative("generated", "")
 
