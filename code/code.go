@@ -40,6 +40,12 @@ func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
 	if c.Here != collector.Here {
 		collector.Add(collector.Here.Import(c.Here))
 	}
+	return c.collectImportsInner(collector, make(map[tinypkg.Node]bool, len(c.Depends)))
+}
+
+func (c *Code) collectImportsInner(collector *tinypkg.ImportCollector, seen map[tinypkg.Node]bool) error {
+	seen[c] = true
+
 	if len(c.imported) > 0 {
 		if err := collector.Merge(c.imported); err != nil {
 			return err
@@ -55,12 +61,16 @@ func (c *Code) CollectImports(collector *tinypkg.ImportCollector) error {
 		}
 	}
 	if c.Depends != nil { // TODO: cache
-		seen := make(map[tinypkg.Node]struct{}, len(c.Depends))
 		for _, dep := range c.Depends {
 			if _, ok := seen[dep]; ok {
 				continue
 			}
-			seen[dep] = struct{}{}
+			if child, ok := dep.(*Code); ok {
+				if err := child.collectImportsInner(collector, seen); err != nil {
+					return fmt.Errorf("in child code %s: %w", child, err)
+				}
+			}
+			seen[dep] = true
 			if err := tinypkg.Walk(dep, collector.Collect); err != nil {
 				return fmt.Errorf("in walk : %w", err)
 			}
