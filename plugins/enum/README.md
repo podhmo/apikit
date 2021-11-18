@@ -5,7 +5,7 @@ the plugin for enum
 ## how to use in code generation
 
 ```go
-// pc is *ext.PluginContext
+// pc is *plugins.PluginContext
 // pkg is *tinypkg.Package
 
 enumSet := enum.EnumSet{Name "Rank", Enums:[]enum.Enum{{Name: "Gold"}, {Name: "Silver"}, {Name: "Bronze"}}}

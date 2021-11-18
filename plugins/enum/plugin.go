@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
-	"github.com/podhmo/apikit/ext"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/namelib"
 	"github.com/podhmo/apikit/pkg/tinypkg"
+	"github.com/podhmo/apikit/plugins"
 	"github.com/podhmo/apikit/resolve"
 )
 
@@ -31,7 +31,7 @@ type Options struct {
 	EnumSet EnumSet
 }
 
-func (o Options) IncludeMe(pc *ext.PluginContext, here *tinypkg.Package) error {
+func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) error {
 	return IncludeMe(
 		pc.Config, pc.Resolver, pc.Emitter,
 		here,

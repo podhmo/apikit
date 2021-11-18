@@ -1,3 +1,4 @@
+//go:build apikit
 // +build apikit
 
 package main

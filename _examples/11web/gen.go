@@ -1,3 +1,4 @@
+//go:build apikit
 // +build apikit
 
 package main
@@ -9,8 +10,8 @@ import (
 	"m/11web/design"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
+	"github.com/podhmo/apikit/plugins/scroll"
 	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/ext/scroll"
 	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
 )
 

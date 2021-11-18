@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/podhmo/apikit/code"
-	"github.com/podhmo/apikit/ext"
 	"github.com/podhmo/apikit/pkg/emitfile"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
+	"github.com/podhmo/apikit/plugins"
 	"github.com/podhmo/apikit/resolve"
 	"github.com/podhmo/apikit/translate"
 	"github.com/podhmo/apikit/web"
@@ -74,9 +74,9 @@ type Generator struct {
 // type GeneratorOption func(*Generator) error
 // func (g *Generator) WithPlugin()
 
-func (g *Generator) IncludePlugin(here *tinypkg.Package, plugin ext.Plugin) error {
+func (g *Generator) IncludePlugin(here *tinypkg.Package, plugin plugins.Plugin) error {
 	// TODO: fix panic using before Generate()
-	pc := &ext.PluginContext{Config: g.Config.Config, Emitter: g.Emitter, Resolver: g.Resolver}
+	pc := &plugins.PluginContext{Config: g.Config.Config, Emitter: g.Emitter, Resolver: g.Resolver}
 	return pc.IncludePlugin(here, plugin)
 }
 
