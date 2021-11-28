@@ -11,8 +11,6 @@ import (
 )
 
 type Analyzed struct {
-	ArgNames []string
-
 	Bindings struct {
 		Path      []*PathBinding
 		Query     []*QueryBinding
@@ -22,9 +20,16 @@ type Analyzed struct {
 	Vars struct {
 		Ignored []*tinypkg.Var
 
-		Provider          *tinypkg.Var
+		Provider *tinypkg.Var
+
 		GetProviderFunc   *tinypkg.Func
 		CreateHandlerFunc *tinypkg.Func // todo: fix
+	}
+	Names struct {
+		Name        string
+		Args        []string
+		QueryParams string
+		PathParams  string
 	}
 }
 
@@ -237,9 +242,9 @@ func Analyze(
 			}
 		}
 	}
-	analyzed := &Analyzed{
-		ArgNames: argNames,
-	}
+
+	analyzed := &Analyzed{}
+
 	analyzed.Bindings.Component = componentBindings
 	analyzed.Bindings.Query = queryBindings
 	analyzed.Bindings.Path = pathBindings
@@ -249,5 +254,10 @@ func Analyze(
 	analyzed.Vars.Provider = provider
 	analyzed.Vars.GetProviderFunc = getProviderFunc
 	analyzed.Vars.CreateHandlerFunc = createHandlerFunc
+
+	analyzed.Names.Args = argNames
+	analyzed.Names.QueryParams = "queryParams"
+	analyzed.Names.PathParams = "pathParams"
+	analyzed.Names.Name = info.Def.Name
 	return analyzed, nil
 }

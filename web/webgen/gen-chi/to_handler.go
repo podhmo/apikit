@@ -138,7 +138,13 @@ func WriteHandlerFunc(w io.Writer,
 	pathBindings := analyzed.Bindings.Path
 	queryBindings := analyzed.Bindings.Query
 	dataBindings := analyzed.Bindings.Data
-	argNames := analyzed.ArgNames
+
+	if name == "" {
+		name = analyzed.Names.Name
+	}
+	argNames := analyzed.Names.Args
+	queryParamsName := analyzed.Names.QueryParams
+	pathParamsName := analyzed.Names.PathParams
 
 	ignored := analyzed.Vars.Ignored
 	provider := analyzed.Vars.Provider
@@ -162,7 +168,7 @@ func WriteHandlerFunc(w io.Writer,
 		// runtime.BindPathParams(&pathParams, req, "<var 1>", ...);
 		if len(pathBindings) > 0 {
 			indent := "\t\t"
-			fmt.Fprintf(w, "%svar pathParams struct {\n", indent)
+			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
 			varNames := make([]string, len(pathBindings))
 			for i, b := range pathBindings {
 				fmt.Fprintf(w, "%s\t%s %s `query:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Var.Name)
@@ -243,12 +249,12 @@ func WriteHandlerFunc(w io.Writer,
 		// runtime.BindQuery(&queryParams, req);
 		if len(queryBindings) > 0 {
 			indent := "\t\t"
-			fmt.Fprintf(w, "%svar queryParams struct {\n", indent)
+			fmt.Fprintf(w, "%svar %s struct {\n", indent, queryParamsName)
 			for _, b := range queryBindings {
 				fmt.Fprintf(w, "%s\t%s %s `query:\"%s\"`\n", indent, b.Name, b.Sym, b.Name)
 			}
 			fmt.Fprintf(w, "%s}\n", indent)
-			fmt.Fprintf(w, "%sif err := %s(&queryParams, req); err != nil {\n", indent, bindQueryFunc)
+			fmt.Fprintf(w, "%sif err := %s(&%s, req); err != nil {\n", indent, bindQueryFunc, queryParamsName)
 			fmt.Fprintf(w, "\t%s_ = err // ignored\n", indent)
 			fmt.Fprintf(w, "%s}\n", indent)
 		}
