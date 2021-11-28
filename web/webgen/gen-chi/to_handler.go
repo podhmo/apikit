@@ -58,10 +58,30 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			}
 			c.AddDependency(t.ProviderModule)
 			c.AddDependency(t.RuntimeModule)
-			return WriteHandlerFunc(w, here,
+
+			analyzed, err := webgen.Analyze(
+				here,
 				t.Resolver, t.Tracker,
 				pathinfo, extraDefs,
-				t.ProviderModule, t.RuntimeModule,
+				t.ProviderModule,
+			)
+			if err != nil {
+				return fmt.Errorf("analyze %w", err)
+			}
+
+			if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
+				return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
+			}
+			if len(analyzed.Bindings.Data) > 1 {
+				return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
+			}
+
+			if name == "" {
+				name = analyzed.Names.Name
+			}
+			return WriteHandlerFunc(w, here, t.Resolver,
+				analyzed,
+				t.RuntimeModule,
 				name,
 			)
 		},
@@ -94,10 +114,7 @@ func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *reso
 func WriteHandlerFunc(w io.Writer,
 	here *tinypkg.Package,
 	resolver *resolve.Resolver,
-	tracker *resolve.Tracker,
-	info *web.PathInfo,
-	extraDefs []*resolve.Def,
-	providerModule *resolve.Module,
+	analyzed *webgen.Analyzed,
 	runtimeModule *resolve.Module,
 	name string,
 ) error {
@@ -122,41 +139,13 @@ func WriteHandlerFunc(w io.Writer,
 		return fmt.Errorf("in runtime module, %w", err)
 	}
 
-	actionFunc := tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
-
-	analyzed, err := webgen.Analyze(
-		here,
-		resolver, tracker,
-		info, extraDefs,
-		providerModule,
-	)
-	if err != nil {
-		return fmt.Errorf("analyze %w", err)
-	}
-
 	componentBindings := analyzed.Bindings.Component
 	pathBindings := analyzed.Bindings.Path
 	queryBindings := analyzed.Bindings.Query
 	dataBindings := analyzed.Bindings.Data
 
-	if name == "" {
-		name = analyzed.Names.Name
-	}
-	argNames := analyzed.Names.Args
-	queryParamsName := analyzed.Names.QueryParams
-	pathParamsName := analyzed.Names.PathParams
-
 	ignored := analyzed.Vars.Ignored
-	provider := analyzed.Vars.Provider
-	getProviderFunc := analyzed.Vars.GetProviderFunc
 	createHandlerFunc := analyzed.Vars.CreateHandlerFunc
-
-	if len(pathBindings) != len(info.VarNames) {
-		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", info.VarNames, pathBindings, info.Def.Symbol)
-	}
-	if len(dataBindings) > 1 {
-		return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(dataBindings), info.Def.Symbol)
-	}
 
 	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
@@ -168,6 +157,8 @@ func WriteHandlerFunc(w io.Writer,
 		// runtime.BindPathParams(&pathParams, req, "<var 1>", ...);
 		if len(pathBindings) > 0 {
 			indent := "\t\t"
+			pathParamsName := analyzed.Names.PathParams
+
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
 			varNames := make([]string, len(pathBindings))
 			for i, b := range pathBindings {
@@ -186,11 +177,10 @@ func WriteHandlerFunc(w io.Writer,
 		// 	<component> = <provider>.<method>()
 		// }
 		if len(componentBindings) > 0 || len(ignored) > 0 {
-			if len(componentBindings)-len(extraDefs) == 0 {
-				provider.Name = "_"
-			}
-
 			indent := "\t\t"
+			provider := analyzed.Vars.Provider
+			getProviderFunc := analyzed.Vars.GetProviderFunc
+
 			fmt.Fprintf(w, "%sreq, %s, err := %s(req)\n", indent, provider.Name, getProviderFunc.Name)
 			fmt.Fprintf(w, "%sif err != nil {\n", indent)
 			fmt.Fprintf(w, "%s\t%s(w, req, nil, err); return\n", indent, handleResultFunc)
@@ -249,6 +239,8 @@ func WriteHandlerFunc(w io.Writer,
 		// runtime.BindQuery(&queryParams, req);
 		if len(queryBindings) > 0 {
 			indent := "\t\t"
+			queryParamsName := analyzed.Names.QueryParams
+
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, queryParamsName)
 			for _, b := range queryBindings {
 				fmt.Fprintf(w, "%s\t%s %s `query:\"%s\"`\n", indent, b.Name, b.Sym, b.Name)
@@ -260,7 +252,9 @@ func WriteHandlerFunc(w io.Writer,
 		}
 
 		// result, err := <action>(....)
-		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionFunc, strings.Join(argNames, ", "))
+		actionName := analyzed.Names.ActionFunc
+		actionArgs := analyzed.Names.ActionFuncArgs
+		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionName, strings.Join(actionArgs, ", "))
 
 		// runtime.HandleResult(w, req, result, err)
 		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", handleResultFunc)

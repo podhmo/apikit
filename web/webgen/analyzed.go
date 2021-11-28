@@ -18,7 +18,7 @@ type Analyzed struct {
 		Data      []DataBinding
 	}
 	Vars struct {
-		Ignored []*tinypkg.Var
+		Ignored []*tinypkg.Var // rename: context.Context, etc...
 
 		Provider *tinypkg.Var
 
@@ -26,12 +26,17 @@ type Analyzed struct {
 		CreateHandlerFunc *tinypkg.Func // todo: fix
 	}
 	Names struct {
-		Name        string
-		Args        []string
-		QueryParams string
-		PathParams  string
+		Name           string
+		ActionFunc     string // core action
+		ActionFuncArgs []string
+		QueryParams    string
+		PathParams     string
 	}
 }
+
+// func (a *Analyzed) IsProviderNeeded() bool {
+// 	return len(a.Bindings.Component) > 0 || len(a.Vars.Ignored) > 0
+// }
 
 type PathBinding struct {
 	Name string // go's name
@@ -255,9 +260,16 @@ func Analyze(
 	analyzed.Vars.GetProviderFunc = getProviderFunc
 	analyzed.Vars.CreateHandlerFunc = createHandlerFunc
 
-	analyzed.Names.Args = argNames
+	analyzed.Names.Name = info.Def.Name
 	analyzed.Names.QueryParams = "queryParams"
 	analyzed.Names.PathParams = "pathParams"
-	analyzed.Names.Name = info.Def.Name
+	analyzed.Names.ActionFunc = tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
+	analyzed.Names.ActionFuncArgs = argNames
+
+	if len(componentBindings) > 0 || len(ignored) > 0 {
+		if len(componentBindings)-len(extraDefs) == 0 {
+			analyzed.Vars.Provider.Name = "_"
+		}
+	}
 	return analyzed, nil
 }
