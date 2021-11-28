@@ -48,7 +48,7 @@ func (t *Tracker) Track(def *Def) {
 			continue
 		case KindComponent:
 			t.track(arg)
-		case KindPrimitive, KindPrimitivePointer:
+		case KindPrimitive, KindPrimitivePointer, KindPrimitiveSlicePointer:
 			continue
 		default:
 			panic(fmt.Sprintf("unexpected kind %s", arg.Kind))

@@ -54,18 +54,22 @@ type Item struct {
 type Kind string
 
 const (
-	KindComponent        Kind = "component"        // pointer, function, interface
-	KindData             Kind = "data"             // struct
-	KindIgnored          Kind = "ignoerd"          // context.Context
-	KindPrimitive        Kind = "primitve"         // string, int, ...
-	KindPrimitivePointer Kind = "primitve-pointer" // *string, *int, ...
-	KindUnsupported      Kind = "unsupported"      // slice, map
+	KindComponent             Kind = "component"              // pointer, function, interface
+	KindData                  Kind = "data"                   // struct
+	KindIgnored               Kind = "ignoerd"                // context.Context
+	KindPrimitive             Kind = "primitve"               // string, int, ...
+	KindPrimitivePointer      Kind = "primitve-pointer"       // *string, *int, ...
+	KindPrimitiveSlicePointer Kind = "primitve-slice-pointer" // *[]string, *[]int, ...
+	KindUnsupported           Kind = "unsupported"            // slice, map
 )
 
 func DetectKind(s reflectshape.Shape, ignoreMap map[string]bool) Kind {
 	if s.GetLv() > 0 {
 		if _, ok := s.(reflectshape.Primitive); ok {
 			return KindPrimitivePointer
+		}
+		if _, ok := s.(reflectshape.Container); ok { // xxx
+			return KindPrimitiveSlicePointer
 		}
 		// TODO: if the pointer of primitive passed, treated as optional value? (not yet)
 		if ignoreMap[s.GetFullName()] {

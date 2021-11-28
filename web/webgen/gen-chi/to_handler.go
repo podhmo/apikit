@@ -203,6 +203,9 @@ func WriteHandlerFunc(w io.Writer,
 		case resolve.KindPrimitivePointer: // handle query string
 			queryBindings = append(queryBindings, &queryBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
 			argNames = append(argNames, "queryParams."+x.Name)
+		case resolve.KindPrimitiveSlicePointer: // handle query string
+			queryBindings = append(queryBindings, &queryBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
+			argNames = append(argNames, "queryParams."+x.Name)
 		case resolve.KindData: // handle request.Body
 			dataBindings = append(dataBindings, x)
 			argNames = append(argNames, x.Name)
