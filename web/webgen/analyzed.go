@@ -34,10 +34,6 @@ type Analyzed struct {
 	}
 }
 
-// func (a *Analyzed) IsProviderNeeded() bool {
-// 	return len(a.Bindings.Component) > 0 || len(a.Vars.Ignored) > 0
-// }
-
 type PathBinding struct {
 	Name string // go's name
 	Var  *web.PathVar
