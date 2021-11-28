@@ -37,10 +37,12 @@ type Logger interface {
 }
 
 type Config struct {
-	Verbose     bool
-	Debug       bool
-	Clean       bool
-	AlwaysWrite bool
+	Verbose bool
+	Debug   bool
+	Clean   bool
+
+	AlwaysWrite       bool
+	DisableManagement bool
 
 	RootDir  string // root directory for file-generation
 	CurDir   string // use for relative-path calculation in logging
@@ -138,8 +140,45 @@ func (e *Executor) Emit() error {
 	// TODO: run once
 	// TODO: dry-run option
 	// TODO: keep-going option
-
 	e.Log.Printf("emit files ...")
+	if e.DisableManagement {
+		return e.emit()
+	}
+	return e.emitWithManagement()
+}
+
+func (e *Executor) emit() error {
+	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
+
+	for _, action := range e.Actions {
+		fpath, err := e.PathResolver.ResolvePath(action.Path)
+		if err != nil {
+			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
+		}
+
+		buf := new(bytes.Buffer)
+		if err := action.Target.Emit(buf); err != nil {
+			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
+		}
+		b := buf.Bytes()
+		if action.FormatFunc != nil {
+			output, err := action.FormatFunc(b)
+			if err != nil && !e.AlwaysWrite {
+				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+			}
+			if err == nil {
+				b = output
+			}
+		}
+
+		if err := e.saver.SaveOrCreateFile(fpath, b, string(classify.ResultTypeCreate)); err != nil {
+			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
+		}
+	}
+	return nil
+}
+
+func (e *Executor) emitWithManagement() error {
 	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
 
 	hash := sha1.New()
