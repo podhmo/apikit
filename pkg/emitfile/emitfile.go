@@ -255,6 +255,9 @@ func (e *Executor) emitWithManagement() error {
 				e.Log.Printf("WARNING: remove %q is failed", r.Name())
 			}
 		case classify.ResultTypeNotChanged:
+			if e.Verbose {
+				e.Log.Printf("\t%s %s", r.Type, r.Name())
+			}
 			// noop
 		default:
 			if !e.AlwaysWrite {
