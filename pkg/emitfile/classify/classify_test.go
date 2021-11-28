@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCommit(t *testing.T) {
+func TestClassify(t *testing.T) {
 	lines := func(xs ...string) []string { return xs }
 	cases := []struct {
 		prev []string // "<name>@<content>"
