@@ -79,7 +79,7 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 			if name == "" {
 				name = analyzed.Names.Name
 			}
-			return WriteHandlerFunc(w, here, t.Resolver,
+			return WriteHandlerFunc(w, here,
 				analyzed,
 				t.RuntimeModule,
 				name,
@@ -113,7 +113,6 @@ func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *reso
 
 func WriteHandlerFunc(w io.Writer,
 	here *tinypkg.Package,
-	resolver *resolve.Resolver,
 	analyzed *webgen.Analyzed,
 	runtimeModule *resolve.Module,
 	name string,
@@ -220,7 +219,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(dataBindings) > 0 {
 			indent := "\t\t"
 			x := dataBindings[0]
-			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, resolver.Symbol(here, x.Shape)) // todo: depenency?
+			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, x.Sym)
 
 			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
 			fmt.Fprintf(w, "\t%sw.WriteHeader(400)\n", indent)

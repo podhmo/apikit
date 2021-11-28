@@ -15,7 +15,7 @@ type Analyzed struct {
 		Path      []*PathBinding
 		Query     []*QueryBinding
 		Component tinypkg.BindingList
-		Data      []DataBinding
+		Data      []*DataBinding
 	}
 	Vars struct {
 		Ignored []*tinypkg.Var // rename: context.Context, etc...
@@ -43,12 +43,14 @@ type PathBinding struct {
 	Var  *web.PathVar
 	Sym  tinypkg.Node
 }
-
 type QueryBinding struct {
 	Name string
 	Sym  tinypkg.Node
 }
-type DataBinding = resolve.Item
+type DataBinding struct {
+	Name string
+	Sym  tinypkg.Node
+}
 
 func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*resolve.Module, error) {
 	type providerT interface{}
@@ -91,7 +93,7 @@ func Analyze(
 	var componentBindings tinypkg.BindingList
 	var pathBindings []*PathBinding
 	var queryBindings []*QueryBinding
-	var dataBindings []DataBinding
+	var dataBindings []*DataBinding
 
 	var ignored []*tinypkg.Var
 	seen := map[reflectshape.Identity]bool{}
@@ -144,7 +146,7 @@ func Analyze(
 			queryBindings = append(queryBindings, &QueryBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
 			argNames = append(argNames, "queryParams."+x.Name)
 		case resolve.KindData: // handle request.Body
-			dataBindings = append(dataBindings, x)
+			dataBindings = append(dataBindings, &DataBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
 			argNames = append(argNames, x.Name)
 		default:
 			argNames = append(argNames, x.Name)
