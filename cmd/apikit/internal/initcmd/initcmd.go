@@ -50,6 +50,8 @@ func New() *clilib.Command {
 
 			ecfg := emitgo.NewConfig(filepath.Base(rootpkgPath), rootpkg)
 			ecfg.Verbose = cfg.Verbose
+			ecfg.DisableManagement = true
+
 			emitter := ecfg.NewEmitter()
 			defer emitter.EmitWith(&err)
 

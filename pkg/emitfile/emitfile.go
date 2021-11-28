@@ -2,6 +2,7 @@ package emitfile
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"fmt"
 	"io"
 	"log"
@@ -10,10 +11,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/podhmo/apikit/pkg/emitfile/classify"
 )
 
 var DEBUG = false
 var VERBOSE = false
+var CLEAN = false
 
 func init() {
 	if v, err := strconv.ParseBool(os.Getenv("DEBUG")); err == nil {
@@ -22,6 +27,9 @@ func init() {
 	if v, err := strconv.ParseBool(os.Getenv("VERBOSE")); err == nil {
 		VERBOSE = v
 	}
+	if v, err := strconv.ParseBool(os.Getenv("CLEAN")); err == nil {
+		CLEAN = v
+	}
 }
 
 type Logger interface {
@@ -29,12 +37,17 @@ type Logger interface {
 }
 
 type Config struct {
-	Verbose     bool
-	Debug       bool
-	AlwaysWrite bool
+	Verbose bool
+	Debug   bool
+	Clean   bool
 
-	RootDir string // root directory for file-generation
-	CurDir  string // use for relative-path calculation in logging
+	AlwaysWrite       bool
+	DisableManagement bool
+
+	RootDir  string // root directory for file-generation
+	CurDir   string // use for relative-path calculation in logging
+	HistDir  string // the directory for saving history
+	HistFile string
 
 	Log Logger
 }
@@ -43,6 +56,7 @@ func NewConfig(rootdir string) *Config {
 	c := &Config{
 		Debug:       DEBUG,
 		Verbose:     VERBOSE,
+		Clean:       CLEAN,
 		Log:         log.New(os.Stderr, "", 0),
 		AlwaysWrite: true,
 		RootDir:     rootdir,
@@ -51,6 +65,14 @@ func NewConfig(rootdir string) *Config {
 		c.Verbose = true
 		c.AlwaysWrite = true
 	}
+
+	if c.HistDir == "" {
+		c.HistDir = c.RootDir
+	}
+	if c.HistFile == "" {
+		c.HistFile = ".emitfile.json"
+	}
+
 	if cwd, err := os.Getwd(); err == nil {
 		c.CurDir = cwd
 	}
@@ -116,8 +138,18 @@ func (e *Executor) Register(path string, emitter Emitter) *EmitAction {
 func (e *Executor) Emit() error {
 	// TODO: strategy (failfast, runall)
 	// TODO: run once
+	// TODO: dry-run option
+	// TODO: keep-going option
 	e.Log.Printf("emit files ...")
+	if e.DisableManagement {
+		return e.emit()
+	}
+	return e.emitWithManagement()
+}
+
+func (e *Executor) emit() error {
 	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
+
 	for _, action := range e.Actions {
 		fpath, err := e.PathResolver.ResolvePath(action.Path)
 		if err != nil {
@@ -139,9 +171,107 @@ func (e *Executor) Emit() error {
 			}
 		}
 
-		if err := e.saver.SaveOrCreateFile(fpath, b); err != nil {
+		if err := e.saver.SaveOrCreateFile(fpath, b, string(classify.ResultTypeCreate)); err != nil {
 			return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
 		}
+	}
+	return nil
+}
+
+func (e *Executor) emitWithManagement() error {
+	sort.SliceStable(e.Actions, func(i, j int) bool { return e.Actions[i].Priority < e.Actions[j].Priority })
+
+	hash := sha1.New()
+	store := classify.JSONFileStore{Mtime: time.Now()}
+
+	histfilePath := filepath.Join(e.HistDir, e.HistFile)
+	prevEntries, err := store.ReadFile(histfilePath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("reading history %q is failed: %w", histfilePath, err)
+	}
+	entries := make([]classify.Entry, 0, len(e.Actions))
+	saveFuncMap := map[string]func(classify.ResultType) error{}
+
+	for _, action := range e.Actions {
+		fpath, err := e.PathResolver.ResolvePath(action.Path)
+		if err != nil {
+			return fmt.Errorf("resolve-path is failed in action=%q: %w", action.Name, err)
+		}
+
+		buf := new(bytes.Buffer)
+		if err := action.Target.Emit(buf); err != nil {
+			return fmt.Errorf("emit-func is failed in action=%q: %w", action.Name, err)
+		}
+		b := buf.Bytes()
+		if action.FormatFunc != nil {
+			output, err := action.FormatFunc(b)
+			if err != nil && !e.AlwaysWrite {
+				return fmt.Errorf("format-func is failed in action=%q: %w", action.Name, err)
+			}
+			if err == nil {
+				b = output
+			}
+		}
+
+		entries = append(entries, classify.NewEntry(fpath, func() ([]byte, error) {
+			hash.Reset()
+			if _, err := hash.Write(b); err != nil {
+				return nil, fmt.Errorf("write %s: %w", fpath, err)
+			}
+			return hash.Sum(nil), nil
+		}))
+
+		if _, alreadyExisted := saveFuncMap[fpath]; alreadyExisted {
+			e.Log.Printf("WARNING: %s is conflicted", fpath)
+		}
+		saveFuncMap[fpath] = func(typ classify.ResultType) error {
+			if err := e.saver.SaveOrCreateFile(fpath, b, string(typ)); err != nil {
+				return fmt.Errorf("write-file is failed in action=%q: %w", action.Name, err)
+			}
+			return nil
+		}
+	}
+
+	classified, err := classify.Classify(prevEntries, entries)
+	if err != nil {
+		return fmt.Errorf("classify, something wrong: %w", err)
+	}
+
+	for _, r := range classified {
+		if e.Config.Clean && r.Type != classify.ResultTypeDelete {
+			r.Type = classify.ResultTypeCreate
+		}
+
+		switch r.Type {
+		case classify.ResultTypeCreate, classify.ResultTypeUpdate:
+			if err := saveFuncMap[r.Name()](r.Type); err != nil {
+				return err
+			}
+		case classify.ResultTypeDelete:
+			if e.Verbose {
+				e.Log.Printf("\t%s %s", r.Type, r.Name())
+			}
+			if err := os.Remove(r.Name()); err != nil {
+				e.Log.Printf("WARNING: remove %q is failed", r.Name())
+			}
+		case classify.ResultTypeNotChanged:
+			if e.Verbose {
+				e.Log.Printf("\t%s %s", r.Type, r.Name())
+			}
+			// noop
+		default:
+			if !e.AlwaysWrite {
+				return fmt.Errorf("unexpected result type %v, file=%q", r.Type, r.Name())
+			}
+			e.Log.Printf("unexpected result type %v, file=%q", r.Type, r.Name())
+		}
+	}
+
+	if err := os.MkdirAll(filepath.Dir(histfilePath), 0744); err != nil {
+		return fmt.Errorf("prepare history directory: %w", err)
+	}
+	if err := store.WriteFile(histfilePath, classified); err != nil {
+		return fmt.Errorf("writing history %q is failed: %w", histfilePath, err)
 	}
 	return nil
 }

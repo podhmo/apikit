@@ -42,3 +42,4 @@ clean:
 	rm -rf 02*/component
 	rm -rf 11*/handler/
 	rm -rf 12*/handler/
+	rm -f `find . -name ".apikit.hist.json"`
