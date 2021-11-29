@@ -104,7 +104,7 @@ func (s *MergeParamsSelector) SelectInput(fn reflectshape.Function) reflectshape
 	if len(fn.Params.Values) == 0 {
 		return nil
 	}
-	shape, info, err := resolve.StructFromShape(s.resolver, fn, resolve.StructFromShapeOptions{SquashEmbedded: false})
+	shape, info, err := resolve.StructFromShape(s.resolver, fn)
 	if err != nil {
 		panic(err) // xxx
 	}
