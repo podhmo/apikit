@@ -19,6 +19,24 @@ type Analyzer struct {
 	RuntimeModule  *resolve.Module
 }
 
+func newAnalyzer(g *Generator) (*Analyzer, error) {
+	resolver := g.Resolver
+	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
+	if err != nil {
+		return nil, err
+	}
+	runtimeModule, err := RuntimeModule(g.RuntimePkg, resolver)
+	if err != nil {
+		return nil, err
+	}
+	return &Analyzer{
+		Resolver:       resolver,
+		Tracker:        g.Tracker,
+		ProviderModule: providerModule,
+		RuntimeModule:  runtimeModule,
+	}, nil
+}
+
 func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.Module, error) {
 	var moduleSkeleton struct {
 		PathParam                  func(*http.Request, string) string

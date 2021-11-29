@@ -104,25 +104,15 @@ func (g *Generator) Generate(
 		g.Log.Printf("\t* router package -> %s", g.RouterPkg.Path)
 	}
 
-	resolver := g.Tracker.Resolver
-	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
+	analyzer, err := newAnalyzer(g)
 	if err != nil {
-		return err
-	}
-	runtimeModule, err := RuntimeModule(g.RuntimePkg, resolver)
-	if err != nil {
-		return err
-	}
-	createHandleResultFunc, err := runtimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
-	if err != nil {
-		return err
+		return fmt.Errorf("new analyzer: %w", err)
 	}
 
-	analyzer := &Analyzer{
-		Resolver:       resolver,
-		Tracker:        g.Tracker,
-		ProviderModule: providerModule,
-		RuntimeModule:  runtimeModule,
+	resolver := g.Tracker.Resolver
+	createHandleResultFunc, err := analyzer.RuntimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
+	if err != nil {
+		return err
 	}
 
 	type handler struct {
@@ -174,6 +164,7 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
+				providerModule := analyzer.ProviderModule
 				c.AddDependency(providerModule)
 				getProviderFunc, err := providerModule.Type("getProvider")
 				if err != nil {
