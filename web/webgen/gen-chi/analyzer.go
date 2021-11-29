@@ -15,19 +15,19 @@ type Analyzer struct {
 	Resolver *resolve.Resolver
 	Tracker  *resolve.Tracker
 
-	ProviderModule *resolve.Module
-	RuntimeModule  *resolve.Module
+	ProviderModule *providerModule
+	RuntimeModule  *runtimeModule
 }
 
 func newAnalyzer(g *Generator) (*Analyzer, error) {
 	resolver := g.Resolver
 	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("in provider module: %w", err)
 	}
 	runtimeModule, err := RuntimeModule(g.RuntimePkg, resolver)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("in runtime module: %w", err)
 	}
 	return &Analyzer{
 		Resolver:       resolver,
@@ -37,7 +37,7 @@ func newAnalyzer(g *Generator) (*Analyzer, error) {
 	}, nil
 }
 
-func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.Module, error) {
+func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*runtimeModule, error) {
 	var moduleSkeleton struct {
 		PathParam                  func(*http.Request, string) string
 		HandleResult               func(http.ResponseWriter, *http.Request, interface{}, error)
@@ -56,10 +56,55 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*resolve.
 	if err != nil {
 		return nil, fmt.Errorf("new runtime module: %w", err)
 	}
-	return m, nil
+
+	handleResultFunc, err := m.Symbol(here, "HandleResult")
+	if err != nil {
+		return nil, err
+	}
+	bindPathParamsFunc, err := m.Symbol(here, "BindPathParams")
+	if err != nil {
+		return nil, err
+	}
+	bindQueryFunc, err := m.Symbol(here, "BindQuery")
+	if err != nil {
+		return nil, err
+	}
+	bindBodyFunc, err := m.Symbol(here, "BindBody")
+	if err != nil {
+		return nil, err
+	}
+	validateStructFunc, err := m.Symbol(here, "ValidateStruct")
+	if err != nil {
+		return nil, err
+	}
+	createHandleResultFunc, err := m.Symbol(here, "CreateHandleResultFunction")
+	if err != nil {
+		return nil, err
+	}
+
+	mm := &runtimeModule{Module: m}
+	mm.Symbols.HandleResult = handleResultFunc
+	mm.Symbols.CreateHandleResult = createHandleResultFunc
+	mm.Symbols.BindPathParams = bindPathParamsFunc
+	mm.Symbols.BindQuery = bindQueryFunc
+	mm.Symbols.BindBody = bindBodyFunc
+	mm.Symbols.ValidateStruct = validateStructFunc
+	return mm, nil
 }
 
-func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*resolve.Module, error) {
+type runtimeModule struct {
+	*resolve.Module
+	Symbols struct {
+		HandleResult       *tinypkg.ImportedSymbol
+		CreateHandleResult *tinypkg.ImportedSymbol
+		BindPathParams     *tinypkg.ImportedSymbol
+		BindQuery          *tinypkg.ImportedSymbol
+		BindBody           *tinypkg.ImportedSymbol
+		ValidateStruct     *tinypkg.ImportedSymbol
+	}
+}
+
+func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*providerModule, error) {
 	type providerT interface{}
 	var moduleSkeleton struct {
 		T             providerT
@@ -76,7 +121,34 @@ func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerN
 	if err != nil {
 		return nil, fmt.Errorf("new provider module: %w", err)
 	}
-	return m, nil
+
+	// TODO: detect name automatically
+	createHandlerFunc, err := m.Type("createHandler")
+	if err != nil {
+		return nil, err
+	}
+	createHandlerFunc.Args[0].Name = "getProvider" // todo: remove
+	getProviderFunc := createHandlerFunc.Args[0].Node.(*tinypkg.Func)
+	getProviderFunc.Name = "getProvider" // todo: remove
+	provider := &tinypkg.Var{Name: "provider", Node: getProviderFunc.Returns[0].Node}
+
+	mm := &providerModule{Module: m}
+	mm.Funcs.CreateHandler = createHandlerFunc
+	mm.Funcs.GetProvider = getProviderFunc
+	mm.Vars.Provider = provider
+	return mm, nil
+}
+
+type providerModule struct {
+	*resolve.Module
+
+	Funcs struct {
+		CreateHandler *tinypkg.Func
+		GetProvider   *tinypkg.Func
+	}
+	Vars struct {
+		Provider *tinypkg.Var
+	}
 }
 
 type Analyzed struct {
@@ -105,7 +177,7 @@ func (a *Analyzer) Analyze(here *tinypkg.Package, node *web.WalkerNode) (*Analyz
 		here,
 		a.Resolver, a.Tracker,
 		pathinfo, extraDefs,
-		a.ProviderModule,
+		a.ProviderModule.Vars.Provider,
 	)
 	if err != nil {
 		return nil, err

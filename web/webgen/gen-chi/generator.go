@@ -110,10 +110,6 @@ func (g *Generator) Generate(
 	}
 
 	resolver := g.Tracker.Resolver
-	createHandleResultFunc, err := analyzer.RuntimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
-	if err != nil {
-		return err
-	}
 
 	type handler struct {
 		name   string
@@ -270,6 +266,8 @@ func (g *Generator) Generate(
 			if _, err := io.Copy(w, r); err != nil {
 				return err
 			}
+
+			createHandleResultFunc := analyzer.RuntimeModule.Symbols.CreateHandleResult
 
 			c.Import(pkg)
 			fmt.Fprintln(w, "func init(){")

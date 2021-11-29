@@ -2,7 +2,6 @@ package webgen
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -18,12 +17,8 @@ type Analyzed struct {
 		Data      []*DataBinding
 	}
 	Vars struct {
-		Ignored []*tinypkg.Var // rename: context.Context, etc...
-
+		Ignored  []*tinypkg.Var // rename: context.Context, etc...
 		Provider *tinypkg.Var
-
-		GetProviderFunc   *tinypkg.Func
-		CreateHandlerFunc *tinypkg.Func // todo: fix
 	}
 	Names struct {
 		ActionFunc     string // core action
@@ -94,43 +89,14 @@ type DataBinding struct {
 	Sym  tinypkg.Node
 }
 
-func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*resolve.Module, error) {
-	type providerT interface{}
-	var moduleSkeleton struct {
-		T             providerT
-		getProvider   func(*http.Request) (*http.Request, providerT, error)
-		createHandler func(
-			getProvider func(*http.Request) (*http.Request, providerT, error),
-		) http.HandlerFunc
-	}
-	pm, err := resolver.PreModule(moduleSkeleton)
-	if err != nil {
-		return nil, fmt.Errorf("new provider pre-module: %w", err)
-	}
-	m, err := pm.NewModule(here, here.NewSymbol(providerName))
-	if err != nil {
-		return nil, fmt.Errorf("new provider module: %w", err)
-	}
-	return m, nil
-}
-
 func Analyze(
 	here *tinypkg.Package,
 	resolver *resolve.Resolver,
 	tracker *resolve.Tracker,
 	info *web.PathInfo, // todo: remove
 	extraDefs []*resolve.Def,
-	providerModule *resolve.Module,
+	provider *tinypkg.Var,
 ) (*Analyzed, error) {
-	// TODO: typed
-	createHandlerFunc, err := providerModule.Type("createHandler")
-	if err != nil {
-		return nil, fmt.Errorf("in provider module, %w", err)
-	}
-	createHandlerFunc.Args[0].Name = "getProvider" // todo: remove
-	getProviderFunc := createHandlerFunc.Args[0].Node.(*tinypkg.Func)
-	getProviderFunc.Name = "getProvider" // todo: remove
-	provider := &tinypkg.Var{Name: "provider", Node: getProviderFunc.Returns[0].Node}
 
 	var componentBindings tinypkg.BindingList
 	var pathBindings []*PathBinding
@@ -307,8 +273,6 @@ func Analyze(
 
 	analyzed.Vars.Ignored = ignored
 	analyzed.Vars.Provider = provider
-	analyzed.Vars.GetProviderFunc = getProviderFunc
-	analyzed.Vars.CreateHandlerFunc = createHandlerFunc
 
 	analyzed.Names.QueryParams = "queryParams"
 	analyzed.Names.PathParams = "pathParams"

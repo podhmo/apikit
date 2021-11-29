@@ -59,27 +59,7 @@ func WriteHandlerFunc(w io.Writer,
 	name string,
 ) error {
 	runtimeModule := analyzed.analyzer.RuntimeModule
-
-	handleResultFunc, err := runtimeModule.Symbol(here, "HandleResult")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindPathParamsFunc, err := runtimeModule.Symbol(here, "BindPathParams")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindQueryFunc, err := runtimeModule.Symbol(here, "BindQuery")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindBodyFunc, err := runtimeModule.Symbol(here, "BindBody")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	validateStructFunc, err := runtimeModule.Symbol(here, "ValidateStruct")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
+	providerModule := analyzed.analyzer.ProviderModule
 
 	componentBindings := analyzed.Bindings.Component
 	pathBindings := analyzed.Bindings.Path
@@ -87,7 +67,9 @@ func WriteHandlerFunc(w io.Writer,
 	dataBindings := analyzed.Bindings.Data
 
 	ignored := analyzed.Vars.Ignored
-	createHandlerFunc := analyzed.Vars.CreateHandlerFunc
+
+	handleResultFunc := runtimeModule.Symbols.HandleResult
+	createHandlerFunc := providerModule.Funcs.CreateHandler
 
 	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
@@ -100,6 +82,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(pathBindings) > 0 {
 			indent := "\t\t"
 			pathParamsName := analyzed.Names.PathParams
+			bindPathParamsFunc := runtimeModule.Symbols.BindPathParams
 
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
 			varNames := make([]string, len(pathBindings))
@@ -121,7 +104,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(componentBindings) > 0 || len(ignored) > 0 {
 			indent := "\t\t"
 			provider := analyzed.Vars.Provider
-			getProviderFunc := analyzed.Vars.GetProviderFunc
+			getProviderFunc := providerModule.Funcs.GetProvider
 
 			fmt.Fprintf(w, "%sreq, %s, err := %s(req)\n", indent, provider.Name, getProviderFunc.Name)
 			fmt.Fprintf(w, "%sif err != nil {\n", indent)
@@ -162,6 +145,9 @@ func WriteHandlerFunc(w io.Writer,
 		if len(dataBindings) > 0 {
 			indent := "\t\t"
 			x := dataBindings[0]
+			bindBodyFunc := runtimeModule.Symbols.BindBody
+			validateStructFunc := runtimeModule.Symbols.ValidateStruct
+
 			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, x.Sym)
 
 			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
@@ -182,6 +168,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(queryBindings) > 0 {
 			indent := "\t\t"
 			queryParamsName := analyzed.Names.QueryParams
+			bindQueryFunc := runtimeModule.Symbols.BindQuery
 
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, queryParamsName)
 			for _, b := range queryBindings {
