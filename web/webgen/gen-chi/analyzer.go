@@ -38,14 +38,14 @@ func newAnalyzer(g *Generator) (*Analyzer, error) {
 }
 
 func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*runtimeModule, error) {
+	// create from ./webruntime
 	var moduleSkeleton struct {
-		PathParam                  func(*http.Request, string) string
 		HandleResult               func(http.ResponseWriter, *http.Request, interface{}, error)
 		CreateHandleResultFunction func(func(error) int) func(http.ResponseWriter, *http.Request, interface{}, error)
 
+		BindBody       func(dst interface{}, src io.ReadCloser) error
 		BindPathParams func(dst interface{}, req *http.Request, keys ...string) error
 		BindQuery      func(dst interface{}, req *http.Request) error
-		BindBody       func(dst interface{}, src io.ReadCloser) error
 		ValidateStruct func(ob interface{}) error
 	}
 	pm, err := resolver.PreModule(moduleSkeleton)
