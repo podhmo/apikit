@@ -279,9 +279,10 @@ func Analyze(
 	analyzed.Names.ActionFunc = tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 	analyzed.Names.ActionFuncArgs = argNames
 
+	// if provider is not used, changes to "_"
 	if len(componentBindings) > 0 || len(ignored) > 0 {
 		if len(componentBindings)-len(extraDefs) == 0 {
-			analyzed.Vars.Provider.Name = "_"
+			analyzed.Vars.Provider = &tinypkg.Var{Name: "_", Node: analyzed.Vars.Provider.Node}
 		}
 	}
 	return analyzed, nil
