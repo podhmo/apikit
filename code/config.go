@@ -53,7 +53,7 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 
 	// first, emit code
 	buf := new(bytes.Buffer)
-	seen := make(map[tinypkg.Node]bool, len(code.Code.Depends))
+	seen := make(map[codeLike]bool, len(code.Code.depends))
 	if err := c.defaultEmitCodeInner(buf, code.Code, seen); err != nil {
 		return fmt.Errorf("emit code in code %q : %w", code.Name, err)
 	}
@@ -76,22 +76,25 @@ func (c *Config) defaultEmitCodeFunc(w io.Writer, code *CodeEmitter) error {
 		return fmt.Errorf("copy body in code %q, something wrong: %w", code.Name, err)
 	}
 	return nil
-
 }
 
-func (c *Config) defaultEmitCodeInner(w io.Writer, code *Code, seen map[tinypkg.Node]bool) error {
+type codeLike interface {
+	Dependencies() []tinypkg.Node
+	EmitContent(w io.Writer) error
+}
+
+func (c *Config) defaultEmitCodeInner(w io.Writer, code codeLike, seen map[codeLike]bool) error {
 	if _, ok := seen[code]; ok {
 		return nil
 	}
 	seen[code] = true
-
-	if err := code.EmitCode(w, code); err != nil {
-		return fmt.Errorf("emit code in code %q : %w", code.Name, err)
+	if err := code.EmitContent(w); err != nil {
+		return err
 	}
-	for _, x := range code.Depends {
-		if code, ok := x.(*Code); ok {
+	for _, x := range code.Dependencies() {
+		if code, ok := x.(codeLike); ok {
 			if err := c.defaultEmitCodeInner(w, code, seen); err != nil {
-				return fmt.Errorf("emit code in code %q : %w", code.Name, err)
+				return err
 			}
 		}
 	}
@@ -107,6 +110,17 @@ func (c *Config) NewCode(
 		Name:     name,
 		Here:     here,
 		EmitCode: emitCode,
+		Config:   c,
+	}
+}
+func (c *Config) ZeroCode(
+	here *tinypkg.Package,
+	name string,
+) *Code {
+	return &Code{
+		Name:     name,
+		Here:     here,
+		EmitCode: func(io.Writer, *Code) error { return nil },
 		Config:   c,
 	}
 }
