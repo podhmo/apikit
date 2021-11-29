@@ -16,7 +16,7 @@ type Analyzer struct {
 	Tracker  *resolve.Tracker
 
 	ProviderModule *providerModule
-	RuntimeModule  *runtimeModule
+	runtimeModule  *runtimeModule
 }
 
 func newAnalyzer(g *Generator) (*Analyzer, error) {
@@ -33,7 +33,7 @@ func newAnalyzer(g *Generator) (*Analyzer, error) {
 		Resolver:       resolver,
 		Tracker:        g.Tracker,
 		ProviderModule: providerModule,
-		RuntimeModule:  runtimeModule,
+		runtimeModule:  runtimeModule,
 	}, nil
 }
 
@@ -56,7 +56,10 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*runtimeM
 	if err != nil {
 		return nil, fmt.Errorf("new runtime module: %w", err)
 	}
+	return &runtimeModule{Module: m, Initialized: false}, nil
+}
 
+func (m *runtimeModule) Imported(here *tinypkg.Package) (*runtimeModule, error) {
 	handleResultFunc, err := m.Symbol(here, "HandleResult")
 	if err != nil {
 		return nil, err
@@ -82,7 +85,7 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*runtimeM
 		return nil, err
 	}
 
-	mm := &runtimeModule{Module: m}
+	mm := &runtimeModule{Module: m.Module, Initialized: true}
 	mm.Symbols.HandleResult = handleResultFunc
 	mm.Symbols.CreateHandleResult = createHandleResultFunc
 	mm.Symbols.BindPathParams = bindPathParamsFunc
@@ -94,7 +97,8 @@ func RuntimeModule(here *tinypkg.Package, resolver *resolve.Resolver) (*runtimeM
 
 type runtimeModule struct {
 	*resolve.Module
-	Symbols struct {
+	Initialized bool
+	Symbols     struct {
 		HandleResult       *tinypkg.ImportedSymbol
 		CreateHandleResult *tinypkg.ImportedSymbol
 		BindPathParams     *tinypkg.ImportedSymbol
@@ -153,7 +157,8 @@ type providerModule struct {
 
 type Analyzed struct {
 	*webgen.Analyzed
-	analyzer *Analyzer
+	RuntimeModule  *runtimeModule
+	ProviderModule *providerModule
 }
 
 func (a *Analyzer) Analyze(here *tinypkg.Package, node *web.WalkerNode) (*Analyzed, error) {
@@ -182,8 +187,11 @@ func (a *Analyzer) Analyze(here *tinypkg.Package, node *web.WalkerNode) (*Analyz
 	if err != nil {
 		return nil, err
 	}
+
+	importedRuntimeModule, err := a.runtimeModule.Imported(here) // import m/runtime
 	return &Analyzed{
-		Analyzed: analyzed,
-		analyzer: a,
+		Analyzed:       analyzed,
+		RuntimeModule:  importedRuntimeModule,
+		ProviderModule: a.ProviderModule,
 	}, nil
 }

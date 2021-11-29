@@ -131,7 +131,7 @@ func (g *Generator) Generate(
 			if err != nil {
 				return fmt.Errorf("analyze failure: %w", err)
 			}
-			code := g.toHandler(here, analyzed, name)
+			code := ToHandlerCode(here, g.Config.Config, analyzed, name)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
@@ -162,10 +162,7 @@ func (g *Generator) Generate(
 			func(w io.Writer, c *code.Code) error {
 				providerModule := analyzer.ProviderModule
 				c.AddDependency(providerModule)
-				getProviderFunc, err := providerModule.Type("getProvider")
-				if err != nil {
-					return fmt.Errorf("in provider module, %w", err)
-				}
+				getProviderFunc := providerModule.Funcs.GetProvider
 
 				chi := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
 				f := here.NewFunc("Mount", []*tinypkg.Var{
@@ -267,7 +264,11 @@ func (g *Generator) Generate(
 				return err
 			}
 
-			createHandleResultFunc := analyzer.RuntimeModule.Symbols.CreateHandleResult
+			runtimeModule, err := analyzer.runtimeModule.Imported(c.Here) // xxx
+			if err != nil {
+				return err
+			}
+			createHandleResultFunc := runtimeModule.Symbols.CreateHandleResult
 
 			c.Import(pkg)
 			fmt.Fprintln(w, "func init(){")

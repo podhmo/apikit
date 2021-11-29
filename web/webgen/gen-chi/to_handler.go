@@ -10,8 +10,9 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-func (g *Generator) toHandler(
+func ToHandlerCode(
 	here *tinypkg.Package,
+	config *code.Config,
 	analyzed *Analyzed,
 	name string,
 ) *code.CodeEmitter {
@@ -19,23 +20,23 @@ func (g *Generator) toHandler(
 		name = analyzed.Name
 	}
 
-	if g.Config.Verbose {
+	if config.Verbose {
 		def := analyzed.PathInfo.Def
-		g.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
+		config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
 	}
 
 	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
-		Config: g.Config.Config,
+		Config: config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			return analyzed.CollectImports(collector)
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
 
-			c.AddDependency(analyzed.analyzer.ProviderModule)
-			c.AddDependency(analyzed.analyzer.RuntimeModule)
+			c.AddDependency(analyzed.ProviderModule)
+			c.AddDependency(analyzed.RuntimeModule)
 
 			pathinfo := analyzed.PathInfo
 			if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
@@ -58,8 +59,8 @@ func WriteHandlerFunc(w io.Writer,
 	analyzed *Analyzed,
 	name string,
 ) error {
-	runtimeModule := analyzed.analyzer.RuntimeModule
-	providerModule := analyzed.analyzer.ProviderModule
+	runtimeModule := analyzed.RuntimeModule
+	providerModule := analyzed.ProviderModule
 
 	componentBindings := analyzed.Bindings.Component
 	pathBindings := analyzed.Bindings.Path
