@@ -8,80 +8,36 @@ import (
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/web/webgen"
 )
 
-func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.CodeEmitter {
-	def := t.Resolver.Def(node.Node.Value)
+func ToHandlerCode(
+	here *tinypkg.Package,
+	config *code.Config,
+	analyzed *Analyzed,
+	name string,
+) *code.CodeEmitter {
 	if name == "" {
-		name = def.Name
-	}
-	t.Tracker.Track(def)
-
-	if t.Config.Verbose {
-		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
+		name = analyzed.Name
 	}
 
-	extraDeps := web.GetMetaData(node.Node).ExtraDependencies
-	extraDefs := make([]*resolve.Def, len(extraDeps))
-	for i, fn := range extraDeps {
-		extraDef := t.Resolver.Def(fn)
-		t.Tracker.Track(extraDef)
-		extraDefs[i] = extraDef
+	if config.Verbose {
+		def := analyzed.PathInfo.Def
+		config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
 	}
 
 	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
-		Config: t.Config,
+		Config: config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
-			// todo: support provider *tinypkg.Var
-			if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, def); err != nil {
-				return err
-			}
-			if len(extraDefs) > 0 {
-				for _, extraDef := range extraDefs {
-					if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, extraDef); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
+			return analyzed.CollectImports(collector)
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
-			if err != nil {
-				return err
-			}
-			c.AddDependency(t.ProviderModule)
-			c.AddDependency(t.RuntimeModule)
-
-			analyzed, err := webgen.Analyze(
-				here,
-				t.Resolver, t.Tracker,
-				pathinfo, extraDefs,
-				t.ProviderModule,
-			)
-			if err != nil {
-				return fmt.Errorf("analyze %w", err)
-			}
-
-			if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
-				return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
-			}
-			if len(analyzed.Bindings.Data) > 1 {
-				return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
-			}
-
-			if name == "" {
-				name = analyzed.Names.Name
-			}
+			c.AddDependency(analyzed.ProviderModule)
+			c.AddDependency(analyzed.RuntimeModule)
 			return WriteHandlerFunc(w, here,
 				analyzed,
-				t.RuntimeModule,
 				name,
 			)
 		},
@@ -89,54 +45,13 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 	return &code.CodeEmitter{Code: c}
 }
 
-func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) error {
-	here := collector.Here
-	use := collector.Collect
-
-	for _, x := range def.Args {
-		sym := resolver.Symbol(here, x.Shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return fmt.Errorf("on walk args %s: %w", sym, err)
-		}
-	}
-	for _, x := range def.Returns {
-		sym := resolver.Symbol(here, x.Shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return fmt.Errorf("on walk returns %s: %w", sym, err)
-		}
-	}
-	if err := use(def.Symbol); err != nil {
-		return fmt.Errorf("on self %s: %w", def.Symbol, err)
-	}
-	return nil
-}
-
 func WriteHandlerFunc(w io.Writer,
 	here *tinypkg.Package,
-	analyzed *webgen.Analyzed,
-	runtimeModule *resolve.Module,
+	analyzed *Analyzed,
 	name string,
 ) error {
-	handleResultFunc, err := runtimeModule.Symbol(here, "HandleResult")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindPathParamsFunc, err := runtimeModule.Symbol(here, "BindPathParams")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindQueryFunc, err := runtimeModule.Symbol(here, "BindQuery")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	bindBodyFunc, err := runtimeModule.Symbol(here, "BindBody")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
-	validateStructFunc, err := runtimeModule.Symbol(here, "ValidateStruct")
-	if err != nil {
-		return fmt.Errorf("in runtime module, %w", err)
-	}
+	runtimeModule := analyzed.RuntimeModule
+	providerModule := analyzed.ProviderModule
 
 	componentBindings := analyzed.Bindings.Component
 	pathBindings := analyzed.Bindings.Path
@@ -144,7 +59,17 @@ func WriteHandlerFunc(w io.Writer,
 	dataBindings := analyzed.Bindings.Data
 
 	ignored := analyzed.Vars.Ignored
-	createHandlerFunc := analyzed.Vars.CreateHandlerFunc
+
+	handleResultFunc := runtimeModule.Symbols.HandleResult
+	createHandlerFunc := providerModule.Funcs.CreateHandler
+
+	pathinfo := analyzed.PathInfo
+	if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
+		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
+	}
+	if len(analyzed.Bindings.Data) > 1 {
+		return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
+	}
 
 	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
@@ -157,6 +82,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(pathBindings) > 0 {
 			indent := "\t\t"
 			pathParamsName := analyzed.Names.PathParams
+			bindPathParamsFunc := runtimeModule.Symbols.BindPathParams
 
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
 			varNames := make([]string, len(pathBindings))
@@ -178,7 +104,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(componentBindings) > 0 || len(ignored) > 0 {
 			indent := "\t\t"
 			provider := analyzed.Vars.Provider
-			getProviderFunc := analyzed.Vars.GetProviderFunc
+			getProviderFunc := providerModule.Funcs.GetProvider
 
 			fmt.Fprintf(w, "%sreq, %s, err := %s(req)\n", indent, provider.Name, getProviderFunc.Name)
 			fmt.Fprintf(w, "%sif err != nil {\n", indent)
@@ -219,6 +145,9 @@ func WriteHandlerFunc(w io.Writer,
 		if len(dataBindings) > 0 {
 			indent := "\t\t"
 			x := dataBindings[0]
+			bindBodyFunc := runtimeModule.Symbols.BindBody
+			validateStructFunc := runtimeModule.Symbols.ValidateStruct
+
 			fmt.Fprintf(w, "%svar %s %s\n", indent, x.Name, x.Sym)
 
 			fmt.Fprintf(w, "%sif err := %s(&%s, req.Body); err != nil {\n", indent, bindBodyFunc, x.Name)
@@ -239,6 +168,7 @@ func WriteHandlerFunc(w io.Writer,
 		if len(queryBindings) > 0 {
 			indent := "\t\t"
 			queryParamsName := analyzed.Names.QueryParams
+			bindQueryFunc := runtimeModule.Symbols.BindQuery
 
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, queryParamsName)
 			for _, b := range queryBindings {

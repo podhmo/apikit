@@ -76,6 +76,11 @@ func TestWriteHandlerFunc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error %+v", err)
 	}
+	analyzer := &Analyzer{
+		Resolver:       resolver,
+		ProviderModule: providerModule,
+		runtimeModule:  runtimeModule,
+	}
 
 	cases := []struct {
 		msg      string
@@ -482,24 +487,22 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 	for _, c := range cases {
 		c := c
 		t.Run(c.msg, func(t *testing.T) {
-			translator := &Translator{
-				Resolver:       config.Resolver,
-				Tracker:        resolve.NewTracker(config.Resolver),
-				Config:         config.Config,
-				RuntimeModule:  runtimeModule,
-				ProviderModule: providerModule,
-			}
-
+			analyzer.Tracker = resolve.NewTracker(config.Resolver)
 			r := web.NewRouter()
 			c.mount(r)
 			if c.override != nil {
-				c.override(translator.Tracker)
+				c.override(analyzer.Tracker)
 			}
 
 			if err := web.Walk(r, func(n *web.WalkerNode) error {
-				code := translator.TranslateToHandler(c.here, n, handlerName)
+				analyzed, err := analyzer.Analyze(c.here, n)
+				if err != nil {
+					t.Fatalf("analyze: %+v", err)
+				}
+
+				code := ToHandlerCode(c.here, config.Config, analyzed, handlerName)
 				var buf strings.Builder
-				err := code.Emit(&buf)
+				err = code.Emit(&buf)
 
 				if c.hasErr {
 					if err == nil {
@@ -507,10 +510,10 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 					}
 					return nil
 				}
-
 				if err != nil {
 					t.Fatalf("unexpected error %+v", err)
 				}
+
 				if want, got := strings.TrimSpace(c.want), strings.TrimSpace(buf.String()); want != got {
 					difftest.LogDiffGotStringAndWantString(t, got, want)
 				}

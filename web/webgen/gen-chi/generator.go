@@ -104,32 +104,12 @@ func (g *Generator) Generate(
 		g.Log.Printf("\t* router package -> %s", g.RouterPkg.Path)
 	}
 
-	resolver := g.Tracker.Resolver
-	providerModule, err := ProviderModule(g.ProviderPkg, resolver, g.Config.ProviderName)
+	analyzer, err := newAnalyzer(g)
 	if err != nil {
-		return err
-	}
-	runtimeModule, err := RuntimeModule(g.RuntimePkg, resolver)
-	if err != nil {
-		return err
-	}
-	createHandleResultFunc, err := runtimeModule.Symbol(g.RuntimePkg, "CreateHandleResultFunction")
-	if err != nil {
-		return err
+		return fmt.Errorf("new analyzer: %w", err)
 	}
 
-	translator := &Translator{
-		Resolver:       resolver,
-		Tracker:        g.Tracker,
-		Config:         g.Config.Config,
-		ProviderModule: providerModule,
-		RuntimeModule:  runtimeModule,
-		internal: &translate.Translator{
-			Tracker:  g.Tracker,
-			Resolver: resolver,
-			Config:   g.Config.Config,
-		},
-	}
+	resolver := g.Tracker.Resolver
 
 	type handler struct {
 		name   string
@@ -146,7 +126,12 @@ func (g *Generator) Generate(
 
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
 			name := web.GetMetaData(node.Node).Name
-			code := translator.TranslateToHandler(here, node, name)
+			analyzed, err := analyzer.Analyze(here, node)
+			// TODO: add hook
+			if err != nil {
+				return fmt.Errorf("analyze failure: %w", err)
+			}
+			code := ToHandlerCode(here, g.Config.Config, analyzed, name)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
@@ -175,11 +160,9 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
+				providerModule := analyzer.ProviderModule
 				c.AddDependency(providerModule)
-				getProviderFunc, err := providerModule.Type("getProvider")
-				if err != nil {
-					return fmt.Errorf("in provider module, %w", err)
-				}
+				getProviderFunc := providerModule.Funcs.GetProvider
 
 				chi := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
 				f := here.NewFunc("Mount", []*tinypkg.Var{
@@ -203,7 +186,13 @@ func (g *Generator) Generate(
 	{
 		here := g.ProviderPkg
 		name := g.Config.ProviderName // xxx
-		code := translator.internal.ExtractProviderInterface(here, name)
+
+		translator := &translate.Translator{
+			Tracker:  g.Tracker,
+			Resolver: resolver,
+			Config:   g.Config.Config,
+		}
+		code := translator.ExtractProviderInterface(here, name)
 		g.Emitter.Register(here, code.Name, code)
 	}
 
@@ -274,6 +263,12 @@ func (g *Generator) Generate(
 			if _, err := io.Copy(w, r); err != nil {
 				return err
 			}
+
+			runtimeModule, err := analyzer.runtimeModule.Imported(c.Here) // xxx
+			if err != nil {
+				return err
+			}
+			createHandleResultFunc := runtimeModule.Symbols.CreateHandleResult
 
 			c.Import(pkg)
 			fmt.Fprintln(w, "func init(){")

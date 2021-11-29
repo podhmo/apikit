@@ -2,7 +2,6 @@ package webgen
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -18,20 +17,62 @@ type Analyzed struct {
 		Data      []*DataBinding
 	}
 	Vars struct {
-		Ignored []*tinypkg.Var // rename: context.Context, etc...
-
+		Ignored  []*tinypkg.Var // rename: context.Context, etc...
 		Provider *tinypkg.Var
-
-		GetProviderFunc   *tinypkg.Func
-		CreateHandlerFunc *tinypkg.Func // todo: fix
 	}
 	Names struct {
-		Name           string
 		ActionFunc     string // core action
 		ActionFuncArgs []string
 		QueryParams    string
 		PathParams     string
 	}
+
+	Name      string
+	PathInfo  *web.PathInfo
+	extraDefs []*resolve.Def
+	resolver  *resolve.Resolver
+	tracker   *resolve.Tracker
+}
+
+func (a *Analyzed) CollectImports(collector *tinypkg.ImportCollector) error {
+	def := a.PathInfo.Def
+	if err := a.collectImportsFromDef(collector, def); err != nil {
+		return err
+	}
+
+	if len(a.extraDefs) > 0 {
+		for _, extraDef := range a.extraDefs {
+			if err := a.collectImportsFromDef(collector, extraDef); err != nil {
+				return err
+			}
+		}
+	}
+
+	return a.Vars.Provider.OnWalk(collector.Collect)
+}
+
+func (a *Analyzed) collectImportsFromDef(collector *tinypkg.ImportCollector, def *resolve.Def) error {
+	here := collector.Here
+	use := collector.Collect
+
+	resolver := a.resolver
+
+	for _, x := range def.Args {
+		sym := resolver.Symbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return fmt.Errorf("on walk args %s: %w", sym, err)
+		}
+	}
+	for _, x := range def.Returns {
+		sym := resolver.Symbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return fmt.Errorf("on walk returns %s: %w", sym, err)
+		}
+	}
+	if err := use(def.Symbol); err != nil {
+		return fmt.Errorf("on self %s: %w", def.Symbol, err)
+	}
+	return nil
 }
 
 type PathBinding struct {
@@ -48,43 +89,14 @@ type DataBinding struct {
 	Sym  tinypkg.Node
 }
 
-func ProviderModule(here *tinypkg.Package, resolver *resolve.Resolver, providerName string) (*resolve.Module, error) {
-	type providerT interface{}
-	var moduleSkeleton struct {
-		T             providerT
-		getProvider   func(*http.Request) (*http.Request, providerT, error)
-		createHandler func(
-			getProvider func(*http.Request) (*http.Request, providerT, error),
-		) http.HandlerFunc
-	}
-	pm, err := resolver.PreModule(moduleSkeleton)
-	if err != nil {
-		return nil, fmt.Errorf("new provider pre-module: %w", err)
-	}
-	m, err := pm.NewModule(here, here.NewSymbol(providerName))
-	if err != nil {
-		return nil, fmt.Errorf("new provider module: %w", err)
-	}
-	return m, nil
-}
-
 func Analyze(
 	here *tinypkg.Package,
 	resolver *resolve.Resolver,
 	tracker *resolve.Tracker,
 	info *web.PathInfo, // todo: remove
 	extraDefs []*resolve.Def,
-	providerModule *resolve.Module,
+	provider *tinypkg.Var,
 ) (*Analyzed, error) {
-	// TODO: typed
-	createHandlerFunc, err := providerModule.Type("createHandler")
-	if err != nil {
-		return nil, fmt.Errorf("in provider module, %w", err)
-	}
-	createHandlerFunc.Args[0].Name = "getProvider" // todo: remove
-	getProviderFunc := createHandlerFunc.Args[0].Node.(*tinypkg.Func)
-	getProviderFunc.Name = "getProvider" // todo: remove
-	provider := &tinypkg.Var{Name: "provider", Node: getProviderFunc.Returns[0].Node}
 
 	var componentBindings tinypkg.BindingList
 	var pathBindings []*PathBinding
@@ -246,7 +258,13 @@ func Analyze(
 		}
 	}
 
-	analyzed := &Analyzed{}
+	analyzed := &Analyzed{
+		resolver:  resolver,
+		tracker:   tracker,
+		Name:      info.Def.Name,
+		PathInfo:  info,
+		extraDefs: extraDefs,
+	}
 
 	analyzed.Bindings.Component = componentBindings
 	analyzed.Bindings.Query = queryBindings
@@ -255,18 +273,16 @@ func Analyze(
 
 	analyzed.Vars.Ignored = ignored
 	analyzed.Vars.Provider = provider
-	analyzed.Vars.GetProviderFunc = getProviderFunc
-	analyzed.Vars.CreateHandlerFunc = createHandlerFunc
 
-	analyzed.Names.Name = info.Def.Name
 	analyzed.Names.QueryParams = "queryParams"
 	analyzed.Names.PathParams = "pathParams"
 	analyzed.Names.ActionFunc = tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 	analyzed.Names.ActionFuncArgs = argNames
 
+	// if provider is not used, changes to "_"
 	if len(componentBindings) > 0 || len(ignored) > 0 {
 		if len(componentBindings)-len(extraDefs) == 0 {
-			analyzed.Vars.Provider.Name = "_"
+			analyzed.Vars.Provider = &tinypkg.Var{Name: "_", Node: analyzed.Vars.Provider.Node}
 		}
 	}
 	return analyzed, nil
