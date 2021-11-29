@@ -23,7 +23,7 @@ type Code struct {
 
 	Priority int
 	Config   *Config
-	Depends  []tinypkg.Node
+	depends  []tinypkg.Node
 }
 
 func (c *Code) Import(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
@@ -31,8 +31,19 @@ func (c *Code) Import(pkg *tinypkg.Package) *tinypkg.ImportedPackage {
 	c.imported = append(c.imported, im)
 	return im
 }
-func (c *Code) AddDependency(dep tinypkg.Node) {
-	c.Depends = append(c.Depends, dep)
+func (c *Code) AddDependency(deps ...tinypkg.Node) {
+	c.depends = append(c.depends, deps...)
+}
+func (c *Code) Dependencies() []tinypkg.Node {
+	return c.depends
+}
+
+// EmitContent emits content only (if you want fullset version, please use c.Config.EmitCodeFunc() )
+func (c *Code) EmitContent(w io.Writer) error {
+	if err := c.EmitCode(w, c); err != nil {
+		return fmt.Errorf("emit content in code %q : %w", c.Name, err)
+	}
+	return nil
 }
 
 // CollectImports is currently used by Config.EmitCodeFunc
@@ -53,7 +64,7 @@ func (c *Code) collectImportsInner(
 			return err
 		}
 	}
-	if c.Depends == nil && c.ImportPackages == nil {
+	if c.depends == nil && c.ImportPackages == nil {
 		return nil
 	}
 
@@ -62,13 +73,13 @@ func (c *Code) collectImportsInner(
 			return fmt.Errorf("in import package : %w", err)
 		}
 	}
-	if c.Depends != nil {
-		seen = make(map[tinypkg.Node]bool, len(c.Depends)+len(history))
+	if c.depends != nil {
+		seen = make(map[tinypkg.Node]bool, len(c.depends)+len(history))
 		for _, x := range history {
 			seen[x] = true
 		}
 		seen[c] = true
-		for _, dep := range c.Depends {
+		for _, dep := range c.depends {
 			if _, ok := seen[dep]; ok {
 				continue
 			}
@@ -121,6 +132,7 @@ func (c *CodeEmitter) EmitImports(w io.Writer, imports []*tinypkg.ImportedPackag
 
 // Emit : for pkg/emitfile.Emitter
 func (c *CodeEmitter) Emit(w io.Writer) error {
+	// emit with header (package declaration, import area)
 	return c.Config.EmitCodeFunc(w, c)
 }
 
@@ -139,3 +151,4 @@ func (c *CodeEmitter) FormatBytes(b []byte) ([]byte, error) {
 
 var _ emitfile.Emitter = &CodeEmitter{}
 var _ tinypkg.Node = &Code{}
+var _ codeLike = &Code{}

@@ -143,7 +143,7 @@ func TestCodeUseAsSymbol(t *testing.T) {
 					)
 					return nil
 				})
-				useCode.Depends = append(useCode.Depends, fooCode, barCode) // this is important!
+				useCode.depends = append(useCode.depends, fooCode, barCode) // this is important!
 				return useCode
 			}(),
 			want:        "Use",
