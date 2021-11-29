@@ -131,6 +131,13 @@ func (g *Generator) Generate(
 		},
 	}
 
+	analyzer := &Analyzer{
+		Resolver:       resolver,
+		Tracker:        g.Tracker,
+		ProviderModule: providerModule,
+		RuntimeModule:  runtimeModule,
+	}
+
 	type handler struct {
 		name   string
 		method string
@@ -146,7 +153,12 @@ func (g *Generator) Generate(
 
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
 			name := web.GetMetaData(node.Node).Name
-			code := translator.TranslateToHandler(here, node, name)
+			analyzed, err := analyzer.Analyze(here, node)
+			// TODO: add hook
+			if err != nil {
+				return fmt.Errorf("analyze failure: %w", err)
+			}
+			code := translator.TranslateToHandler(here, analyzed, name)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)

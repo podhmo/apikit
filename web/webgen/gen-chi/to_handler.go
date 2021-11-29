@@ -8,28 +8,20 @@ import (
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
-	"github.com/podhmo/apikit/resolve"
-	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/web/webgen"
 )
 
-func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerNode, name string) *code.CodeEmitter {
-	def := t.Resolver.Def(node.Node.Value)
+func (t *Translator) TranslateToHandler(
+	here *tinypkg.Package,
+	analyzed *Analyzed,
+	name string,
+) *code.CodeEmitter {
 	if name == "" {
-		name = def.Name
+		name = analyzed.Name
 	}
-	t.Tracker.Track(def)
 
 	if t.Config.Verbose {
+		def := analyzed.PathInfo.Def
 		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
-	}
-
-	extraDeps := web.GetMetaData(node.Node).ExtraDependencies
-	extraDefs := make([]*resolve.Def, len(extraDeps))
-	for i, fn := range extraDeps {
-		extraDef := t.Resolver.Def(fn)
-		t.Tracker.Track(extraDef)
-		extraDefs[i] = extraDef
 	}
 
 	c := &code.Code{
@@ -38,50 +30,22 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 		// priority: code.PrioritySecond,
 		Config: t.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
-			// todo: support provider *tinypkg.Var
-			if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, def); err != nil {
-				return err
-			}
-			if len(extraDefs) > 0 {
-				for _, extraDef := range extraDefs {
-					if err := collectImportsForHandler(collector, t.Resolver, t.Tracker, extraDef); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
+			return analyzed.CollectImports(collector)
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-			pathinfo, err := web.ExtractPathInfo(node.Node.VariableNames, def)
-			if err != nil {
-				return err
-			}
-			c.AddDependency(t.ProviderModule)
-			c.AddDependency(t.RuntimeModule)
 
-			analyzed, err := webgen.Analyze(
-				here,
-				t.Resolver, t.Tracker,
-				pathinfo, extraDefs,
-				t.ProviderModule,
-			)
-			if err != nil {
-				return fmt.Errorf("analyze %w", err)
-			}
+			c.AddDependency(analyzed.analyzer.ProviderModule)
+			c.AddDependency(analyzed.analyzer.RuntimeModule)
 
+			pathinfo := analyzed.PathInfo
 			if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
 				return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
 			}
 			if len(analyzed.Bindings.Data) > 1 {
 				return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
 			}
-
-			if name == "" {
-				name = analyzed.Names.Name
-			}
 			return WriteHandlerFunc(w, here,
 				analyzed,
-				t.RuntimeModule,
 				name,
 			)
 		},
@@ -89,34 +53,13 @@ func (t *Translator) TranslateToHandler(here *tinypkg.Package, node *web.WalkerN
 	return &code.CodeEmitter{Code: c}
 }
 
-func collectImportsForHandler(collector *tinypkg.ImportCollector, resolver *resolve.Resolver, tracker *resolve.Tracker, def *resolve.Def) error {
-	here := collector.Here
-	use := collector.Collect
-
-	for _, x := range def.Args {
-		sym := resolver.Symbol(here, x.Shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return fmt.Errorf("on walk args %s: %w", sym, err)
-		}
-	}
-	for _, x := range def.Returns {
-		sym := resolver.Symbol(here, x.Shape)
-		if err := tinypkg.Walk(sym, use); err != nil {
-			return fmt.Errorf("on walk returns %s: %w", sym, err)
-		}
-	}
-	if err := use(def.Symbol); err != nil {
-		return fmt.Errorf("on self %s: %w", def.Symbol, err)
-	}
-	return nil
-}
-
 func WriteHandlerFunc(w io.Writer,
 	here *tinypkg.Package,
-	analyzed *webgen.Analyzed,
-	runtimeModule *resolve.Module,
+	analyzed *Analyzed,
 	name string,
 ) error {
+	runtimeModule := analyzed.analyzer.RuntimeModule
+
 	handleResultFunc, err := runtimeModule.Symbol(here, "HandleResult")
 	if err != nil {
 		return fmt.Errorf("in runtime module, %w", err)
