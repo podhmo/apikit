@@ -34,17 +34,8 @@ func ToHandlerCode(
 			return analyzed.CollectImports(collector)
 		},
 		EmitCode: func(w io.Writer, c *code.Code) error {
-
 			c.AddDependency(analyzed.ProviderModule)
 			c.AddDependency(analyzed.RuntimeModule)
-
-			pathinfo := analyzed.PathInfo
-			if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
-				return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
-			}
-			if len(analyzed.Bindings.Data) > 1 {
-				return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
-			}
 			return WriteHandlerFunc(w, here,
 				analyzed,
 				name,
@@ -71,6 +62,14 @@ func WriteHandlerFunc(w io.Writer,
 
 	handleResultFunc := runtimeModule.Symbols.HandleResult
 	createHandlerFunc := providerModule.Funcs.CreateHandler
+
+	pathinfo := analyzed.PathInfo
+	if len(analyzed.Bindings.Path) != len(pathinfo.VarNames) {
+		return fmt.Errorf("invalid path bindings, routing=%v, args=%v (in %s)", pathinfo.VarNames, analyzed.Bindings.Path, pathinfo.Def.Symbol)
+	}
+	if len(analyzed.Bindings.Data) > 1 {
+		return fmt.Errorf("invalid data bindings, support only 1 struct, but found %d (in %s)", len(analyzed.Bindings.Data), pathinfo.Def.Symbol)
+	}
 
 	return tinypkg.WriteFunc(w, here, name, createHandlerFunc, func() error {
 		fmt.Fprintln(w, "\treturn func(w http.ResponseWriter, req *http.Request) {")
