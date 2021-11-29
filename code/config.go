@@ -113,3 +113,14 @@ func (c *Config) NewCode(
 		Config:   c,
 	}
 }
+func (c *Config) ZeroCode(
+	here *tinypkg.Package,
+	name string,
+) *Code {
+	return &Code{
+		Name:     name,
+		Here:     here,
+		EmitCode: func(io.Writer, *Code) error { return nil },
+		Config:   c,
+	}
+}
