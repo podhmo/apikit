@@ -87,7 +87,7 @@ func WriteHandlerFunc(w io.Writer,
 			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
 			varNames := make([]string, len(pathBindings))
 			for i, b := range pathBindings {
-				fmt.Fprintf(w, "%s\t%s %s `query:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Var.Name)
+				fmt.Fprintf(w, "%s\t%s %s `path:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Var.Name)
 				varNames[i] = strconv.Quote(b.Var.Name)
 			}
 			fmt.Fprintf(w, "%s}\n", indent)

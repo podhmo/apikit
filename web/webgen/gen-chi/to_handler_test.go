@@ -125,7 +125,7 @@ import (
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var pathParams struct {
-			` + "message string `query:\"message,required\"`" + `
+			` + "message string `path:\"message,required\"`" + `
 		}
 		if err := runtime.BindPathParams(&pathParams, req, "message"); err != nil {
 			w.WriteHeader(404)
@@ -151,7 +151,7 @@ import (
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var pathParams struct {
-			` + "message genchi.Message `query:\"message,required\"`" + `
+			` + "message genchi.Message `path:\"message,required\"`" + `
 		}
 		if err := runtime.BindPathParams(&pathParams, req, "message"); err != nil {
 			w.WriteHeader(404)
@@ -177,7 +177,7 @@ import (
 func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var pathParams struct {
-			` + "message genchi.Message `query:\"message,required\"`" + `
+			` + "message genchi.Message `path:\"message,required\"`" + `
 		}
 		if err := runtime.BindPathParams(&pathParams, req, "message"); err != nil {
 			w.WriteHeader(404)
