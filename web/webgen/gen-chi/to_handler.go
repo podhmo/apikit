@@ -10,7 +10,7 @@ import (
 	"github.com/podhmo/apikit/pkg/tinypkg"
 )
 
-func (t *Translator) TranslateToHandler(
+func (g *Generator) toHandler(
 	here *tinypkg.Package,
 	analyzed *Analyzed,
 	name string,
@@ -19,16 +19,16 @@ func (t *Translator) TranslateToHandler(
 		name = analyzed.Name
 	}
 
-	if t.Config.Verbose {
+	if g.Config.Verbose {
 		def := analyzed.PathInfo.Def
-		t.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
+		g.Config.Log.Printf("\t+ translate %s.%s -> handler %s.%s", def.Package.Path, def.Symbol, here.Path, name)
 	}
 
 	c := &code.Code{
 		Name: name,
 		Here: here,
 		// priority: code.PrioritySecond,
-		Config: t.Config,
+		Config: g.Config.Config,
 		ImportPackages: func(collector *tinypkg.ImportCollector) error {
 			return analyzed.CollectImports(collector)
 		},

@@ -118,19 +118,6 @@ func (g *Generator) Generate(
 		return err
 	}
 
-	translator := &Translator{
-		Resolver:       resolver,
-		Tracker:        g.Tracker,
-		Config:         g.Config.Config,
-		ProviderModule: providerModule,
-		RuntimeModule:  runtimeModule,
-		internal: &translate.Translator{
-			Tracker:  g.Tracker,
-			Resolver: resolver,
-			Config:   g.Config.Config,
-		},
-	}
-
 	analyzer := &Analyzer{
 		Resolver:       resolver,
 		Tracker:        g.Tracker,
@@ -158,7 +145,7 @@ func (g *Generator) Generate(
 			if err != nil {
 				return fmt.Errorf("analyze failure: %w", err)
 			}
-			code := translator.TranslateToHandler(here, analyzed, name)
+			code := g.toHandler(here, analyzed, name)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
@@ -215,7 +202,13 @@ func (g *Generator) Generate(
 	{
 		here := g.ProviderPkg
 		name := g.Config.ProviderName // xxx
-		code := translator.internal.ExtractProviderInterface(here, name)
+
+		translator := &translate.Translator{
+			Tracker:  g.Tracker,
+			Resolver: resolver,
+			Config:   g.Config.Config,
+		}
+		code := translator.ExtractProviderInterface(here, name)
 		g.Emitter.Register(here, code.Name, code)
 	}
 

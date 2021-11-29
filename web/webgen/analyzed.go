@@ -26,12 +26,58 @@ type Analyzed struct {
 		CreateHandlerFunc *tinypkg.Func // todo: fix
 	}
 	Names struct {
-		Name           string
 		ActionFunc     string // core action
 		ActionFuncArgs []string
 		QueryParams    string
 		PathParams     string
 	}
+
+	Name      string
+	PathInfo  *web.PathInfo
+	extraDefs []*resolve.Def
+	resolver  *resolve.Resolver
+	tracker   *resolve.Tracker
+}
+
+func (a *Analyzed) CollectImports(collector *tinypkg.ImportCollector) error {
+	def := a.PathInfo.Def
+	if err := a.collectImportsFromDef(collector, def); err != nil {
+		return err
+	}
+
+	if len(a.extraDefs) > 0 {
+		for _, extraDef := range a.extraDefs {
+			if err := a.collectImportsFromDef(collector, extraDef); err != nil {
+				return err
+			}
+		}
+	}
+
+	return a.Vars.Provider.OnWalk(collector.Collect)
+}
+
+func (a *Analyzed) collectImportsFromDef(collector *tinypkg.ImportCollector, def *resolve.Def) error {
+	here := collector.Here
+	use := collector.Collect
+
+	resolver := a.resolver
+
+	for _, x := range def.Args {
+		sym := resolver.Symbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return fmt.Errorf("on walk args %s: %w", sym, err)
+		}
+	}
+	for _, x := range def.Returns {
+		sym := resolver.Symbol(here, x.Shape)
+		if err := tinypkg.Walk(sym, use); err != nil {
+			return fmt.Errorf("on walk returns %s: %w", sym, err)
+		}
+	}
+	if err := use(def.Symbol); err != nil {
+		return fmt.Errorf("on self %s: %w", def.Symbol, err)
+	}
+	return nil
 }
 
 type PathBinding struct {
@@ -246,7 +292,13 @@ func Analyze(
 		}
 	}
 
-	analyzed := &Analyzed{}
+	analyzed := &Analyzed{
+		resolver:  resolver,
+		tracker:   tracker,
+		Name:      info.Def.Name,
+		PathInfo:  info,
+		extraDefs: extraDefs,
+	}
 
 	analyzed.Bindings.Component = componentBindings
 	analyzed.Bindings.Query = queryBindings
@@ -258,7 +310,6 @@ func Analyze(
 	analyzed.Vars.GetProviderFunc = getProviderFunc
 	analyzed.Vars.CreateHandlerFunc = createHandlerFunc
 
-	analyzed.Names.Name = info.Def.Name
 	analyzed.Names.QueryParams = "queryParams"
 	analyzed.Names.PathParams = "pathParams"
 	analyzed.Names.ActionFunc = tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
