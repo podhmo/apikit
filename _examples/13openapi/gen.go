@@ -26,36 +26,31 @@ func main() {
 // TODO: set 404-handler
 
 func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(design.ListArticle, "..").NewEmitter()
-	defer emitter.EmitWith(&err)
+	ctx := context.Background()
+	return emitgo.NewConfigFromRelativePath(design.ListArticle, "..").EmitWith(func(emitter *emitgo.Emitter) error {
+		c := genchi.DefaultConfig()
+		c.Override("db", design.NewDB)
 
-	c := genchi.DefaultConfig()
-	c.Override("db", design.NewDB)
+		r := web.NewRouter()
+		r.Group("/articles", func(r *web.Router) {
+			// TODO: set tag
+			r.Get("/", design.ListArticle)
+			r.Get("/{articleId}", design.GetArticle)
+			r.Post("/{articleId}/comments", design.PostArticleComment)
+		})
 
-	r := web.NewRouter()
-	r.Group("/articles", func(r *web.Router) {
-		// TODO: set tag
-		r.Get("/", design.ListArticle)
-		r.Get("/{articleId}", design.GetArticle)
-		r.Post("/{articleId}/comments", design.PostArticleComment)
+		g := c.New(emitter)
+		if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
+			return err
+		}
+
+		// generate openapi doc via custom plugin
+		if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
+			OutputFile: "docs/openapi.json",
+			Handlers:   g.Handlers,
+		}); err != nil {
+			return fmt.Errorf("on gendoc plugin: %w", err)
+		}
+		return nil
 	})
-
-	g := c.New(emitter)
-	if err := g.Generate(
-		context.Background(),
-		r,
-		design.HTTPStatusOf,
-	); err != nil {
-		return err
-	}
-
-	// generate openapi doc via custom plugin
-	if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
-		OutputFile: "docs/openapi.json",
-		Handlers:   g.Handlers,
-	}); err != nil {
-		return fmt.Errorf("on gendoc plugin: %w", err)
-	}
-
-	return nil
 }
