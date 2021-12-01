@@ -278,7 +278,7 @@ func (g *Generator) Generate(
 		})}
 		g.Emitter.Register(here, c.Name, c)
 	}
-	g.Handlers = handlers
+	g.Handlers = append(g.Handlers, handlers...)
 	return nil
 }
 
