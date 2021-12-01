@@ -67,6 +67,8 @@ type Generator struct {
 	RouterPkg   *tinypkg.Package
 	HandlerPkg  *tinypkg.Package
 	RuntimePkg  *tinypkg.Package
+
+	Handlers []Handler
 }
 
 // type GeneratorOption func(*Generator) error
@@ -110,14 +112,7 @@ func (g *Generator) Generate(
 	}
 
 	resolver := g.Tracker.Resolver
-
-	type handler struct {
-		name   string
-		method string
-		path   string
-		fn     tinypkg.Node
-	}
-	var handlers []handler
+	var handlers []Handler
 
 	// handler
 	{
@@ -125,21 +120,26 @@ func (g *Generator) Generate(
 		here := g.RouterPkg
 
 		if err := web.Walk(r, func(node *web.WalkerNode) error {
-			name := web.GetMetaData(node.Node).Name
+			metadata := web.GetMetaData(node.Node)
 			analyzed, err := analyzer.Analyze(here, node)
-			// TODO: add hook
 			if err != nil {
+				// TODO: keep going option
 				return fmt.Errorf("analyze failure: %w", err)
 			}
-			code := ToHandlerCode(here, g.Config.Config, analyzed, name)
+
+			code := ToHandlerCode(here, g.Config.Config, analyzed, metadata.Name)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
-			h := handler{
-				name:   code.Name,
-				method: methodAndPath[0][:1] + strings.ToLower(methodAndPath[0][1:]), // GET -> Get
-				path:   methodAndPath[1],
-				fn:     here.NewSymbol(code.Name),
+
+			h := Handler{
+				Name:        code.Name,
+				Method:      methodAndPath[0][:1] + strings.ToLower(methodAndPath[0][1:]), // GET -> Get
+				Path:        methodAndPath[1],
+				RawFn:       node.Node.Value,
+				HandlerFunc: here.NewSymbol(code.Name),
+				MetaData:    metadata,
+				Analyzed:    analyzed,
 			}
 			handlers = append(handlers, h)
 			return nil
@@ -174,7 +174,7 @@ func (g *Generator) Generate(
 				return tinypkg.WriteFunc(w, here, "", f, func() error {
 					for _, h := range handlers {
 						// TODO: grouping
-						fmt.Fprintf(w, "\tr.%s(%q, %s(%s))\n", h.method, h.path, h.fn, getProviderFunc.Name)
+						fmt.Fprintf(w, "\tr.%s(%q, %s(%s))\n", h.Method, h.Path, h.HandlerFunc, getProviderFunc.Name)
 					}
 					return nil
 				})
@@ -278,5 +278,17 @@ func (g *Generator) Generate(
 		})}
 		g.Emitter.Register(here, c.Name, c)
 	}
+	g.Handlers = append(g.Handlers, handlers...)
 	return nil
+}
+
+type Handler struct {
+	Name   string
+	Method string
+	Path   string
+
+	RawFn       interface{}
+	HandlerFunc tinypkg.Node
+	MetaData    web.MetaData
+	Analyzed    *Analyzed
 }
