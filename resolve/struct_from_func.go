@@ -36,7 +36,7 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function) (reflectshape
 					Anonymous: true,
 				})
 				tags = append(tags, "")
-				kindMap[kind] = append(kindMap[kind], i)
+				kindMap[kind] = append(kindMap[kind], len(tags)-1)
 			case KindPrimitive:
 				fields.Keys = append(fields.Keys, name)
 				fields.Values = append(fields.Values, p)
@@ -45,7 +45,7 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function) (reflectshape
 					Required:  true,
 				})
 				tags = append(tags, "")
-				kindMap[kind] = append(kindMap[kind], i)
+				kindMap[kind] = append(kindMap[kind], len(tags)-1)
 			case KindPrimitivePointer:
 				fields.Keys = append(fields.Keys, name)
 				fields.Values = append(fields.Values, p)
@@ -54,7 +54,7 @@ func StructFromShape(resolver *Resolver, fn reflectshape.Function) (reflectshape
 					Required:  false,
 				})
 				tags = append(tags, "")
-				kindMap[kind] = append(kindMap[kind], i)
+				kindMap[kind] = append(kindMap[kind], len(tags)-1)
 			}
 		default:
 			return reflectshape.Struct{}, StructFromShapeInfo{}, fmt.Errorf("unsupported kind %v", kind)
