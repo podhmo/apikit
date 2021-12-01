@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,8 +22,6 @@ type Config struct {
 	*code.Config
 	Tracker      *resolve.Tracker
 	ProviderName string
-
-	OnAnalyzed func(*Analyzed, Handler) error
 }
 
 func DefaultConfig() *Config {
@@ -70,6 +67,8 @@ type Generator struct {
 	RouterPkg   *tinypkg.Package
 	HandlerPkg  *tinypkg.Package
 	RuntimePkg  *tinypkg.Package
+
+	Handlers []Handler
 }
 
 // type GeneratorOption func(*Generator) error
@@ -140,15 +139,9 @@ func (g *Generator) Generate(
 				RawFn:       node.Node.Value,
 				HandlerFunc: here.NewSymbol(code.Name),
 				MetaData:    metadata,
+				Analyzed:    analyzed,
 			}
 			handlers = append(handlers, h)
-
-			if g.Config.OnAnalyzed != nil {
-				if err := g.Config.OnAnalyzed(analyzed, h); err != nil {
-					log.Printf("WARNING error on onAnalyzed hook: %+v", err)
-				}
-			}
-
 			return nil
 		}); err != nil {
 			return fmt.Errorf("on generate handler: %w", err)
@@ -285,6 +278,7 @@ func (g *Generator) Generate(
 		})}
 		g.Emitter.Register(here, c.Name, c)
 	}
+	g.Handlers = handlers
 	return nil
 }
 
@@ -296,4 +290,5 @@ type Handler struct {
 	RawFn       interface{}
 	HandlerFunc tinypkg.Node
 	MetaData    web.MetaData
+	Analyzed    *Analyzed
 }
