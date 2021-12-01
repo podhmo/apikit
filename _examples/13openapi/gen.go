@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"reflect"
@@ -50,6 +49,15 @@ func run() (err error) {
 		r.Post("/{articleId}/comments", design.PostArticleComment)
 	})
 
+	g := c.New(emitter)
+	if err := g.Generate(
+		context.Background(),
+		r,
+		design.HTTPStatusOf,
+	); err != nil {
+		return err
+	}
+
 	////////////////////////////////////////
 	// TODO: share shape-extractor
 	rc := reflectopenapi.Config{
@@ -63,46 +71,35 @@ func run() (err error) {
 		Selector: &MergeParamsSelector{resolver: c.Resolver},
 	}
 
-	m, generateDoc, err := rc.NewManager()
-	if err != nil {
-		return err
-	}
-	c.OnAnalyzed = func(analyzed *genchi.Analyzed, h genchi.Handler) error {
-		metadata := h.MetaData
-		fn := h.RawFn
-		m.RegisterFunc(fn).After(func(op *openapi3.Operation) {
-			for _, p := range op.Parameters {
-				if p.Value.In == "path" {
-					for _, binding := range analyzed.Bindings.Path {
-						if binding.Name == p.Value.Name {
-							p.Value.Name = binding.Var.Name // e.g. articleID -> articleId
-							fmt.Println("@", p.Value.Name, binding.Var.Name)
+	doc, err := rc.BuildDoc(ctx, func(m *reflectopenapi.Manager) {
+		for _, h := range g.Handlers {
+			analyzed := h.Analyzed
+			metadata := h.MetaData
+
+			m.RegisterFunc(h.RawFn).After(func(op *openapi3.Operation) {
+				// e.g. articleID -> articleId
+				for _, p := range op.Parameters {
+					if p.Value.In == "path" {
+						for _, binding := range analyzed.Bindings.Path {
+							if binding.Name == p.Value.Name {
+								p.Value.Name = binding.Var.Name
+							}
 						}
 					}
 				}
-			}
-			m.Doc.AddOperation(metadata.Path, metadata.Method, op)
-		})
-		return nil
+				m.Doc.AddOperation(metadata.Path, metadata.Method, op)
+			})
+		}
+	})
+	if err != nil {
+		log.Printf("WARNING: generate doc is failured %+v", err)
 	}
 	emitter.FileEmitter.Register("docs/openapi.json", emitfile.EmitFunc(func(w io.Writer) error {
-		if err := generateDoc(ctx); err != nil {
-			return fmt.Errorf("generate openAPI doc: %w", err)
-		}
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		return enc.Encode(m.Doc) // xxx
+		return enc.Encode(doc)
 	}))
 	////////////////////////////////////////
-
-	g := c.New(emitter)
-	if err := g.Generate(
-		context.Background(),
-		r,
-		design.HTTPStatusOf,
-	); err != nil {
-		return err
-	}
 	return nil
 }
 
