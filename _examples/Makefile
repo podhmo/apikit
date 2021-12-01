@@ -1,7 +1,7 @@
 export DEBUG ?= 0
 export VERBOSE ?= 1
 
-default: 00 01 02 10 11 12
+default: 00 01 02 10 11 12 13
 
 00:
 	go run $(shell echo $@*/)gen.go
@@ -17,6 +17,8 @@ default: 00 01 02 10 11 12
 	go run $(shell echo $@*/)gen.go
 12:
 	go run $(shell echo $@*/)gen.go
+13:
+	go run $(shell echo $@*/)gen.go
 
 check:
 	go install -v ./$(shell echo 00*/)/runner/...
@@ -24,6 +26,7 @@ check:
 	go install -v ./$(shell echo 02*/)/component/...
 	go install -v ./$(shell echo 11*/)/handler/...
 	go install -v ./$(shell echo 12*/)/handler/...
+	go install -v ./$(shell echo 13*/)/handler/...
 
 # apikit
 init-check:
@@ -42,4 +45,5 @@ clean:
 	rm -rf 02*/component
 	rm -rf 11*/handler/
 	rm -rf 12*/handler/
+	rm -rf 13*/handler/
 	rm -f `find . -name ".apikit.hist.json"`
