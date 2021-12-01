@@ -38,6 +38,19 @@
           "text"
         ],
         "type": "object"
+      },
+      "defaultError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "title": "defaultError",
+        "type": "object"
       }
     }
   },
@@ -76,7 +89,14 @@
             "description": ""
           },
           "default": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
           }
         },
         "summary": "lists articles"
@@ -107,7 +127,14 @@
             "description": ""
           },
           "default": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
           }
         }
       }
@@ -162,7 +189,14 @@
             "description": ""
           },
           "default": {
-            "description": ""
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
           }
         }
       }

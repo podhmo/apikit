@@ -22,6 +22,9 @@ func main() {
 	}
 }
 
+// TODO: schema description
+// TODO: (schema fields description)
+// TODO: examples
 // TODO: set error handler (500-handler)
 // TODO: set 404-handler
 
@@ -45,9 +48,14 @@ func run() (err error) {
 		}
 
 		// generate openapi doc via custom plugin
+		type defaultError struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		}
 		if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
-			OutputFile: "docs/openapi.json",
-			Handlers:   g.Handlers,
+			OutputFile:   "docs/openapi.json",
+			Handlers:     g.Handlers,
+			DefaultError: defaultError{},
 		}); err != nil {
 			return fmt.Errorf("on gendoc plugin: %w", err)
 		}

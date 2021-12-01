@@ -21,8 +21,9 @@ import (
 )
 
 type Options struct {
-	OutputFile string
-	Handlers   []genchi.Handler
+	OutputFile   string
+	Handlers     []genchi.Handler
+	DefaultError interface{}
 }
 
 func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) error {
@@ -31,6 +32,7 @@ func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) err
 		here,
 		o.OutputFile,
 		o.Handlers,
+		o.DefaultError,
 	)
 }
 
@@ -39,6 +41,7 @@ func IncludeMe(
 	here *tinypkg.Package,
 	outputFile string,
 	handlers []genchi.Handler,
+	defaultError interface{},
 ) error {
 	ctx := context.TODO() // hmm
 	if outputFile == "" {
@@ -46,8 +49,6 @@ func IncludeMe(
 		outputFile = "docs/openapi.json"
 	}
 
-	////////////////////////////////////////
-	// TODO: share shape-extractor
 	rc := reflectopenapi.Config{
 		SkipValidation: true,
 		StrictSchema:   true,
@@ -57,6 +58,10 @@ func IncludeMe(
 			return v
 		},
 		Selector: &MergeParamsSelector{resolver: resolver},
+	}
+
+	if defaultError != nil {
+		rc.DefaultError = defaultError
 	}
 
 	doc, err := rc.BuildDoc(ctx, func(m *reflectopenapi.Manager) {
