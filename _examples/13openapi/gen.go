@@ -1,3 +1,4 @@
+//go:build apikit
 // +build apikit
 
 package main
@@ -5,6 +6,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"reflect"
@@ -32,13 +34,24 @@ func main() {
 // TODO: set 404-handler
 
 func run() (err error) {
+	ctx := context.Background()
+
 	emitter := emitgo.NewConfigFromRelativePath(design.ListArticle, "..").NewEmitter()
 	defer emitter.EmitWith(&err)
 
 	c := genchi.DefaultConfig()
 	c.Override("db", design.NewDB)
 
+	r := web.NewRouter()
+	r.Group("/articles", func(r *web.Router) {
+		// TODO: set tag
+		r.Get("/", design.ListArticle)
+		r.Get("/{articleId}", design.GetArticle)
+		r.Post("/{articleId}/comments", design.PostArticleComment)
+	})
+
 	////////////////////////////////////////
+	// TODO: share shape-extractor
 	rc := reflectopenapi.Config{
 		SkipValidation: true,
 		StrictSchema:   true,
@@ -49,30 +62,38 @@ func run() (err error) {
 		},
 		Selector: &MergeParamsSelector{resolver: c.Resolver},
 	}
-	////////////////////////////////////////
 
-	var r *web.Router
-
-	// TODO: use shape
-	// TODO: share shape-extractor
-	doc, err := rc.BuildDoc(context.Background(), func(m *reflectopenapi.Manager) {
-		r = web.NewRouter()
-		r.Group("/articles", func(r *web.Router) {
-			// TODO: set tag
-			r.Get("/", design.ListArticle, WithOpenAPIOperation(m))
-			r.Get("/{articleId}", design.GetArticle, WithOpenAPIOperation(m))
-			r.Post("/{articleId}/comments", design.PostArticleComment, WithOpenAPIOperation(m))
-		})
-	})
+	m, generateDoc, err := rc.NewManager()
 	if err != nil {
 		return err
 	}
-
+	c.OnAnalyzed = func(analyzed *genchi.Analyzed, h genchi.Handler) error {
+		metadata := h.MetaData
+		fn := h.RawFn
+		m.RegisterFunc(fn).After(func(op *openapi3.Operation) {
+			for _, p := range op.Parameters {
+				if p.Value.In == "path" {
+					for _, binding := range analyzed.Bindings.Path {
+						if binding.Name == p.Value.Name {
+							p.Value.Name = binding.Var.Name // e.g. articleID -> articleId
+							fmt.Println("@", p.Value.Name, binding.Var.Name)
+						}
+					}
+				}
+			}
+			m.Doc.AddOperation(metadata.Path, metadata.Method, op)
+		})
+		return nil
+	}
 	emitter.FileEmitter.Register("docs/openapi.json", emitfile.EmitFunc(func(w io.Writer) error {
+		if err := generateDoc(ctx); err != nil {
+			return fmt.Errorf("generate openAPI doc: %w", err)
+		}
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
-		return enc.Encode(doc)
+		return enc.Encode(m.Doc) // xxx
 	}))
+	////////////////////////////////////////
 
 	g := c.New(emitter)
 	if err := g.Generate(
@@ -83,14 +104,6 @@ func run() (err error) {
 		return err
 	}
 	return nil
-}
-
-func WithOpenAPIOperation(m *reflectopenapi.Manager) web.RoutingOption {
-	return func(node *web.Node, metadata *web.MetaData) {
-		m.RegisterFunc(node.Value).After(func(op *openapi3.Operation) {
-			m.Doc.AddOperation(metadata.Path, metadata.Method, op)
-		})
-	}
 }
 
 type MergeParamsSelector struct {

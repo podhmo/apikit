@@ -12,7 +12,7 @@ import (
 func PostArticleComment(getProvider func(*http.Request) (*http.Request, Provider, error)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		var pathParams struct {
-			articleID int64 `query:"articleId,required"`
+			articleID int64 `path:"articleId,required"`
 		}
 		if err := runtime.BindPathParams(&pathParams, req, "articleId"); err != nil {
 			w.WriteHeader(404)
