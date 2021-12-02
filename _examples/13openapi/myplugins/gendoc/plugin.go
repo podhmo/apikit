@@ -24,6 +24,7 @@ type Options struct {
 	OutputFile   string
 	Handlers     []genchi.Handler
 	DefaultError interface{}
+	Prepare      func(m *Manager)
 }
 
 func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) error {
@@ -33,7 +34,18 @@ func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) err
 		o.OutputFile,
 		o.Handlers,
 		o.DefaultError,
+		o.Prepare,
 	)
+}
+
+type Manager struct {
+	*reflectopenapi.Manager
+}
+
+func (m *Manager) DefineEnum(value interface{}, values ...interface{}) {
+	m.Visitor.VisitType(value, func(schema *openapi3.Schema) {
+		schema.Enum = append([]interface{}{value}, values...)
+	})
 }
 
 func IncludeMe(
@@ -42,10 +54,11 @@ func IncludeMe(
 	outputFile string,
 	handlers []genchi.Handler,
 	defaultError interface{},
+	prepare func(m *Manager),
 ) error {
 	ctx := context.TODO() // hmm
 	if outputFile == "" {
-		log.Println("output filename is empty, so saving at docs/openapi.json")
+		log.Println("output finame is empty, so saving at docs/openapi.json")
 		outputFile = "docs/openapi.json"
 	}
 
@@ -65,6 +78,10 @@ func IncludeMe(
 	}
 
 	doc, err := rc.BuildDoc(ctx, func(m *reflectopenapi.Manager) {
+		if prepare != nil {
+			prepare(&Manager{Manager: m})
+		}
+
 		for _, h := range handlers {
 			analyzed := h.Analyzed
 			metadata := h.MetaData
