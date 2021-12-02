@@ -39,6 +39,15 @@
         ],
         "type": "object"
       },
+      "SortOrder": {
+        "enum": [
+          "desc",
+          "asc"
+        ],
+        "title": "SortOrder",
+        "type": "string",
+        "x-new-type": "m/13openapi/design.SortOrder"
+      },
       "defaultError": {
         "additionalProperties": false,
         "properties": {
@@ -71,6 +80,13 @@
             "name": "limit",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
             }
           }
         ],
