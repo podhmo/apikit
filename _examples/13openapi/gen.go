@@ -56,6 +56,12 @@ func run() (err error) {
 			OutputFile:   "docs/openapi.json",
 			Handlers:     g.Handlers,
 			DefaultError: defaultError{},
+			Prepare: func(m *gendoc.Manager) {
+				m.DefineEnum(
+					design.SortOrderDesc,
+					design.SortOrderAsc,
+				)
+			},
 		}); err != nil {
 			return fmt.Errorf("on gendoc plugin: %w", err)
 		}

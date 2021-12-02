@@ -16,9 +16,15 @@ type Article struct {
 }
 
 // TODO: pagination
+type SortOrder string
+
+const (
+	SortOrderDesc SortOrder = "desc"
+	SortOrderAsc  SortOrder = "asc"
+)
 
 // ListArticle lists articles
-func ListArticle(ctx context.Context, db *DB, limit *int) ([]*Article, error) {
+func ListArticle(ctx context.Context, db *DB, limit *int, sort *SortOrder) ([]*Article, error) {
 	return nil, nil
 }
 func GetArticle(ctx context.Context, db *DB, articleID int64) (*Article, error) {
