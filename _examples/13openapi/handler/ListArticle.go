@@ -5,6 +5,7 @@ package handler
 import (
 	"context"
 	"m/13openapi/design"
+	"m/13openapi/design/enum"
 	"m/13openapi/handler/runtime"
 	"net/http"
 )
@@ -27,8 +28,8 @@ func ListArticle(getProvider func(*http.Request) (*http.Request, Provider, error
 			}
 		}
 		var queryParams struct {
-			limit *int              `query:"limit"`
-			sort  *design.SortOrder `query:"sort"`
+			limit *int            `query:"limit"`
+			sort  *enum.SortOrder `query:"sort"`
 		}
 		if err := runtime.BindQuery(&queryParams, req); err != nil {
 			_ = err // ignored

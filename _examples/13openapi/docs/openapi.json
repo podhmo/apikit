@@ -42,11 +42,19 @@
       "SortOrder": {
         "enum": [
           "desc",
+          "desc",
           "asc"
         ],
         "title": "SortOrder",
         "type": "string",
-        "x-new-type": "m/13openapi/design.SortOrder"
+        "x-enum-descriptions": [
+          "descending order",
+          "ascending order"
+        ],
+        "x-enum-varnames": [
+          "desc",
+          "asc"
+        ]
       },
       "defaultError": {
         "additionalProperties": false,

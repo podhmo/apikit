@@ -9,7 +9,9 @@ import (
 	"log"
 
 	"m/13openapi/design"
+	"m/13openapi/design/enum"
 	"m/13openapi/myplugins/gendoc"
+	"m/13openapi/seed"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
@@ -57,10 +59,7 @@ func run() (err error) {
 			Handlers:     g.Handlers,
 			DefaultError: defaultError{},
 			Prepare: func(m *gendoc.Manager) {
-				m.DefineEnum(
-					design.SortOrderDesc,
-					design.SortOrderAsc,
-				)
+				m.DefineEnumWithEnumSet(enum.SortOrderDesc, seed.Enums.SortOrder)
 			},
 		}); err != nil {
 			return fmt.Errorf("on gendoc plugin: %w", err)
