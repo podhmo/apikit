@@ -58,7 +58,7 @@ func IncludeMe(
 ) error {
 	ctx := context.TODO() // hmm
 	if outputFile == "" {
-		log.Println("output finame is empty, so saving at docs/openapi.json")
+		log.Println("output filename is empty, so saving at docs/openapi.json")
 		outputFile = "docs/openapi.json"
 	}
 
