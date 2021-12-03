@@ -33,8 +33,8 @@ func run() (err error) {
 	r := web.NewRouter()
 	// todo: conflict-check
 	r.Get("/hello", action.Hello)
-	r.Get("/hello-with-auth", action.Hello, web.WithExtraDependencies(auth.LoginRequired), web.WithRename("HelloWithAuth"))
-	r.Get("/hello-with-auth-with-db", action.Hello, web.WithExtraDependencies(auth.LoginRequiredWithDB), web.WithRename("HelloWithAuthWithDB"))
+	r.Get("/hello-with-auth", action.Hello, web.WithExtraDependencies(auth.LoginRequired), web.WithAnotherHandlerName("HelloWithAuth"))
+	r.Get("/hello-with-auth-with-db", action.Hello, web.WithExtraDependencies(auth.LoginRequiredWithDB), web.WithAnotherHandlerName("HelloWithAuthWithDB"))
 
 	c := genchi.DefaultConfig()
 	// c.Override("logger", action.NewLogger)

@@ -53,7 +53,7 @@ func WithExtraDependencies(deps ...interface{}) RoutingOption {
 		metadata.ExtraDependencies = append(metadata.ExtraDependencies, deps...)
 	}
 }
-func WithRename(name string) RoutingOption {
+func WithAnotherHandlerName(name string) RoutingOption {
 	return func(node *Node, metadata *MetaData) {
 		metadata.Name = name
 	}
