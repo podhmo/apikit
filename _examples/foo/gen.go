@@ -7,13 +7,12 @@ package main
 
 import (
 	"context"
-	"log"
-	"m/foo/action"
-	"m/foo/design"
-
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
-	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
+	"github.com/podhmo/apikit/web/webgen/gen-chi"
+	"log"
+	"m/foo/action"
+	"m/foo/design/code"
 )
 
 // generate code: VERBOSE=1 go run gen.go
@@ -36,7 +35,7 @@ func run() (err error) {
 	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
 	g := c.New(emitter)
-	if err := g.Generate(context.Background(), r, design.HTTPStatusOf); err != nil {
+	if err := g.Generate(context.Background(), r, code.HTTPStatusOf); err != nil {
 		return err
 	}
 
