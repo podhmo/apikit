@@ -241,6 +241,11 @@ func (e *Executor) emitWithManagement() error {
 		if e.Config.Clean && r.Type != classify.ResultTypeDelete {
 			r.Type = classify.ResultTypeCreate
 		}
+		if r.Type == classify.ResultTypeNotChanged {
+			if _, err := os.Stat(r.Name()); err != nil && os.IsNotExist(err) {
+				r.Type = classify.ResultTypeCreate
+			}
+		}
 
 		switch r.Type {
 		case classify.ResultTypeCreate, classify.ResultTypeUpdate:
