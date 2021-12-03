@@ -33,10 +33,15 @@ func (c *PluginConfig) ActivatePlugins(
 	pc := &PluginContext{Context: ctx, PluginConfig: c}
 	for _, p := range plugins {
 		if err := pc.IncludePlugin(here, p); err != nil {
-			return fmt.Errorf("on plugin %v, %w", reflect.TypeOf(pc.IncludePlugin), err)
+			return fmt.Errorf("error in plugin %s: %w", nameOfPlugin(p), err)
 		}
 	}
 	return nil
+}
+
+func nameOfPlugin(p Plugin) string {
+	rt := reflect.TypeOf(p)
+	return fmt.Sprintf("%s.%s", rt.PkgPath(), rt.Name())
 }
 
 type PluginContext struct {
