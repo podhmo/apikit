@@ -6,7 +6,7 @@ import (
 	"context"
 	"log"
 	"m/foo/action"
-	"m/foo/handler/runtime"
+	"m/foo/webapi/runtime"
 	"net/http"
 )
 
