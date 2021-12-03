@@ -45,13 +45,13 @@ func run() (err error) {
 	c := genchi.DefaultConfig()
 	c.Override("db", design.NewDB)
 
+	ctx := context.Background()
 	g := c.New(emitter)
-	if err := g.Generate(
-		context.Background(),
-		r,
-		design.HTTPStatusOf,
-	); err != nil {
+	if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
 		return err
 	}
-	return g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: 0}) // latestIDType is int
+
+	return g.ActivatePlugins(ctx, g.RuntimePkg,
+		scroll.Options{LatestIDTypeZeroValue: 0}, // latestIDType is int
+	)
 }

@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"m/14openapi-petstore/action"
 	"m/14openapi-petstore/design"
@@ -43,6 +42,8 @@ func router() *web.Router {
 }
 
 func run() (err error) {
+	ctx := context.Background()
+
 	emitter := emitgo.NewConfigFromRelativePath(action.AddPet, "..").NewEmitter()
 	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
@@ -52,7 +53,7 @@ func run() (err error) {
 
 	g := c.New(emitter)
 	r := router()
-	if err := g.Generate(context.Background(), r, design.HTTPStatusOf); err != nil {
+	if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
 		return err
 	}
 
@@ -61,20 +62,18 @@ func run() (err error) {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	}
-	if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
-		OutputFile:   "docs/openapi.json",
-		Handlers:     g.Handlers,
-		DefaultError: defaultError{},
-		Prepare: func(m *gendoc.Manager) {
-			// customize information
-			var doc *openapi3.T = m.Doc
-			doc.Info.Title = "Swagger Petstore"
-			doc.Info.Version = "1.0.0"
-			doc.Info.Description = "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification."
+	return g.ActivatePlugins(ctx, g.RootPkg,
+		gendoc.Options{
+			OutputFile:   "docs/openapi.json",
+			Handlers:     g.Handlers,
+			DefaultError: defaultError{},
+			Prepare: func(m *gendoc.Manager) {
+				// customize information
+				var doc *openapi3.T = m.Doc
+				doc.Info.Title = "Swagger Petstore"
+				doc.Info.Version = "1.0.0"
+				doc.Info.Description = "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification."
+			},
 		},
-	}); err != nil {
-		return fmt.Errorf("on gendoc plugin: %w", err)
-	}
-	return nil
-
+	)
 }

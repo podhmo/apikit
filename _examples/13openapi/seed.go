@@ -4,8 +4,7 @@
 package main
 
 import (
-	"fmt"
-
+	"context"
 	"m/13openapi/seed"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
@@ -17,13 +16,12 @@ func main() {
 	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
 		emitter.DisableManagement = true
 
-		pc := plugins.NewDefaultPluginContext(emitter)
+		ctx := context.Background()
 		pkg := emitter.RootPkg.Relative("design/enum", "")
 
-		enumset := seed.Enums.SortOrder
-		if err := pc.IncludePlugin(pkg, enum.Options{EnumSet: enumset}); err != nil {
-			return fmt.Errorf("generate Grade: %w", err)
-		}
-		return nil
+		c := plugins.NewDefaultConfig(emitter)
+		return c.ActivatePlugins(ctx, pkg,
+			enum.Options{EnumSet: seed.Enums.SortOrder},
+		)
 	})
 }

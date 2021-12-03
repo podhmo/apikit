@@ -30,6 +30,7 @@ type Options struct {
 
 func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) error {
 	return IncludeMe(
+		pc.Context,
 		pc.Config, pc.Resolver, pc.Emitter,
 		here,
 		o.OutputFile,
@@ -75,6 +76,7 @@ func (m *Manager) DefineEnumWithEnumSet(value interface{}, set enum.EnumSet) {
 }
 
 func IncludeMe(
+	ctx context.Context,
 	config *code.Config, resolver *resolve.Resolver, emitter *emitgo.Emitter,
 	here *tinypkg.Package,
 	outputFile string,
@@ -82,7 +84,6 @@ func IncludeMe(
 	defaultError interface{},
 	prepare func(m *Manager),
 ) error {
-	ctx := context.TODO() // hmm
 	if outputFile == "" {
 		log.Println("output filename is empty, so saving at docs/openapi.json")
 		outputFile = "docs/openapi.json"
