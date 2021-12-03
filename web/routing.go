@@ -107,7 +107,7 @@ func (r *Router) Group(pattern string, use func(*Router)) *Router {
 		Root: r.Root, ErrorHandler: r.ErrorHandler, Parent: r,
 		prefix: pattern, FullPrefix: fullprefix,
 		MetaData: &MetaData{Parent: r.MetaData},
-	}
+		}
 	use(child)
 	return child
 }

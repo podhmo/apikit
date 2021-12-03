@@ -74,10 +74,12 @@ type Generator struct {
 // type GeneratorOption func(*Generator) error
 // func (g *Generator) WithPlugin()
 
-func (g *Generator) IncludePlugin(here *tinypkg.Package, plugin plugins.Plugin) error {
+func (g *Generator) ActivatePlugins(ctx context.Context, here *tinypkg.Package, targets ...plugins.Plugin) error {
 	// TODO: fix panic using before Generate()
-	pc := &plugins.PluginContext{Config: g.Config.Config, Emitter: g.Emitter, Resolver: g.Resolver}
-	return pc.IncludePlugin(here, plugin)
+	c := &plugins.PluginConfig{Config: g.Config.Config}
+	c.Emitter = g.Emitter
+	c.Resolver = g.Resolver
+	return c.ActivatePlugins(ctx, here, targets...)
 }
 
 func (g *Generator) Generate(
