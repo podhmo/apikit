@@ -13,6 +13,7 @@ import (
 	"m/14openapi-petstore/design"
 	"m/14openapi-petstore/myplugins/gendoc"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
 	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
@@ -55,6 +56,13 @@ func run() (err error) {
 		OutputFile:   "docs/openapi.json",
 		Handlers:     g.Handlers,
 		DefaultError: defaultError{},
+		Prepare: func(m *gendoc.Manager) {
+			// customize information
+			var doc *openapi3.T = m.Doc
+			doc.Info.Title = "Swagger Petstore"
+			doc.Info.Version = "1.0.0"
+			doc.Info.Description = "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification."
+		},
 	}); err != nil {
 		return fmt.Errorf("on gendoc plugin: %w", err)
 	}

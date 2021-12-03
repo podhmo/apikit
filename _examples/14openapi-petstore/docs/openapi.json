@@ -32,9 +32,9 @@
     }
   },
   "info": {
-    "description": "-",
-    "title": "Sample API",
-    "version": "0.0.0"
+    "description": "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification.",
+    "title": "Swagger Petstore",
+    "version": "1.0.0"
   },
   "openapi": "3.0.0",
   "paths": {
