@@ -14,7 +14,8 @@ type Router struct {
 	Root         *Node
 	ErrorHandler func(error)
 
-	Parent *Router // []*Router?
+	Parent   *Router // []*Router?
+	MetaData *MetaData
 
 	FullPrefix string
 	prefix     string
@@ -26,6 +27,7 @@ func NewRouter() *Router {
 		ErrorHandler: func(err error) {
 			log.Printf("ERROR: %+v", err)
 		},
+		MetaData: &MetaData{},
 	}
 }
 
@@ -33,12 +35,14 @@ type MetaData struct {
 	Method string
 	Path   string
 
-	DefaultStatusCode int // if 0 -> 200
+	ExtraDependencies []interface{}
+	Parent            *MetaData
 
 	// additional
 	Name              string // if not renamed, the value is  ""
 	Description       string
-	ExtraDependencies []interface{}
+	DefaultStatusCode int // if 0 -> 200
+	Tags              []string
 }
 
 var (
@@ -63,6 +67,11 @@ func WithDefaultStatusCode(code int) RoutingOption {
 		metadata.DefaultStatusCode = code
 	}
 }
+func WithTags(tags ...string) RoutingOption {
+	return func(node *Node, metadata *MetaData) {
+		metadata.Tags = append(metadata.Tags, tags...)
+	}
+}
 func GetMetaData(node *Node) MetaData {
 	mu.Lock()
 	defer mu.Unlock()
@@ -81,6 +90,7 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 	metadata := &MetaData{
 		Method: method,
 		Path:   r.FullPrefix + pattern,
+		Parent: r.MetaData,
 	}
 	metadataMap[node] = metadata
 	mu.Unlock()
@@ -93,7 +103,11 @@ func (r *Router) Method(method, pattern string, fn T, options ...RoutingOption) 
 
 func (r *Router) Group(pattern string, use func(*Router)) *Router {
 	fullprefix := r.FullPrefix + pattern
-	child := &Router{Root: r.Root, ErrorHandler: r.ErrorHandler, Parent: r, prefix: pattern, FullPrefix: fullprefix}
+	child := &Router{
+		Root: r.Root, ErrorHandler: r.ErrorHandler, Parent: r,
+		prefix: pattern, FullPrefix: fullprefix,
+		MetaData: &MetaData{Parent: r.MetaData},
+	}
 	use(child)
 	return child
 }
