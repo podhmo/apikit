@@ -39,6 +39,23 @@
         ],
         "type": "object"
       },
+      "SortOrder": {
+        "enum": [
+          "desc",
+          "desc",
+          "asc"
+        ],
+        "title": "SortOrder",
+        "type": "string",
+        "x-enum-descriptions": [
+          "descending order",
+          "ascending order"
+        ],
+        "x-enum-varnames": [
+          "desc",
+          "asc"
+        ]
+      },
       "defaultError": {
         "additionalProperties": false,
         "properties": {
@@ -71,6 +88,13 @@
             "name": "limit",
             "schema": {
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "$ref": "#/components/schemas/SortOrder"
             }
           }
         ],

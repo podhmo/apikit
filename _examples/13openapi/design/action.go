@@ -2,6 +2,7 @@ package design
 
 import (
 	"context"
+	"m/13openapi/design/enum"
 )
 
 type DB struct{}
@@ -18,7 +19,7 @@ type Article struct {
 // TODO: pagination
 
 // ListArticle lists articles
-func ListArticle(ctx context.Context, db *DB, limit *int) ([]*Article, error) {
+func ListArticle(ctx context.Context, db *DB, limit *int, sort *enum.SortOrder) ([]*Article, error) {
 	return nil, nil
 }
 func GetArticle(ctx context.Context, db *DB, articleID int64) (*Article, error) {

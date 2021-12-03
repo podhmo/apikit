@@ -14,6 +14,7 @@ import (
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/plugins"
+	"github.com/podhmo/apikit/plugins/enum"
 	"github.com/podhmo/apikit/resolve"
 	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
 	reflectopenapi "github.com/podhmo/reflect-openapi"
@@ -24,6 +25,7 @@ type Options struct {
 	OutputFile   string
 	Handlers     []genchi.Handler
 	DefaultError interface{}
+	Prepare      func(m *Manager)
 }
 
 func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) error {
@@ -33,7 +35,43 @@ func (o Options) IncludeMe(pc *plugins.PluginContext, here *tinypkg.Package) err
 		o.OutputFile,
 		o.Handlers,
 		o.DefaultError,
+		o.Prepare,
 	)
+}
+
+type Manager struct {
+	*reflectopenapi.Manager
+}
+
+func (m *Manager) DefineEnum(value interface{}, values ...interface{}) {
+	m.Visitor.VisitType(value, func(schema *openapi3.Schema) {
+		schema.Enum = append([]interface{}{value}, values...)
+	})
+}
+func (m *Manager) DefineEnumWithEnumSet(value interface{}, set enum.EnumSet) {
+	m.Visitor.VisitType(value, func(schema *openapi3.Schema) {
+		schema.Title = set.Name
+		values := make([]interface{}, len(set.Enums))
+		names := make([]string, len(set.Enums))
+		descs := make([]string, len(set.Enums))
+		hasDesc := false
+		for i, x := range set.Enums {
+			names[i] = x.Name
+			values[i] = x.Value
+			descs[i] = x.Description
+			if x.Description != "" {
+				hasDesc = true
+			}
+		}
+		schema.Enum = append([]interface{}{value}, values...)
+		if schema.Extensions == nil {
+			schema.Extensions = map[string]interface{}{}
+		}
+		schema.Extensions["x-enum-varnames"] = names
+		if hasDesc {
+			schema.Extensions["x-enum-descriptions"] = descs
+		}
+	})
 }
 
 func IncludeMe(
@@ -42,6 +80,7 @@ func IncludeMe(
 	outputFile string,
 	handlers []genchi.Handler,
 	defaultError interface{},
+	prepare func(m *Manager),
 ) error {
 	ctx := context.TODO() // hmm
 	if outputFile == "" {
@@ -65,6 +104,10 @@ func IncludeMe(
 	}
 
 	doc, err := rc.BuildDoc(ctx, func(m *reflectopenapi.Manager) {
+		if prepare != nil {
+			prepare(&Manager{Manager: m})
+		}
+
 		for _, h := range handlers {
 			analyzed := h.Analyzed
 			metadata := h.MetaData
