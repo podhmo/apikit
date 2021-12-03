@@ -4,7 +4,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/plugins"
@@ -13,13 +13,12 @@ import (
 
 func main() {
 	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
-		pc := plugins.NewDefaultPluginContext(emitter)
-		pkg := emitter.RootPkg.Relative("generated", "")
+		ctx := context.Background()
+		here := emitter.RootPkg.Relative("generated", "")
 
 		enumset := enum.StringEnums("Grade", "s", "a", "b", "c", "d")
-		if err := pc.IncludePlugin(pkg, enum.Options{EnumSet: enumset}); err != nil {
-			return fmt.Errorf("generate Grade: %w", err)
-		}
-		return nil
+		return plugins.NewDefaultConfig(emitter).ActivatePlugins(ctx, here,
+			enum.Options{EnumSet: enumset},
+		)
 	})
 }

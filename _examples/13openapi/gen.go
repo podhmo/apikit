@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"m/13openapi/design"
@@ -50,20 +49,20 @@ func run() (err error) {
 		}
 
 		// generate openapi doc via custom plugin
-		type defaultError struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		}
-		if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
-			OutputFile:   "docs/openapi.json",
-			Handlers:     g.Handlers,
-			DefaultError: defaultError{},
-			Prepare: func(m *gendoc.Manager) {
-				m.DefineEnumWithEnumSet(enum.SortOrderDesc, seed.Enums.SortOrder)
+		return g.ActivatePlugins(ctx, g.RootPkg,
+			gendoc.Options{
+				OutputFile:   "docs/openapi.json",
+				Handlers:     g.Handlers,
+				DefaultError: defaultError{},
+				Prepare: func(m *gendoc.Manager) {
+					m.DefineEnumWithEnumSet(enum.SortOrderDesc, seed.Enums.SortOrder)
+				},
 			},
-		}); err != nil {
-			return fmt.Errorf("on gendoc plugin: %w", err)
-		}
-		return nil
+		)
 	})
+}
+
+type defaultError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }

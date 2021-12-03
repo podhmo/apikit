@@ -4,6 +4,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/plugins"
 	"github.com/podhmo/apikit/plugins/scroll"
@@ -11,10 +13,12 @@ import (
 
 func main() {
 	emitgo.NewConfigFromRelativePath(main, ".").MustEmitWith(func(emitter *emitgo.Emitter) error {
-		pc := plugins.NewDefaultPluginContext(emitter)
+		ctx := context.Background()
 		pkg := emitter.RootPkg.Relative("runtime", "")
 
 		var latestID int = 0 // for scroll implemention
-		return pc.IncludePlugin(pkg, scroll.Options{LatestIDTypeZeroValue: latestID})
+		return plugins.NewDefaultConfig(emitter).ActivatePlugins(ctx, pkg,
+			scroll.Options{LatestIDTypeZeroValue: latestID},
+		)
 	})
 }
