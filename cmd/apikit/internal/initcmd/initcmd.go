@@ -158,6 +158,9 @@ func run() error {
 		// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 	
 		g := c.New(emitter)
+		g.HandlerPkg = g.RootPkg.Relative("webapi/handler", "")
+		g.RuntimePkg = g.RootPkg.Relative("webapi/runtime", "")
+
 		r := newRouter()
 		if err := g.Generate(ctx, r, code.HTTPStatusOf); err != nil {
 			return err
