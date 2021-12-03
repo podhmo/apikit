@@ -34,7 +34,7 @@ func run() (err error) {
 	r.Get("/pets", action.FindPets)
 	r.Post("/pets", action.AddPet)
 	r.Get("/pets/{id}", action.FindPetByID)
-	r.Delete("/pets/{id}", action.DeletePet)
+	r.Delete("/pets/{id}", action.DeletePet, web.WithDefaultStatusCode(204))
 
 	c := genchi.DefaultConfig()
 	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)

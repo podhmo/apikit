@@ -28,6 +28,9 @@ func DeletePet(getProvider func(*http.Request) (*http.Request, Provider, error))
 			p = provider.PetStore()
 		}
 		result, err := action.DeletePet(p, pathParams.id)
+		if err == nil {
+			w.WriteHeader(204)
+		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }
