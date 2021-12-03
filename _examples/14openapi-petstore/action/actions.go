@@ -31,6 +31,7 @@ type Pet struct {
 	Id int64 `json:"id"`
 }
 
+// FindPets Returns all pets
 func FindPets(
 	p *PetStore,
 	tag *string, // TODO: tags *[]string
@@ -66,6 +67,7 @@ func FindPets(
 	return result, nil
 }
 
+// AddPet Creates a new pet in the store. Duplicates are allowed
 func AddPet(
 	p *PetStore,
 	params NewPet,
@@ -88,6 +90,7 @@ func AddPet(
 	return pet, nil
 }
 
+// Returns a pet based on a single ID
 func FindPetByID(
 	p *PetStore,
 	id int64,
@@ -103,6 +106,7 @@ func FindPetByID(
 	return pet, nil
 }
 
+// deletes a single pet based on the ID supplied
 func DeletePet(
 	p *PetStore,
 	id int64,

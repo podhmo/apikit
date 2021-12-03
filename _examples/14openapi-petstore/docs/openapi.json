@@ -40,6 +40,7 @@
   "paths": {
     "/pets": {
       "get": {
+        "description": "Returns all pets",
         "operationId": "m/14openapi-petstore/action.FindPets",
         "parameters": [
           {
@@ -81,9 +82,11 @@
             },
             "description": "default error"
           }
-        }
+        },
+        "summary": "Returns all pets"
       },
       "post": {
+        "description": "Creates a new pet in the store. Duplicates are allowed",
         "operationId": "m/14openapi-petstore/action.AddPet",
         "requestBody": {
           "content": {
@@ -124,11 +127,13 @@
             },
             "description": "default error"
           }
-        }
+        },
+        "summary": "Creates a new pet in the store. Duplicates are allowed"
       }
     },
     "/pets/{id}": {
       "delete": {
+        "description": "deletes a single pet based on the ID supplied",
         "operationId": "m/14openapi-petstore/action.DeletePet",
         "parameters": [
           {
@@ -163,9 +168,11 @@
             },
             "description": "default error"
           }
-        }
+        },
+        "summary": "deletes a single pet based on the ID supplied"
       },
       "get": {
+        "description": "Returns a pet based on a single ID",
         "operationId": "m/14openapi-petstore/action.FindPetByID",
         "parameters": [
           {
@@ -198,7 +205,8 @@
             },
             "description": "default error"
           }
-        }
+        },
+        "summary": "Returns a pet based on a single ID"
       }
     }
   },
