@@ -45,7 +45,7 @@ func New() *clilib.Command {
 			cfg.Header = ""
 
 			rootpkg := cfg.Resolver.NewPackage(rootpkgPath, "main")
-			designpkg := rootpkg.Relative("design", "")
+			codepkg := rootpkg.Relative("design/code", "")
 			actionpkg := rootpkg.Relative("action", "")
 
 			ecfg := emitgo.NewConfig(filepath.Base(rootpkgPath), rootpkg)
@@ -56,16 +56,16 @@ func New() *clilib.Command {
 			defer emitter.EmitWith(&err)
 
 			{
-				here := designpkg
+				here := codepkg
 				c := cfg.NewCode(here, "code.go", func(w io.Writer, c *code.Code) error {
 					c.Import(cfg.Resolver.NewPackage("github.com/morikuni/failure", ""))
 					source := `
 // error codes for your application.
 const (
-	CodeNotFound        failure.StringCode = "NotFound"
-	CodeUnauthorized    failure.StringCode = "Unauthorized"
-	CodeForbidden       failure.StringCode = "Forbidden"
-	CodeValidationError failure.StringCode = "ValidationError"
+	NotFound        failure.StringCode = "NotFound"
+	Unauthorized    failure.StringCode = "Unauthorized"
+	Forbidden       failure.StringCode = "Forbidden"
+	ValidationError failure.StringCode = "ValidationError"
 )
 
 func HTTPStatusOf(err error) int {
@@ -78,13 +78,13 @@ func HTTPStatusOf(err error) int {
 		return 500 // http.StatusInternalServerError
 	}
 	switch c {
-	case CodeUnauthorized:
-		return 401
-	case CodeForbidden:
+	case Unauthorized:
+		return 401 // http.StatusUuauthorized
+	case Forbidden:
 		return 403 // http.StatusForbidden
-	case CodeNotFound:
+	case NotFound:
 		return 404 // http.StatusNotFound
-	case CodeValidationError:
+	case ValidationError:
 		return 422 // http.StatusUnprocessableEntity // or http.StatusBadRequest?
 	default:
 		return 500 // http.StatusInternalServerError
@@ -129,7 +129,7 @@ func NewLogger() (*log.Logger, error) {
 					c.Import(cfg.Resolver.NewPackage("github.com/podhmo/apikit/web", ""))
 					c.Import(cfg.Resolver.NewPackage("github.com/podhmo/apikit/web/webgen/gen-chi", "genchi"))
 
-					c.Import(designpkg)
+					c.Import(codepkg)
 					c.Import(actionpkg)
 					source := `
 // generate code: VERBOSE=1 go run gen.go
@@ -152,7 +152,7 @@ func run() (err error) {
 	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
 	g := c.New(emitter)
-	if err := g.Generate(context.Background(), r, design.HTTPStatusOf); err != nil {
+	if err := g.Generate(context.Background(), r, code.HTTPStatusOf); err != nil {
 		return err
 	}
 	
