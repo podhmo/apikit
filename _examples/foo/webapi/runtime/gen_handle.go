@@ -3,8 +3,11 @@
 package runtime
 
 import (
+	"m/foo/design/code"
+)
+
+import (
 	"errors"
-	"m/foo/design"
 	"net/http"
 	"reflect"
 
@@ -52,5 +55,5 @@ func CreateHandleResultFunction(getHTTPStatus func(error) int) HandleResultFunc 
 	}
 }
 func init() {
-	HandleResult = CreateHandleResultFunction(design.HTTPStatusOf)
+	HandleResult = CreateHandleResultFunction(code.HTTPStatusOf)
 }
