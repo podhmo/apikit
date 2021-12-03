@@ -113,22 +113,39 @@ func IncludeMe(
 			metadata := h.MetaData
 
 			m.RegisterFunc(h.RawFn).After(func(op *openapi3.Operation) {
-				// e.g. articleID -> articleId
-				for _, p := range op.Parameters {
-					if p.Value.In == "path" {
-						for _, binding := range analyzed.Bindings.Path {
-							if binding.Name == p.Value.Name {
-								p.Value.Name = binding.Var.Name
+				// handling tags
+				{
+					for p := &metadata; p.Parent != nil; p = p.Parent {
+						if p.Tags != nil {
+							op.Tags = append(op.Tags, p.Tags...)
+						}
+					}
+				}
+
+				// normalize the name of path-params
+				{
+					// e.g. articleID -> articleId
+					for _, p := range op.Parameters {
+						if p.Value.In == "path" {
+							for _, binding := range analyzed.Bindings.Path {
+								if binding.Name == p.Value.Name {
+									p.Value.Name = binding.Var.Name
+								}
 							}
 						}
 					}
 				}
-				if code := metadata.DefaultStatusCode; code != 0 && op.Responses != nil {
-					if v200, ok := op.Responses["200"]; ok {
-						op.Responses[strconv.Itoa(code)] = v200
-						delete(op.Responses, "200")
+
+				// handling default status
+				{
+					if code := metadata.DefaultStatusCode; code != 0 && op.Responses != nil {
+						if v200, ok := op.Responses["200"]; ok {
+							op.Responses[strconv.Itoa(code)] = v200
+							delete(op.Responses, "200")
+						}
 					}
 				}
+
 				m.Doc.AddOperation(metadata.Path, metadata.Method, op)
 			})
 		}
