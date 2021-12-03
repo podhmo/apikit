@@ -500,7 +500,7 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 					t.Fatalf("analyze: %+v", err)
 				}
 
-				code := ToHandlerCode(c.here, config.Config, analyzed, handlerName)
+				code := ToHandlerCode(c.here, config.Config, analyzed, web.MetaData{Name: handlerName})
 				var buf strings.Builder
 				err = code.Emit(&buf)
 

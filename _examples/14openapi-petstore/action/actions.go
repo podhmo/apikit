@@ -33,7 +33,8 @@ type Pet struct {
 
 func FindPets(
 	p *PetStore,
-	tags *[]string, limit *int32,
+	tag *string, // TODO: tags *[]string
+	limit *int32,
 ) ([]*Pet, error) {
 	p.Lock.Lock()
 	defer p.Lock.Unlock()
@@ -41,7 +42,8 @@ func FindPets(
 	var result []*Pet
 
 	for _, pet := range p.Pets {
-		if tags != nil {
+		if tag != nil {
+			tags := &[]string{*tag} // TODO: FIXME
 			// If we have tags,  filter pets by tag
 			for _, t := range *tags {
 				if pet.Tag != nil && (*pet.Tag == t) {
@@ -104,7 +106,7 @@ func FindPetByID(
 func DeletePet(
 	p *PetStore,
 	id int64,
-) (interface{}, error) { // TODO: 204
+) (interface{}, error) {
 	p.Lock.Lock()
 	defer p.Lock.Unlock()
 

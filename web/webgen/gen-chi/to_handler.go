@@ -8,14 +8,16 @@ import (
 
 	"github.com/podhmo/apikit/code"
 	"github.com/podhmo/apikit/pkg/tinypkg"
+	"github.com/podhmo/apikit/web"
 )
 
 func ToHandlerCode(
 	here *tinypkg.Package,
 	config *code.Config,
 	analyzed *Analyzed,
-	name string,
+	metadata web.MetaData,
 ) *code.CodeEmitter {
+	name := metadata.Name
 	if name == "" {
 		name = analyzed.Name
 	}
@@ -39,6 +41,7 @@ func ToHandlerCode(
 			return WriteHandlerFunc(w, here,
 				analyzed,
 				name,
+				metadata.DefaultStatusCode,
 			)
 		},
 	}
@@ -49,6 +52,7 @@ func WriteHandlerFunc(w io.Writer,
 	here *tinypkg.Package,
 	analyzed *Analyzed,
 	name string,
+	defaultStatusCode int,
 ) error {
 	runtimeModule := analyzed.RuntimeModule
 	providerModule := analyzed.ProviderModule
@@ -184,6 +188,12 @@ func WriteHandlerFunc(w io.Writer,
 		actionName := analyzed.Names.ActionFunc
 		actionArgs := analyzed.Names.ActionFuncArgs
 		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionName, strings.Join(actionArgs, ", "))
+
+		if defaultStatusCode != 0 {
+			fmt.Fprintln(w, "\t\tif err == nil{")
+			fmt.Fprintf(w, "\t\t\tw.WriteHeader(%d)\n", defaultStatusCode)
+			fmt.Fprintln(w, "\t\t}")
+		}
 
 		// runtime.HandleResult(w, req, result, err)
 		fmt.Fprintf(w, "\t\t%s(w, req, result, err)\n", handleResultFunc)

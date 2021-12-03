@@ -33,6 +33,8 @@ type MetaData struct {
 	Method string
 	Path   string
 
+	DefaultStatusCode int // if 0 -> 200
+
 	// additional
 	Name              string // if not renamed, the value is  ""
 	Description       string
@@ -54,6 +56,11 @@ func WithExtraDependencies(deps ...interface{}) RoutingOption {
 func WithRename(name string) RoutingOption {
 	return func(node *Node, metadata *MetaData) {
 		metadata.Name = name
+	}
+}
+func WithDefaultStatusCode(code int) RoutingOption {
+	return func(node *Node, metadata *MetaData) {
+		metadata.DefaultStatusCode = code
 	}
 }
 func GetMetaData(node *Node) MetaData {

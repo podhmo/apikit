@@ -4,7 +4,7 @@ package handler
 
 import (
 	"m/14openapi-petstore/action"
-	"main/handler/runtime"
+	"m/14openapi-petstore/handler/runtime"
 	"net/http"
 )
 
@@ -28,6 +28,9 @@ func DeletePet(getProvider func(*http.Request) (*http.Request, Provider, error))
 			p = provider.PetStore()
 		}
 		result, err := action.DeletePet(p, pathParams.id)
+		if err == nil {
+			w.WriteHeader(204)
+		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }
