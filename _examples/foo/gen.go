@@ -23,17 +23,22 @@ func main() {
 	}
 }
 
+func newRouter() *web.Router {
+	r := web.NewRouter()
+	r.Get("/hello", action.Hello)
+	return r
+}
+
 func run() error {
 	ctx := context.Background()
 	return emitgo.NewConfigFromRelativePath(action.Hello, "..").EmitWith(func(emitter *emitgo.Emitter) error {
 		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
-		r := web.NewRouter()
-		r.Get("/hello", action.Hello)
 
 		c := genchi.DefaultConfig()
 		// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
 		g := c.New(emitter)
+		r := newRouter()
 		if err := g.Generate(ctx, r, code.HTTPStatusOf); err != nil {
 			return err
 		}
