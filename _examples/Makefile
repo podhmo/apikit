@@ -18,6 +18,9 @@ default: 00 01 02 10 11 12 13
 12:
 	go run $(shell echo $@*/)gen.go
 13:
+	go run $(shell echo $@*/)seed.go
+	go run $(shell echo $@*/)gen.go
+14:
 	go run $(shell echo $@*/)gen.go
 
 check:
@@ -27,6 +30,7 @@ check:
 	go install -v ./$(shell echo 11*/)/handler/...
 	go install -v ./$(shell echo 12*/)/handler/...
 	go install -v ./$(shell echo 13*/)/handler/...
+	go install -v ./$(shell echo 14*/)/handler/...
 
 # apikit
 init-check:
@@ -46,4 +50,5 @@ clean:
 	rm -rf 11*/handler/
 	rm -rf 12*/handler/
 	rm -rf 13*/handler/
+	rm -rf 14*/handler/
 	rm -f `find . -name ".apikit.hist.json"`

@@ -7,12 +7,13 @@ package main
 
 import (
 	"context"
-	"github.com/podhmo/apikit/pkg/emitgo"
-	"github.com/podhmo/apikit/web"
-	"github.com/podhmo/apikit/web/webgen/gen-chi"
 	"log"
 	"m/14openapi-petstore/action"
 	"m/14openapi-petstore/design"
+
+	"github.com/podhmo/apikit/pkg/emitgo"
+	"github.com/podhmo/apikit/web"
+	genchi "github.com/podhmo/apikit/web/webgen/gen-chi"
 )
 
 // generate code: VERBOSE=1 go run gen.go
@@ -24,12 +25,16 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(action.Hello, "..").NewEmitter()
+	emitter := emitgo.NewConfigFromRelativePath(main, "").NewEmitter()
 	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
 	r := web.NewRouter()
-	r.Get("/hello", action.Hello)
+
+	r.Get("/pets", action.FindPets)
+	r.Post("/pets", action.AddPet)
+	r.Get("/pets/{id}", action.FindPetByID)
+	r.Delete("/pets/{id}", action.DeletePet)
 
 	c := genchi.DefaultConfig()
 	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
