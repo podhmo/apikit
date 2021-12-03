@@ -27,22 +27,31 @@ func main() {
 	}
 }
 
+func router() *web.Router {
+	r := web.NewRouter()
+
+	r.Group("", func(r *web.Router) {
+		r.MetaData.Tags = []string{"pet"}
+
+		r.Get("/pets", action.FindPets, web.WithTags("query"))
+		r.Post("/pets", action.AddPet)
+		r.Get("/pets/{id}", action.FindPetByID, web.WithTags("query"))
+		r.Delete("/pets/{id}", action.DeletePet, web.WithDefaultStatusCode(204))
+	})
+
+	return r
+}
+
 func run() (err error) {
 	emitter := emitgo.NewConfigFromRelativePath(action.AddPet, "..").NewEmitter()
 	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
-	r := web.NewRouter()
-
-	r.Get("/pets", action.FindPets)
-	r.Post("/pets", action.AddPet)
-	r.Get("/pets/{id}", action.FindPetByID)
-	r.Delete("/pets/{id}", action.DeletePet, web.WithDefaultStatusCode(204))
-
 	c := genchi.DefaultConfig()
 	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
 	g := c.New(emitter)
+	r := router()
 	if err := g.Generate(context.Background(), r, design.HTTPStatusOf); err != nil {
 		return err
 	}

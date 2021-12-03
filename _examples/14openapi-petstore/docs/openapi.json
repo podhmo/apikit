@@ -83,7 +83,11 @@
             "description": "default error"
           }
         },
-        "summary": "Returns all pets"
+        "summary": "Returns all pets",
+        "tags": [
+          "query",
+          "pet"
+        ]
       },
       "post": {
         "description": "Creates a new pet in the store. Duplicates are allowed",
@@ -128,7 +132,10 @@
             "description": "default error"
           }
         },
-        "summary": "Creates a new pet in the store. Duplicates are allowed"
+        "summary": "Creates a new pet in the store. Duplicates are allowed",
+        "tags": [
+          "pet"
+        ]
       }
     },
     "/pets/{id}": {
@@ -169,7 +176,10 @@
             "description": "default error"
           }
         },
-        "summary": "deletes a single pet based on the ID supplied"
+        "summary": "deletes a single pet based on the ID supplied",
+        "tags": [
+          "pet"
+        ]
       },
       "get": {
         "description": "Returns a pet based on a single ID",
@@ -206,7 +216,11 @@
             "description": "default error"
           }
         },
-        "summary": "Returns a pet based on a single ID"
+        "summary": "Returns a pet based on a single ID",
+        "tags": [
+          "query",
+          "pet"
+        ]
       }
     }
   },
