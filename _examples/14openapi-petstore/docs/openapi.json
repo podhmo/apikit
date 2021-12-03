@@ -1,0 +1,211 @@
+{
+  "components": {
+    "schemas": {
+      "Pet": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "defaultError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "title": "defaultError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "-",
+    "title": "Sample API",
+    "version": "0.0.0"
+  },
+  "openapi": "3.0.0",
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "m/14openapi-petstore/action.FindPets",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tag",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Pet"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "m/14openapi-petstore/action.AddPet",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "tag": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
+          }
+        }
+      }
+    },
+    "/pets/{id}": {
+      "delete": {
+        "operationId": "m/14openapi-petstore/action.DeletePet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "description": "Any type",
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
+          }
+        }
+      },
+      "get": {
+        "operationId": "m/14openapi-petstore/action.FindPetByID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pet"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/defaultError"
+                }
+              }
+            },
+            "description": "default error"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "local development server",
+      "url": "http://localhost:8888"
+    }
+  ]
+}

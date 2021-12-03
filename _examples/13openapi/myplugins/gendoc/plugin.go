@@ -123,6 +123,12 @@ func IncludeMe(
 						}
 					}
 				}
+				if code := metadata.DefaultStatusCode; code != 0 && op.Responses != nil {
+					if v200, ok := op.Responses["200"]; ok {
+						op.Responses[strconv.Itoa(code)] = v200
+						delete(op.Responses, "200")
+					}
+				}
 				m.Doc.AddOperation(metadata.Path, metadata.Method, op)
 			})
 		}

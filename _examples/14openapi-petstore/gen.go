@@ -7,9 +7,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"m/14openapi-petstore/action"
 	"m/14openapi-petstore/design"
+	"m/14openapi-petstore/myplugins/gendoc"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
 	"github.com/podhmo/apikit/web"
@@ -44,7 +46,18 @@ func run() (err error) {
 		return err
 	}
 
-	// use scroll plugin (string type version)
-	// g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: ""}) // latestId is string
+	// generate openapi doc via custom plugin
+	type defaultError struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+	if err := g.IncludePlugin(g.RootPkg, gendoc.Options{
+		OutputFile:   "docs/openapi.json",
+		Handlers:     g.Handlers,
+		DefaultError: defaultError{},
+	}); err != nil {
+		return fmt.Errorf("on gendoc plugin: %w", err)
+	}
 	return nil
+
 }
