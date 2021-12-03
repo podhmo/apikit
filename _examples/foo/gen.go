@@ -23,23 +23,25 @@ func main() {
 	}
 }
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(action.Hello, "..").NewEmitter()
-	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
-	defer emitter.EmitWith(&err)
+func run() error {
+	ctx := context.Background()
+	return emitgo.NewConfigFromRelativePath(action.Hello, "..").EmitWith(func(emitter *emitgo.Emitter) error {
+		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
+		r := web.NewRouter()
+		r.Get("/hello", action.Hello)
 
-	r := web.NewRouter()
-	r.Get("/hello", action.Hello)
+		c := genchi.DefaultConfig()
+		// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 
-	c := genchi.DefaultConfig()
-	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
+		g := c.New(emitter)
+		if err := g.Generate(ctx, r, code.HTTPStatusOf); err != nil {
+			return err
+		}
 
-	g := c.New(emitter)
-	if err := g.Generate(context.Background(), r, code.HTTPStatusOf); err != nil {
-		return err
-	}
-
-	// use scroll plugin (string type version)
-	// g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: ""}) // latestId is string
-	return nil
+		// // use scroll plugin (string type version)
+		// return g.ActivatePlugins(ctx, g.RuntimePkg,
+		// 	scroll.Options{LatestIDTypeZeroValue: ""}, // latestId is string
+		// )
+		return nil
+	})
 }
