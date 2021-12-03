@@ -129,6 +129,8 @@ func NewLogger() (*log.Logger, error) {
 					c.Import(cfg.Resolver.NewPackage("github.com/podhmo/apikit/web", ""))
 					c.Import(cfg.Resolver.NewPackage("github.com/podhmo/apikit/web/webgen/gen-chi", "genchi"))
 
+					// c.Import(cfg.Resolver.NewPackage("github.com/podhmo/apikit/plugins/scroll", ""))
+
 					c.Import(codepkg)
 					c.Import(actionpkg)
 					source := `
@@ -141,6 +143,7 @@ func main() {
 }
 
 func run() error {
+	ctx := context.Background()
 	return emitgo.NewConfigFromRelativePath(action.Hello, "..").EmitWith(func(emitter *emitgo.Emitter) error {
 		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 		r := web.NewRouter()
@@ -150,12 +153,14 @@ func run() error {
 		// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
 	
 		g := c.New(emitter)
-		if err := g.Generate(context.Background(), r, code.HTTPStatusOf); err != nil {
+		if err := g.Generate(ctx, r, code.HTTPStatusOf); err != nil {
 			return err
 		}
 		
-		// use scroll plugin (string type version)
-		// g.IncludePlugin(g.RuntimePkg, scroll.Options{LatestIDTypeZeroValue: ""}) // latestId is string
+		// // use scroll plugin (string type version)
+		// return g.ActivatePlugins(ctx, g.RuntimePkg,
+		// 	scroll.Options{LatestIDTypeZeroValue: ""}, // latestId is string
+		// )
 		return nil
 	})
 }
