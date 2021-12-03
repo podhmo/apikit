@@ -20,13 +20,11 @@ func newfileSaver(config *Config) *fileSaver {
 
 func (wf *fileSaver) SaveOrCreateFile(path string, b []byte, prefix string) error {
 	defer func() {
-		if wf.config.Verbose {
-			relative, err := filepath.Rel(wf.config.CurDir, path)
-			if err == nil {
-				path = relative
-			}
-			wf.config.Log.Printf("\t%s file %s", prefix, path) // todo: detect Create Or Update Or Delete (?)
+		relative, err := filepath.Rel(wf.config.CurDir, path)
+		if err == nil {
+			path = relative
 		}
+		wf.config.Log.Printf("\t%s file %s", prefix, path) // todo: detect Create Or Update Or Delete (?)
 	}()
 
 	if err := ioutil.WriteFile(path, b, 0666); err != nil {

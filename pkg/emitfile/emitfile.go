@@ -248,9 +248,7 @@ func (e *Executor) emitWithManagement() error {
 				return err
 			}
 		case classify.ResultTypeDelete:
-			if e.Verbose {
-				e.Log.Printf("\t%s %s", r.Type, r.Name())
-			}
+			e.Log.Printf("\t%s %s", r.Type, r.Name())
 			if err := os.Remove(r.Name()); err != nil {
 				e.Log.Printf("WARNING: remove %q is failed", r.Name())
 			}
