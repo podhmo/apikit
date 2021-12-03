@@ -25,7 +25,7 @@ func main() {
 }
 
 func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(main, "").NewEmitter()
+	emitter := emitgo.NewConfigFromRelativePath(action.AddPet, "..").NewEmitter()
 	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 	defer emitter.EmitWith(&err)
 
