@@ -127,7 +127,7 @@ func (g *Generator) Generate(
 				return fmt.Errorf("analyze failure: %w", err)
 			}
 
-			code := ToHandlerCode(here, g.Config.Config, analyzed, metadata.Name)
+			code := ToHandlerCode(here, g.Config.Config, analyzed, metadata)
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
