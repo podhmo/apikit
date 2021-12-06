@@ -4,12 +4,13 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"m/30graphql/action"
 	"m/30graphql/design"
-	"os"
 
 	"github.com/podhmo/apikit/graph"
+	gengraphqlgo "github.com/podhmo/apikit/graph/gen-graphql-go"
+	"github.com/podhmo/apikit/pkg/emitgo"
 )
 
 // TODO: interface
@@ -53,8 +54,17 @@ func router() *graph.Router {
 }
 
 func main() {
-	r := router()
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	enc.Encode(r)
+	emitgo.NewConfigFromRelativePath(action.AllUsers, "../").EmitWith(func(emitter *emitgo.Emitter) error {
+		ctx := context.Background()
+		r := router()
+
+		c := gengraphqlgo.DefaultConfig()
+		c.DisableFormat = true
+
+		g := c.New(emitter)
+		return g.Generate(ctx, r)
+		// enc := json.NewEncoder(os.Stdout)
+		// enc.SetIndent("", "  ")
+		// enc.Encode(r)
+	})
 }
