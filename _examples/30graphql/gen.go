@@ -4,32 +4,13 @@
 package main
 
 import (
+	"encoding/json"
 	"m/30graphql/action"
+	"m/30graphql/design"
+	"os"
+
+	"github.com/podhmo/apikit/graph"
 )
-
-// https://github.com/graphql/swapi-graphql
-
-type Router interface {
-	Query(options ...Option)
-	Mutation(options ...Option)
-
-	Object(ob interface{}, options ...Option)
-	Implements(ob interface{}) Option
-	Field(name string, r Resolver) Option
-	Exclude(names ...string) Option
-
-	// TODO
-	Union(fn interface{})
-	Enum(values ...interface{})
-}
-
-type Field struct {
-	Name     string
-	Resolver interface{}
-}
-
-type Option = interface{}
-type Resolver = interface{}
 
 // TODO: interface
 // TODO: enum
@@ -39,8 +20,8 @@ type Resolver = interface{}
 // 	return nil, nil
 // }
 
-func mount(r Router) {
-	// TODO: required
+func router() *graph.Router {
+	r := graph.NewRouter()
 
 	r.Query(
 		r.Field("me", action.Me),
@@ -49,6 +30,9 @@ func mount(r Router) {
 		// r.Field("search", func(term string) ([]SearchResult, error) { return nil, nil }),
 		r.Field("myChats", action.MyChats),
 	)
+
+	r.Object(design.Chat{})
+	r.Object(design.User{})
 
 	// TODO: field resolver
 	// r.Object(Chat{},
@@ -65,7 +49,12 @@ func mount(r Router) {
 
 	// // TODO: union
 	// r.Union(func(*design.User, *design.Chat, *design.ChatMessage) SearchResult { return nil })
+	return r
 }
 
 func main() {
+	r := router()
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	enc.Encode(r)
 }
