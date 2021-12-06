@@ -1,6 +1,11 @@
 package resolver
 
-import "github.com/graphql-go/graphql"
+import (
+	"m/30graphql/action"
+	"m/30graphql/design"
+
+	"github.com/graphql-go/graphql"
+)
 
 type Definitions struct {
 	dateType *graphql.Scalar
@@ -116,22 +121,31 @@ func Schema() (graphql.Schema, error) {
 	})
 
 	return graphql.NewSchema(graphql.SchemaConfig{
-		Query: query,
+		Query:    query,
+		Mutation: nil,
 	})
 }
 
 func ResolveMe(p graphql.ResolveParams) (interface{}, error) {
+	// TODO:
 	return nil, nil
 }
 
 func ResolveUser(p graphql.ResolveParams) (interface{}, error) {
-	return nil, nil
+	var id design.ID
+	if v, ok := p.Args["id"].(design.ID); ok {
+		id = v
+	}
+	r, err := action.User(p.Context, id)
+	return r, err
 }
 
 func ResolveAllUsers(p graphql.ResolveParams) (interface{}, error) {
+	// TODO:
 	return nil, nil
 }
 
 func ResolveMyChats(p graphql.ResolveParams) (interface{}, error) {
+	// TODO:
 	return nil, nil
 }

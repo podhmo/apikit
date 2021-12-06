@@ -3,7 +3,9 @@
 
 package main
 
-import "context"
+import (
+	"m/30graphql/action"
+)
 
 // https://github.com/graphql/swapi-graphql
 
@@ -32,59 +34,20 @@ type Resolver = interface{}
 // TODO: interface
 // TODO: enum
 
-// types ----------------------------------------
-
-type ID string
-type Date string
-type Role string // enum (USER, ADMIN)
-const (
-	RoleAdmin Role = "ADMIN"
-	RoleUser  Role = "USER"
-)
-
-type Node struct {
-	ID ID
-}
-
-type User struct {
-	ID       ID
-	Username string
-	Email    string
-	Role     Role
-}
-
-type Chat struct {
-	ID       ID
-	Users    []*User
-	Messages []*ChatMessage
-}
-
-type ChatMessage struct {
-	ID      ID
-	Content string
-	Time    Date
-	User    User
-}
-
-type SearchResult interface {
-	// User, Chat, ChatMessage
-}
-
-// resolver
-
-func ChatActiveUsers(ctx context.Context, chat *Chat) ([]*User, error) {
-	return nil, nil
-}
+// // resolver
+// func ChatActiveUsers(ctx context.Context, chat *design.Chat) ([]*design.User, error) {
+// 	return nil, nil
+// }
 
 func mount(r Router) {
 	// TODO: required
 
 	r.Query(
-		r.Field("me", func() (*User, error) { return nil, nil }),
-		r.Field("user", func(id ID) (*User, error) { return nil, nil }),
-		r.Field("allUsers", func() ([]*User, error) { return nil, nil }),
+		r.Field("me", action.Me),
+		r.Field("user", action.User),
+		r.Field("allUsers", action.AllUsers),
 		// r.Field("search", func(term string) ([]SearchResult, error) { return nil, nil }),
-		r.Field("myChats", func() ([]*Chat, error) { return nil, nil }),
+		r.Field("myChats", action.MyChats),
 	)
 
 	// TODO: field resolver
@@ -101,7 +64,7 @@ func mount(r Router) {
 	// }
 
 	// // TODO: union
-	// r.Union(func(*User, *Chat, *ChatMessage) SearchResult { return nil })
+	// r.Union(func(*design.User, *design.Chat, *design.ChatMessage) SearchResult { return nil })
 }
 
 func main() {
