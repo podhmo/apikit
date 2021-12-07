@@ -13,23 +13,23 @@ type Node struct {
 }
 
 type User struct {
-	ID       ID
-	Username string
-	Email    string
-	Role     Role
+	ID       ID     `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     Role   `json:"role"`
 }
 
 type Chat struct {
-	ID       ID
-	Users    []*User
-	Messages []*ChatMessage
+	ID       ID             `json:"id"`
+	Users    []*User        `json:"users"`
+	Messages []*ChatMessage `json:"messages"`
 }
 
 type ChatMessage struct {
-	ID      ID
-	Content string
-	Time    Date
-	User    User
+	ID      ID     `json:"id"`
+	Content string `json:"content"`
+	Time    Date   `json:"time"`
+	User    *User  `json:"user"`
 }
 
 type SearchResult interface {

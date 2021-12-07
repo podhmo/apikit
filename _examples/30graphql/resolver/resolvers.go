@@ -1,151 +1,105 @@
 package resolver
 
 import (
+	"context"
 	"m/30graphql/action"
 	"m/30graphql/design"
+	"m/30graphql/store"
 
 	"github.com/graphql-go/graphql"
 )
 
-type Definitions struct {
-	dateType *graphql.Scalar
-	roleType *graphql.Enum
-
-	userType        *graphql.Object
-	chatType        *graphql.Object
-	chatMessageType *graphql.Object
+type Provider interface {
+	Store() *store.Store
 }
 
-func Schema() (graphql.Schema, error) {
-	var defs Definitions
+type getProviderFunc = func(ctx context.Context) Provider
 
-	// Args: graphql.FieldConfigArgument{
-	// 	"doneOnly": &graphql.ArgumentConfig{
-	// 		Type: graphql.Boolean,
-	// 	},
-	// },
-	defs.roleType = graphql.NewEnum(graphql.EnumConfig{
-		Name: "Role",
-		Values: graphql.EnumValueConfigMap{
-			"ADMIN": &graphql.EnumValueConfig{},
-			"USER":  &graphql.EnumValueConfig{},
-		},
-	})
-
-	defs.dateType = graphql.DateTime
-	defs.userType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "User",
-		Fields: (graphql.FieldsThunk)(func() graphql.Fields {
-			return graphql.Fields{
-				"id": &graphql.Field{
-					Type: graphql.NewNonNull(graphql.ID),
-				},
-				"username": &graphql.Field{
-					Type: graphql.String,
-				},
-				"email": &graphql.Field{
-					Type: graphql.String,
-				},
-				"role": &graphql.Field{
-					Type: defs.roleType,
-				},
-			}
-		}),
-	})
-
-	defs.chatType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "Chat",
-		Fields: (graphql.FieldsThunk)(func() graphql.Fields {
-			return graphql.Fields{
-				"id": &graphql.Field{
-					Type: graphql.NewNonNull(graphql.ID),
-				},
-				"users": &graphql.Field{
-					Type: graphql.NewList(defs.userType),
-				},
-				"messages": &graphql.Field{
-					Type: graphql.NewList(defs.chatMessageType),
-				},
-			}
-		}),
-		// Interfaces: (graphql.InterfacesThunk)(func() []*graphql.Interface {
-		// 	return []*graphql.Interface{someInterface}
-		// }),
-	})
-
-	defs.chatMessageType = graphql.NewObject(graphql.ObjectConfig{
-		Name: "chatMessage",
-		Fields: (graphql.FieldsThunk)(func() graphql.Fields {
-			return graphql.Fields{
-				"id": &graphql.Field{
-					Type: graphql.NewNonNull(graphql.ID),
-				},
-				"content": &graphql.Field{
-					Type: graphql.String,
-				},
-				"time": &graphql.Field{
-					Type: defs.dateType,
-				},
-				"user": &graphql.Field{
-					Type: defs.userType,
-				},
-			}
-		}),
-	})
-
-	query := graphql.NewObject(graphql.ObjectConfig{
-		Name: "query",
-		Fields: graphql.Fields{
-			"me": &graphql.Field{
-				Type:    defs.userType,
-				Resolve: ResolveMe,
-			},
-			"user": &graphql.Field{
-				Args: graphql.FieldConfigArgument{
-					"id": &graphql.ArgumentConfig{
-						Type: graphql.String,
-					},
-				},
-				Type:    defs.userType,
-				Resolve: ResolveUser,
-			},
-			"allUsers": &graphql.Field{
-				Type:    graphql.NewList(defs.userType),
-				Resolve: ResolveAllUsers,
-			},
-			"myChats": &graphql.Field{
-				Type:    graphql.NewList(defs.chatType),
-				Resolve: ResolveMyChats,
-			},
-		},
-	})
-
-	return graphql.NewSchema(graphql.SchemaConfig{
-		Query:    query,
-		Mutation: nil,
-	})
-}
-
-func ResolveMe(p graphql.ResolveParams) (interface{}, error) {
-	// TODO:
-	return nil, nil
-}
-
-func ResolveUser(p graphql.ResolveParams) (interface{}, error) {
-	var id design.ID
-	if v, ok := p.Args["id"].(design.ID); ok {
-		id = v
+func ResolveMe(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		return action.Me(ctx, store) // TODO: get current user (?)
 	}
-	r, err := action.User(p.Context, id)
-	return r, err
 }
 
-func ResolveAllUsers(p graphql.ResolveParams) (interface{}, error) {
-	// TODO:
-	return nil, nil
+func ResolveUser(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+
+		var id design.ID
+		if v, ok := p.Args["id"].(design.ID); ok {
+			id = v
+		}
+		return action.User(ctx, store, id)
+	}
 }
 
-func ResolveMyChats(p graphql.ResolveParams) (interface{}, error) {
-	// TODO:
-	return nil, nil
+func ResolveAllUsers(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		return action.AllUsers(ctx, store)
+	}
+}
+
+func ResolveMyChats(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		return action.MyChats(ctx, store)
+	}
+}
+func ResolveChatToUsers(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		chat := p.Source.(*design.Chat)
+		return action.ChatToUsers(ctx, store, chat)
+	}
+}
+func ResolveChatToMessages(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		chat := p.Source.(*design.Chat)
+		return action.ChatToMessages(ctx, store, chat)
+	}
+}
+func ResolveChatMessageToUser(getProvider getProviderFunc) graphql.FieldResolveFn {
+	return func(p graphql.ResolveParams) (interface{}, error) {
+		ctx := p.Context
+		provider := getProvider(ctx)
+		var store *store.Store
+		{
+			store = provider.Store()
+		}
+		message := p.Source.(*design.ChatMessage)
+		return action.ChatMessageToUser(ctx, store, message)
+	}
 }

@@ -32,8 +32,14 @@ func router() *graph.Router {
 		r.Field("myChats", action.MyChats),
 	)
 
-	r.Object(design.Chat{})
 	r.Object(design.User{})
+	r.Object(design.Chat{},
+		r.Field("users", action.ChatToUsers),
+		r.Field("messages", action.ChatToMessages),
+	)
+	r.Object(design.ChatMessage{},
+		r.Field("user", action.ChatMessageToUser),
+	)
 
 	// TODO: field resolver
 	// r.Object(Chat{},
