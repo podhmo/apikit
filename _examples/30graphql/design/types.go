@@ -27,6 +27,8 @@ type Chat struct {
 
 type ChatMessage struct {
 	ID      ID     `json:"id"`
+	UserID  ID     `json:"userID`
+	ChatID  ID     `json:"chatID`
 	Content string `json:"content"`
 	Time    Date   `json:"time"`
 	User    *User  `json:"user"`

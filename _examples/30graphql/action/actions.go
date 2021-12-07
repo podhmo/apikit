@@ -24,6 +24,8 @@ func toChat(store *s.Store, c *s.Chat) *design.Chat {
 func toChatMessage(store *s.Store, m *s.ChatMessage) *design.ChatMessage {
 	return &design.ChatMessage{
 		ID:      design.ID(m.ID),
+		UserID:  design.ID(m.UserID),
+		ChatID:  design.ID(m.ChatID),
 		Content: m.Content,
 		Time:    design.Date(m.Time),
 	}
@@ -123,8 +125,7 @@ func ChatMessageToUser(
 	m *design.ChatMessage,
 ) (*design.User, error) {
 	// todo: handling easily
-	p := store.GetChatMessage(s.ChatMessageID(m.ID))
-	return toUser(store, store.GetUser(p.UserID)), nil
+	return toUser(store, store.GetUser(s.UserID(m.UserID))), nil
 }
 
 // r.Field("search", func(term string) ([]SearchResult, error) { return nil, nil }),
