@@ -7,7 +7,7 @@ import (
 	s "m/30graphql/store"
 )
 
-func toUser(store *s.Store, u *s.User) *design.User {
+func toUser(u *s.User) *design.User {
 	return &design.User{
 		ID:       design.ID(u.ID),
 		Username: u.Username,
@@ -15,13 +15,13 @@ func toUser(store *s.Store, u *s.User) *design.User {
 		Role:     design.RoleAdmin, // xxx
 	}
 }
-func toChat(store *s.Store, c *s.Chat) *design.Chat {
+func toChat(c *s.Chat) *design.Chat {
 	return &design.Chat{
 		ID: design.ID(c.ID),
 		// without Users and Messages
 	}
 }
-func toChatMessage(store *s.Store, m *s.ChatMessage) *design.ChatMessage {
+func toChatMessage(m *s.ChatMessage) *design.ChatMessage {
 	return &design.ChatMessage{
 		ID:      design.ID(m.ID),
 		UserID:  design.ID(m.UserID),
@@ -43,7 +43,7 @@ func Me(
 	store *s.Store,
 ) (*design.User, error) {
 	u := store.Users[0]
-	return toUser(store, u), nil
+	return toUser(u), nil
 }
 
 func User(
@@ -55,7 +55,7 @@ func User(
 	if u == nil {
 		return nil, fmt.Errorf("not found") // todo: custom merror
 	}
-	return toUser(store, u), nil
+	return toUser(u), nil
 }
 func AllUsers(
 	ctx context.Context,
@@ -63,7 +63,7 @@ func AllUsers(
 ) ([]*design.User, error) {
 	r := make([]*design.User, len(store.Users))
 	for i, u := range store.Users {
-		r[i] = toUser(store, u)
+		r[i] = toUser(u)
 	}
 	return r, nil
 }
@@ -86,7 +86,7 @@ func MyChats(
 	for _, chat := range store.Chats {
 		for _, myChatID := range myChatIDs {
 			if myChatID == chat.ID {
-				r = append(r, toChat(store, chat))
+				r = append(r, toChat(chat))
 				break
 			}
 		}
@@ -101,7 +101,7 @@ func ChatToUsers(
 ) ([]*design.User, error) {
 	var r []*design.User
 	for _, userId := range store.ChatToUsers[s.ChatID(chat.ID)] {
-		r = append(r, toUser(store, store.GetUser(userId)))
+		r = append(r, toUser(store.GetUser(userId)))
 	}
 	return r, nil
 }
@@ -114,7 +114,7 @@ func ChatToMessages(
 	chatID := s.ChatID(chat.ID)
 	for _, m := range store.ChatMessages {
 		if m.ChatID == chatID {
-			r = append(r, toChatMessage(store, m))
+			r = append(r, toChatMessage(m))
 		}
 	}
 	return r, nil
@@ -125,7 +125,7 @@ func ChatMessageToUser(
 	m *design.ChatMessage,
 ) (*design.User, error) {
 	// todo: handling easily
-	return toUser(store, store.GetUser(s.UserID(m.UserID))), nil
+	return toUser(store.GetUser(s.UserID(m.UserID))), nil
 }
 
 // r.Field("search", func(term string) ([]SearchResult, error) { return nil, nil }),
