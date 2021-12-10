@@ -95,15 +95,7 @@ func writeComposed(
 		return fmt.Errorf("topological sort: %w", err)
 	}
 
-	var returns []*tinypkg.Var
-	{
-		sym := resolver.Symbol(here, providers[len(providers)-1].Shape)
-		f, ok := sym.(*tinypkg.Func)
-		if !ok {
-			return fmt.Errorf("unexpected return type providers[%d] (%s)", len(providers)-1, sym)
-		}
-		returns = f.Returns
-	}
+	returns := sorted[len(sorted)-1].Provider.Returns
 	return tinypkg.WriteFunc(w, here, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
 			indent := "\t"
