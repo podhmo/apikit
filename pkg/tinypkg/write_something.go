@@ -249,6 +249,19 @@ type topoState struct {
 	nodes map[string]*Binding
 }
 
+func (bl BindingList) Dump(vars ...*Var) {
+	fmt.Fprintln(os.Stderr, "****************************************")
+	fmt.Fprintln(os.Stderr, "variables")
+	for _, v := range vars {
+		fmt.Fprintln(os.Stderr, "\t", v)
+	}
+	fmt.Fprintln(os.Stderr, "bindings")
+	for _, b := range bl {
+		fmt.Fprintln(os.Stderr, "\t", b.Name, "<-", b.typ, "...", b.Provider)
+	}
+	fmt.Fprintln(os.Stderr, "****************************************")
+}
+
 func (bl BindingList) TopologicalSorted(vars ...*Var) ([]*Binding, error) {
 	s := &topoState{
 		sorted: make([]*Binding, 0, len(bl)),
