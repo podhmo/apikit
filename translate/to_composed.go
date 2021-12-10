@@ -67,8 +67,6 @@ func writeComposed(
 			name := v.Name
 			varLv := tinypkg.GetLevel(v.Node)
 			argLV := tinypkg.GetLevel(x.Node)
-			// fmt.Println("@@", "arg", i, x, tinypkg.GetLevel(x.Node))
-			// fmt.Println("@#", "var", v.Name, v.Node, tinypkg.GetLevel(v.Node))
 			diff := varLv - argLV
 			if diff < 0 {
 				name = strings.Repeat("&", diff) + name
