@@ -2,6 +2,23 @@ package tinypkg
 
 import "fmt"
 
+func GetLevel(x Node) int {
+	if x, ok := x.(*Pointer); ok {
+		return x.Lv
+	}
+	return 0
+}
+
+func TypeEqualWithoutLevel(x, y Node) bool {
+	if v, ok := x.(*Pointer); ok {
+		x = v.V
+	}
+	if v, ok := y.(*Pointer); ok {
+		y = v.V
+	}
+	return TypeEqual(x, y)
+}
+
 func TypeEqual(x, y Node) bool {
 	switch x := x.(type) {
 	case *Var:
