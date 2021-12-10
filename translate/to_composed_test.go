@@ -45,19 +45,19 @@ func TestToComposed(t *testing.T) {
 			},
 			want: `
 func InitializeEvent(phrase string) (*translate.Event, error) {
-	var v0 *translate.Message
+	var m *translate.Message
 	{
-		v0 = NewMessage(phrase)
+		m = translate.NewMessage(phrase)
 	}
-	var v1 *translate.Greeter
+	var g *translate.Greeter
 	{
 		var err error
-		v1, err = NewGreeter(m)
+		g, err = translate.NewGreeter(*m)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return translate.NewEvent(v1)
+	return translate.NewEvent(*g)
 }`,
 		},
 		{
@@ -70,19 +70,19 @@ func InitializeEvent(phrase string) (*translate.Event, error) {
 			},
 			want: `
 func InitializeEvent(phrase string) (*Event, error) {
-	var v0 *Message
+	var m *Message
 	{
-		v0 = NewMessage(phrase)
+		m = NewMessage(phrase)
 	}
-	var v1 *Greeter
+	var g *Greeter
 	{
 		var err error
-		v1, err = NewGreeter(m)
+		g, err = NewGreeter(*m)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return NewEvent(v1)
+	return NewEvent(*g)
 }`,
 		},
 		{
@@ -95,19 +95,19 @@ func InitializeEvent(phrase string) (*Event, error) {
 			},
 			want: `
 func InitializeEvent(phrase string) (*translate.Event, error) {
-	var v0 *translate.Message
+	var m *translate.Message
 	{
-		v0 = NewMessage(phrase)
+		m = translate.NewMessage(phrase)
 	}
-	var v1 *translate.Greeter
+	var g *translate.Greeter
 	{
 		var err error
-		v1, err = NewGreeter(m)
+		g, err = translate.NewGreeter(*m)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return translate.NewEvent(v1)
+	return translate.NewEvent(*g)
 }`,
 		},
 	}
