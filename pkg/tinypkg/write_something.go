@@ -58,7 +58,7 @@ type Binding struct {
 
 	Provider      *Func
 	ProviderAlias string
-	argsAliases   []string // args in call alias
+	ArgsAliases   []string // args in call alias
 
 	ZeroReturnsDefault string
 
@@ -114,7 +114,7 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 
 func (b *Binding) CallString(here *Package) string {
 	provider := b.Provider
-	args := b.argsAliases
+	args := b.ArgsAliases
 	if args == nil {
 		args = make([]string, 0, len(provider.Args))
 		for _, x := range provider.Args {

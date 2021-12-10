@@ -3,6 +3,7 @@ package translate
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	"github.com/podhmo/apikit/resolve"
@@ -65,16 +66,29 @@ func writeComposed(
 		if err != nil {
 			return fmt.Errorf("on provider %s, new binding: %w", p.Symbol, err)
 		}
+
+		// handling pointer (ref, deref)
+		args := make([]string, len(b.Provider.Args))
 		for i, x := range b.Provider.Args {
-			fmt.Println("@@", "arg", i, x, tinypkg.GetLevel(x.Node))
 			v := vars[p.Args[i].Shape.GetIdentity()]
-			fmt.Println("@#", "var", v.Name, v.Node, tinypkg.GetLevel(v.Node))
+			name := v.Name
+			varLv := tinypkg.GetLevel(v.Node)
+			argLV := tinypkg.GetLevel(x.Node)
+			// fmt.Println("@@", "arg", i, x, tinypkg.GetLevel(x.Node))
+			// fmt.Println("@#", "var", v.Name, v.Node, tinypkg.GetLevel(v.Node))
+			diff := varLv - argLV
+			if diff < 0 {
+				name = strings.Repeat("&", diff) + name
+			} else if diff > 0 {
+				name = strings.Repeat("*", diff) + name
+			}
+			args[i] = name
 		}
+		b.ArgsAliases = args
 		bindings = append(bindings, b)
-		fmt.Println("---")
 	}
 
-	bindings.Dump(args...)
+	// bindings.Dump(args...)
 
 	sorted, err := bindings.TopologicalSorted(args...)
 	if err != nil {
