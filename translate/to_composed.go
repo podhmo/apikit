@@ -16,13 +16,7 @@ func writeComposed(
 	here *tinypkg.Package, resolver *resolve.Resolver,
 	name string, providers []*resolve.Def,
 ) error {
-	// TODO: external
-	type Var struct {
-		*tinypkg.Var
-		K reflectshape.Identity
-	}
-
-	vars := map[reflectshape.Identity]Var{}
+	vars := map[reflectshape.Identity]*tinypkg.Var{}
 
 	for i, p := range providers {
 		retItem := p.Returns[0].Shape
@@ -32,7 +26,7 @@ func writeComposed(
 		}
 		name := fmt.Sprintf("v%d", i)
 		node := resolver.Symbol(here, retItem)
-		vars[k] = Var{K: k, Var: &tinypkg.Var{Name: name, Node: node}}
+		vars[k] = &tinypkg.Var{Name: name, Node: node}
 	}
 
 	var args []*tinypkg.Var
@@ -41,9 +35,8 @@ func writeComposed(
 			k := x.Shape.GetIdentity()
 			v, ok := vars[k]
 			if !ok {
-				sym := resolver.Symbol(here, x.Shape)
-				args = append(args, &tinypkg.Var{Name: x.Name, Node: sym})
-				v = Var{K: k, Var: &tinypkg.Var{Name: x.Name, Node: sym}}
+				v = &tinypkg.Var{Name: x.Name, Node: resolver.Symbol(here, x.Shape)}
+				args = append(args, v)
 				vars[k] = v
 			}
 			v.Name = x.Name
