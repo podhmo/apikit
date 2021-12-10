@@ -99,16 +99,13 @@ func writeComposed(
 	return tinypkg.WriteFunc(w, here, name, &tinypkg.Func{Args: args, Returns: returns},
 		func() error {
 			indent := "\t"
-			for i, b := range sorted {
-				if i == len(sorted)-1 {
-					fmt.Fprintf(w, "%sreturn %s\n", indent, b.CallString(here))
-					break
-				}
-
+			for _, b := range sorted[:len(sorted)-1] {
 				if err := b.WriteWithCleanupAndError(w, here, indent, returns); err != nil {
 					return err
 				}
 			}
+			b := sorted[len(sorted)-1]
+			fmt.Fprintf(w, "%sreturn %s\n", indent, b.CallString(here))
 			return nil
 		})
 }
