@@ -7,13 +7,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
-
 	"webruntime"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator/v10"
 )
 
 type Article struct {
@@ -24,7 +23,7 @@ type Article struct {
 }
 type Comment struct {
 	Author string `json:"author"`
-	Text   string `json"text"`
+	Text   string `json:"text"`
 }
 
 var articles = map[int64]*Article{
@@ -32,32 +31,6 @@ var articles = map[int64]*Article{
 		ID:    1,
 		Title: "foo",
 	},
-}
-
-func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
-	var pathItem struct {
-		ArticleID int64 `path:"articleId,required"`
-	}
-
-	{
-		if err := webruntime.BindPath(&pathItem, req, "articleId"); err != nil {
-			w.WriteHeader(http.StatusNotFound) // todo: some helpers
-			webruntime.HandleResult(w, req, nil, err)
-			return
-		}
-	}
-
-	var input PostArticleCommentInput
-	{
-		if err := webruntime.BindBody(&input, req.Body); err != nil {
-			w.WriteHeader(http.StatusBadRequest) // todo: some helpers
-			webruntime.HandleResult(w, req, nil, err)
-			return
-		}
-	}
-	ctx := req.Context()
-	result, err := PostArticleComment(ctx, input, pathItem.ArticleID)
-	webruntime.HandleResult(w, req, result, err)
 }
 
 type PostArticleCommentInput struct {
@@ -68,38 +41,69 @@ func PostArticleComment(
 	ctx context.Context,
 	input PostArticleCommentInput,
 	articleID int64,
-) (*Article, error) {
-	if err := webruntime.Validate(input); err != nil {
-		return nil, err
-	}
+	loud *bool,
+) (*Comment, error) {
 	article, ok := articles[articleID]
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
-	article.Comments = append(article.Comments, &Comment{
+
+	text := input.Text
+	if loud != nil && *loud {
+		text = strings.ToUpper(text)
+	}
+	comment := &Comment{
 		Author: "someone",
-		Text:   input.Text,
-	})
-	return article, nil
+		Text:   text,
+	}
+	article.Comments = append(article.Comments, comment)
+	return comment, nil
 }
 
-var validate = validator.New()
+func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
+	var data struct {
+		ArticleID int64 `path:"articleId,required"`
+		Loud      *bool `query:"loud"`
+		PostArticleCommentInput
+	}
 
-func Validate(ob interface{}) error {
-	// TODO: merge error
-	if err := validate.Struct(ob); err != nil {
-		return err
+	// path bindings
+	if err := webruntime.BindPathParams(&data, req, "articleId"); err != nil {
+		w.WriteHeader(http.StatusNotFound) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
 	}
-	if v, ok := ob.(interface{ Validate() error }); ok {
-		return v.Validate() // TODO: 422
+
+	// data bindings
+	if err := webruntime.BindBody(&data.PostArticleCommentInput, req.Body); err != nil {
+		w.WriteHeader(http.StatusBadRequest) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
 	}
-	return nil
+	if err := webruntime.ValidateStruct(data.PostArticleCommentInput); err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
+	}
+
+	// query bindings
+	if err := webruntime.BindQuery(&data, req); err != nil {
+		_ = err // ignored
+	}
+
+	ctx := req.Context()
+	result, err := PostArticleComment(ctx, data.PostArticleCommentInput, data.ArticleID, data.Loud)
+	webruntime.HandleResult(w, req, result, err)
 }
 
 func main() {
 	if err := run(); err != nil {
 		log.Fatalf("!! %+v", err)
 	}
+}
+
+func Mount(r chi.Router) {
+	r.Post("/articles/{articleId}/comments", PostArticleCommentHandler)
 }
 
 func run() error {
@@ -113,7 +117,7 @@ func run() error {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.Heartbeat("/_ping"))
 
-	r.Post("/articles/{articleId}/comments", PostArticleCommentHandler)
+	Mount(r)
 
 	port := 8888
 	if v, err := strconv.Atoi(os.Getenv("PORT")); err == nil {
