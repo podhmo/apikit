@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 	"webruntime"
 
@@ -22,7 +23,7 @@ type Article struct {
 }
 type Comment struct {
 	Author string `json:"author"`
-	Text   string `json"text"`
+	Text   string `json:"text"`
 }
 
 var articles = map[int64]*Article{
@@ -40,21 +41,29 @@ func PostArticleComment(
 	ctx context.Context,
 	input PostArticleCommentInput,
 	articleID int64,
-) (*Article, error) {
+	loud *bool,
+) (*Comment, error) {
 	article, ok := articles[articleID]
 	if !ok {
 		return nil, fmt.Errorf("not found")
 	}
-	article.Comments = append(article.Comments, &Comment{
+
+	text := input.Text
+	if loud != nil && *loud {
+		text = strings.ToUpper(text)
+	}
+	comment := &Comment{
 		Author: "someone",
-		Text:   input.Text,
-	})
-	return article, nil
+		Text:   text,
+	}
+	article.Comments = append(article.Comments, comment)
+	return comment, nil
 }
 
 func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 	var data struct {
 		ArticleID int64 `path:"articleId,required"`
+		Loud      *bool `query:"loud"`
 		PostArticleCommentInput
 	}
 
@@ -77,8 +86,13 @@ func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// query bindings
+	if err := webruntime.BindQuery(&data, req); err != nil {
+		_ = err // ignored
+	}
+
 	ctx := req.Context()
-	result, err := PostArticleComment(ctx, data.PostArticleCommentInput, data.ArticleID)
+	result, err := PostArticleComment(ctx, data.PostArticleCommentInput, data.ArticleID, data.Loud)
 	webruntime.HandleResult(w, req, result, err)
 }
 
