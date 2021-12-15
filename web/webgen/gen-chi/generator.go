@@ -116,6 +116,17 @@ func (g *Generator) Generate(
 	resolver := g.Tracker.Resolver
 	var handlers []Handler
 
+	providerModule := analyzer.ProviderModule
+	getProviderFunc := providerModule.Funcs.GetProvider
+	chiPkg := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
+	mountFunc := g.RouterPkg.NewFunc("Mount",
+		[]*tinypkg.Var{
+			{Name: "r", Node: chiPkg.NewSymbol("Router")},
+			{Name: getProviderFunc.Name, Node: getProviderFunc},
+		},
+		nil,
+	)
+
 	// handler
 	{
 		g.Log.Printf("generate handler package ...")
@@ -165,18 +176,10 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
-				providerModule := analyzer.ProviderModule
 				c.AddDependency(providerModule)
-				getProviderFunc := providerModule.Funcs.GetProvider
+				c.AddDependency(mountFunc)
 
-				chi := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
-				f := here.NewFunc("Mount", []*tinypkg.Var{
-					{Name: "r", Node: chi.NewSymbol("Router")},
-					{Name: getProviderFunc.Name, Node: getProviderFunc},
-				}, nil)
-				c.AddDependency(f)
-
-				return tinypkg.WriteFunc(w, here, "", f, func() error {
+				return tinypkg.WriteFunc(w, here, "", mountFunc, func() error {
 					for _, h := range handlers {
 						// TODO: grouping
 						fn := here.Use(h.HandlerFunc.Symbol())
