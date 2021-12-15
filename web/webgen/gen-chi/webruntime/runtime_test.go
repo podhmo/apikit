@@ -1,8 +1,10 @@
 package webruntime_test
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"webruntime"
 
@@ -135,6 +137,64 @@ func TestBindHeader(t *testing.T) {
 		}
 		if got := data.Verbose; got != nil {
 			t.Errorf("want verbose is nil, but got is %v", *got)
+		}
+	})
+}
+
+func TestBindBody(t *testing.T) {
+	type Data struct {
+		APIKey  string `json:"apikey"`
+		Verbose bool   `json:"verbose"`
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		var data Data
+
+		body := `{"apikey": "xxx", "verbose": true, "xxx": "yyy"}`
+		if err := webruntime.BindBody(&data, ioutil.NopCloser(strings.NewReader(body))); err != nil {
+			t.Errorf("unexpected error: %+v", err)
+		}
+
+		want := Data{Verbose: true, APIKey: "xxx"}
+		if want, got := want.APIKey, data.APIKey; want != got {
+			t.Errorf("want apikey is %v, but got is %v", want, got)
+		}
+		if want, got := want.Verbose, data.Verbose; want != got {
+			t.Errorf("want verboseis %v, but got is %v", want, got)
+		}
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		var data Data
+
+		body := `{"verbose": "foo"`
+		if err := webruntime.BindBody(&data, ioutil.NopCloser(strings.NewReader(body))); err == nil {
+			t.Errorf("error is expected but nil")
+		}
+
+		want := Data{}
+		if want, got := want.APIKey, data.APIKey; want != got {
+			t.Errorf("want apikey is %v, but got is %v", want, got)
+		}
+		if want, got := want.Verbose, data.Verbose; want != got {
+			t.Errorf("want verboseis %v, but got is %v", want, got)
+		}
+	})
+
+	t.Run("invalid field type", func(t *testing.T) {
+		var data Data
+
+		body := `{"verbose": "foo"}`
+		if err := webruntime.BindBody(&data, ioutil.NopCloser(strings.NewReader(body))); err == nil {
+			t.Errorf("error is expected but nil")
+		}
+
+		want := Data{}
+		if want, got := want.APIKey, data.APIKey; want != got {
+			t.Errorf("want apikey is %v, but got is %v", want, got)
+		}
+		if want, got := want.Verbose, data.Verbose; want != got {
+			t.Errorf("want verboseis %v, but got is %v", want, got)
 		}
 	})
 }
