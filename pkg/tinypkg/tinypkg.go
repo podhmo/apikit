@@ -150,6 +150,10 @@ func (p *Package) Lookup(name string) *Symbol {
 	return p.symbols[name]
 }
 
+func (p *Package) Use(sym *Symbol) *ImportedSymbol {
+	return p.Import(sym.Package).Lookup(sym)
+}
+
 type Symbol struct {
 	Name    string
 	Package *Package
@@ -225,6 +229,10 @@ type Func struct {
 	Package *Package
 	Args    []*Var
 	Returns []*Var
+}
+
+func (f *Func) Symbol() *Symbol {
+	return f.Package.NewSymbol(f.Name)
 }
 
 func (f *Func) OnWalk(use func(*Symbol) error) error {
