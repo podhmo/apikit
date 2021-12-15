@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func TestPathParams(t *testing.T) {
+func TestBindPathParams(t *testing.T) {
 	type Data struct {
 		FooID string `path:"fooId"`
 		BarID int    `path:"barId"`
@@ -36,6 +36,7 @@ func TestPathParams(t *testing.T) {
 		if _, err := http.Get(ts.URL + path); err != nil {
 			t.Errorf("unexpected error: %+v", err)
 		}
+
 		if want, got := want.FooID, data.FooID; want != got {
 			t.Errorf("want foo id is %q, but got is %q", want, got)
 		}
@@ -50,11 +51,50 @@ func TestPathParams(t *testing.T) {
 		if _, err := http.Get(ts.URL + path); err != nil {
 			t.Errorf("unexpected error: %+v", err)
 		}
+
 		if want, got := want.FooID, data.FooID; !(want != got) {
 			t.Errorf("want foo id is %q, but got is %q", want, got)
 		}
 		if want, got := want.BarID, data.BarID; !(want != got) {
 			t.Errorf("want bar id is %v, but got is %v", want, got)
+		}
+	})
+}
+
+func TestBindQuery(t *testing.T) {
+	type Data struct {
+		Verbose *bool `query:"verbose"`
+		Limit   *int  `limit:"limit"`
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		var data Data
+		req := httptest.NewRequest("GET", "/?verbose=true&limit=10&xxx=yyyy", nil)
+		webruntime.BindQuery(&data, req)
+
+		verbose := true
+		limit := 10
+		want := Data{Verbose: &verbose, Limit: &limit}
+		if want, got := want.Verbose, data.Verbose; *want != *got {
+			t.Errorf("want verbose is %v, but got is %v", *want, *got)
+		}
+		if want, got := want.Limit, data.Limit; *want != *got {
+			t.Errorf("want limit is %v, but got is %v", *want, *got)
+		}
+	})
+	t.Run("invalid ignored", func(t *testing.T) {
+		var data Data
+		req := httptest.NewRequest("GET", "/?verbose=abbaba&limit=fooo", nil)
+		webruntime.BindQuery(&data, req)
+
+		verbose := false
+		limit := 0
+		want := Data{Verbose: &verbose, Limit: &limit}
+		if want, got := want.Verbose, data.Verbose; *want != *got {
+			t.Errorf("want verbose is %v, but got is %v", *want, *got)
+		}
+		if want, got := want.Limit, data.Limit; *want != *got {
+			t.Errorf("want limit is %v, but got is %v", *want, *got)
 		}
 	})
 }
