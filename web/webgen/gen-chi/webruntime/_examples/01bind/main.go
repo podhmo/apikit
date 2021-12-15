@@ -34,33 +34,32 @@ var articles = map[int64]*Article{
 }
 
 func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
-	var pathItem struct {
+	var data struct {
 		ArticleID int64 `path:"articleId,required"`
+		PostArticleCommentInput
 	}
 
-	{
-		if err := webruntime.BindPathParams(&pathItem, req, "articleId"); err != nil {
-			w.WriteHeader(http.StatusNotFound) // todo: some helpers
-			webruntime.HandleResult(w, req, nil, err)
-			return
-		}
+	// path bindings
+	if err := webruntime.BindPathParams(&data, req, "articleId"); err != nil {
+		w.WriteHeader(http.StatusNotFound) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
 	}
 
-	var input PostArticleCommentInput
-	{
-		if err := webruntime.BindBody(&input, req.Body); err != nil {
-			w.WriteHeader(http.StatusBadRequest) // todo: some helpers
-			webruntime.HandleResult(w, req, nil, err)
-			return
-		}
-		if err := webruntime.ValidateStruct(input); err != nil {
-			w.WriteHeader(http.StatusUnprocessableEntity) // todo: some helpers
-			webruntime.HandleResult(w, req, nil, err)
-			return
-		}
+	// data bindings
+	if err := webruntime.BindBody(&data.PostArticleCommentInput, req.Body); err != nil {
+		w.WriteHeader(http.StatusBadRequest) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
 	}
+	if err := webruntime.ValidateStruct(data.PostArticleCommentInput); err != nil {
+		w.WriteHeader(http.StatusUnprocessableEntity) // todo: some helpers
+		webruntime.HandleResult(w, req, nil, err)
+		return
+	}
+
 	ctx := req.Context()
-	result, err := PostArticleComment(ctx, input, pathItem.ArticleID)
+	result, err := PostArticleComment(ctx, data.PostArticleCommentInput, data.ArticleID)
 	webruntime.HandleResult(w, req, result, err)
 }
 
