@@ -55,7 +55,7 @@ func BindQuery(dst interface{}, req *http.Request) error {
 	return decoder.Decode(dst, req.URL.Query())
 }
 
-func BindHeader(dst interface{}, req *http.Request, keys []string) error {
+func BindHeader(dst interface{}, req *http.Request) error {
 	mu.Lock()
 	defer mu.Unlock()
 	decoder.SetAliasTag("header")

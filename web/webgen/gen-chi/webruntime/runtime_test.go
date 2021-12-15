@@ -98,3 +98,43 @@ func TestBindQuery(t *testing.T) {
 		}
 	})
 }
+
+func TestBindHeader(t *testing.T) {
+	type Data struct {
+		APIKey  *string `header:"API_KEY"`
+		Verbose *bool   `header:"VERBOSE"`
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		var data Data
+		req := httptest.NewRequest("GET", "/", nil)
+		req.Header.Set("API_KEY", "xxx")
+		req.Header.Set("VERBOSE", "1")
+		req.Header.Set("XXXX", "YYY")
+
+		webruntime.BindHeader(&data, req)
+
+		apiKey := "xxx"
+		verbose := true
+		want := Data{Verbose: &verbose, APIKey: &apiKey}
+		if want, got := want.APIKey, data.APIKey; *want != *got {
+			t.Errorf("want apikey is %v, but got is %v", *want, *got)
+		}
+		if want, got := want.Verbose, data.Verbose; *want != *got {
+			t.Errorf("want verbose is %v, but got is %v", *want, *got)
+		}
+	})
+
+	t.Run("invalid ignored", func(t *testing.T) {
+		var data Data
+		req := httptest.NewRequest("GET", "/", nil)
+
+		webruntime.BindHeader(&data, req)
+		if got := data.APIKey; got != nil {
+			t.Errorf("want apikey is nil, but got is %q", *got)
+		}
+		if got := data.Verbose; got != nil {
+			t.Errorf("want verbose is nil, but got is %v", *got)
+		}
+	})
+}
