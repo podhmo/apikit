@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-playground/validator/v10"
 )
 
 type Article struct {
@@ -40,7 +39,7 @@ func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 	}
 
 	{
-		if err := webruntime.BindPath(&pathItem, req, "articleId"); err != nil {
+		if err := webruntime.BindPathParams(&pathItem, req, "articleId"); err != nil {
 			w.WriteHeader(http.StatusNotFound) // todo: some helpers
 			webruntime.HandleResult(w, req, nil, err)
 			return
@@ -51,6 +50,11 @@ func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 	{
 		if err := webruntime.BindBody(&input, req.Body); err != nil {
 			w.WriteHeader(http.StatusBadRequest) // todo: some helpers
+			webruntime.HandleResult(w, req, nil, err)
+			return
+		}
+		if err := webruntime.ValidateStruct(input); err != nil {
+			w.WriteHeader(http.StatusUnprocessableEntity) // todo: some helpers
 			webruntime.HandleResult(w, req, nil, err)
 			return
 		}
@@ -69,9 +73,6 @@ func PostArticleComment(
 	input PostArticleCommentInput,
 	articleID int64,
 ) (*Article, error) {
-	if err := webruntime.Validate(input); err != nil {
-		return nil, err
-	}
 	article, ok := articles[articleID]
 	if !ok {
 		return nil, fmt.Errorf("not found")
@@ -83,23 +84,14 @@ func PostArticleComment(
 	return article, nil
 }
 
-var validate = validator.New()
-
-func Validate(ob interface{}) error {
-	// TODO: merge error
-	if err := validate.Struct(ob); err != nil {
-		return err
-	}
-	if v, ok := ob.(interface{ Validate() error }); ok {
-		return v.Validate() // TODO: 422
-	}
-	return nil
-}
-
 func main() {
 	if err := run(); err != nil {
 		log.Fatalf("!! %+v", err)
 	}
+}
+
+func Mount(r chi.Router) {
+	r.Post("/articles/{articleId}/comments", PostArticleCommentHandler)
 }
 
 func run() error {
@@ -113,7 +105,7 @@ func run() error {
 	r.Use(middleware.Timeout(60 * time.Second))
 	r.Use(middleware.Heartbeat("/_ping"))
 
-	r.Post("/articles/{articleId}/comments", PostArticleCommentHandler)
+	Mount(r)
 
 	port := 8888
 	if v, err := strconv.Atoi(os.Getenv("PORT")); err == nil {
