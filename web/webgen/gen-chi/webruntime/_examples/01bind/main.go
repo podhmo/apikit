@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
 	"webruntime"
 
 	"github.com/go-chi/chi/v5"
@@ -31,6 +30,26 @@ var articles = map[int64]*Article{
 		ID:    1,
 		Title: "foo",
 	},
+}
+
+type PostArticleCommentInput struct {
+	Text string `json:"text" validate:"required"`
+}
+
+func PostArticleComment(
+	ctx context.Context,
+	input PostArticleCommentInput,
+	articleID int64,
+) (*Article, error) {
+	article, ok := articles[articleID]
+	if !ok {
+		return nil, fmt.Errorf("not found")
+	}
+	article.Comments = append(article.Comments, &Comment{
+		Author: "someone",
+		Text:   input.Text,
+	})
+	return article, nil
 }
 
 func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
@@ -61,26 +80,6 @@ func PostArticleCommentHandler(w http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	result, err := PostArticleComment(ctx, data.PostArticleCommentInput, data.ArticleID)
 	webruntime.HandleResult(w, req, result, err)
-}
-
-type PostArticleCommentInput struct {
-	Text string `json:"text" validate:"required"`
-}
-
-func PostArticleComment(
-	ctx context.Context,
-	input PostArticleCommentInput,
-	articleID int64,
-) (*Article, error) {
-	article, ok := articles[articleID]
-	if !ok {
-		return nil, fmt.Errorf("not found")
-	}
-	article.Comments = append(article.Comments, &Comment{
-		Author: "someone",
-		Text:   input.Text,
-	})
-	return article, nil
 }
 
 func main() {
