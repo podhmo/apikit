@@ -13,8 +13,10 @@ import (
 var DefaultHistFileName = ".apikit.hist.json"
 
 type Config struct {
-	RootPkg        *tinypkg.Package
-	FilenamePrefix string
+	RootPkg *tinypkg.Package
+
+	FilenamePrefix string // deprecated
+	FilenameFormat func(name string) string
 
 	*emitfile.Config
 }
@@ -74,6 +76,9 @@ func (e *Emitter) Register(pkg *tinypkg.Package, name string, target emitfile.Em
 	}
 	if e.Config.FilenamePrefix != "" {
 		name = e.Config.FilenamePrefix + name
+	}
+	if e.Config.FilenameFormat != nil {
+		name = e.Config.FilenameFormat(name)
 	}
 	return e.FileEmitter.Register("/"+path.Join(pkg.Path, name), target)
 }
