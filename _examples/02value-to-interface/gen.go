@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"m/02value-to-interface/db"
 
 	"github.com/podhmo/apikit/pkg/emitgo"
@@ -10,24 +8,17 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
+	emitgo.NewConfigFromRelativePath(db.NewDB, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		config := translate.DefaultConfig()
+		translator := translate.NewTranslator(config)
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(db.NewDB, "..").NewEmitter()
-	defer emitter.EmitWith(&err)
-
-	config := translate.DefaultConfig()
-	translator := translate.NewTranslator(config)
-
-	rootpkg := emitter.RootPkg
-	dst := rootpkg.Relative("component", "")
-	{
-		pkg := dst
-		code := translator.TranslateToInterface(pkg, &db.DB{}, "DB")
-		emitter.Register(pkg, code.Name, code)
-	}
-	return nil
+		rootpkg := emitter.RootPkg
+		dst := rootpkg.Relative("component", "")
+		{
+			pkg := dst
+			code := translator.TranslateToInterface(pkg, &db.DB{}, "DB")
+			emitter.Register(pkg, code.Name, code)
+		}
+		return nil
+	})
 }

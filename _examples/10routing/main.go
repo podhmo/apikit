@@ -2,34 +2,35 @@ package main
 
 import (
 	"encoding/json"
-	"log"
-	"m/10routing/design"
 	"os"
 	"strings"
+
+	"m/10routing/design"
 
 	"github.com/podhmo/apikit/web"
 )
 
-func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
-
-func run() (err error) {
-	r := web.NewRouter()
+func mount(r *web.Router) {
 	r.Group("/articles", func(r *web.Router) {
 		// TODO: set tag
 
 		r.Get("/", design.ListArticle)
 		r.Get("/{articleId}", design.GetArticle)
 	})
+}
 
-	enc := json.NewEncoder(os.Stdout)
-	return web.Walk(r, func(n *web.WalkerNode) error {
-		return enc.Encode(map[string]interface{}{
+func main() {
+	r := web.NewRouter()
+	mount(r)
+
+	dumpJSON := json.NewEncoder(os.Stdout).Encode
+	err := web.Walk(r, func(n *web.WalkerNode) error {
+		return dumpJSON(map[string]interface{}{
 			"path": strings.Join(n.Path(), ""),
 			"vars": n.Node.VariableNames,
 		})
 	})
+	if err != nil {
+		panic(err)
+	}
 }

@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"m/14openapi-petstore/action"
 	"m/14openapi-petstore/design"
 	"m/14openapi-petstore/myplugins/gendoc"
@@ -21,14 +20,50 @@ import (
 // generate code: VERBOSE=1 go run gen.go
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
+	ctx := context.Background()
+
+	emitgo.NewConfigFromRelativePath(action.AddPet, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
+
+		c := genchi.DefaultConfig()
+		override(c)
+
+		r := web.NewRouter()
+		mount(r)
+
+		g := c.New(emitter)
+		if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
+			return err
+		}
+
+		// generate openapi doc via custom plugin
+		type defaultError struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		}
+		return g.ActivatePlugins(ctx, g.RootPkg,
+			gendoc.Options{
+				OutputFile:   "docs/openapi.json",
+				Handlers:     g.Handlers,
+				DefaultError: defaultError{},
+				Prepare: func(m *gendoc.Manager) {
+					// customize information
+					var doc *openapi3.T = m.Doc
+					doc.Info.Title = "Swagger Petstore"
+					doc.Info.Version = "1.0.0"
+					doc.Info.Description = "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification."
+				},
+			},
+		)
+
+	})
 }
 
-func router() *web.Router {
-	r := web.NewRouter()
+func override(c *genchi.Config) {
+	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
+}
 
+func mount(r *web.Router) {
 	r.Group("", func(r *web.Router) {
 		r.MetaData.Tags = []string{"pet"}
 
@@ -37,43 +72,4 @@ func router() *web.Router {
 		r.Get("/pets/{id}", action.FindPetByID, web.WithTags("query"))
 		r.Delete("/pets/{id}", action.DeletePet, web.WithDefaultStatusCode(204))
 	})
-
-	return r
-}
-
-func run() (err error) {
-	ctx := context.Background()
-
-	emitter := emitgo.NewConfigFromRelativePath(action.AddPet, "..").NewEmitter()
-	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
-	defer emitter.EmitWith(&err)
-
-	c := genchi.DefaultConfig()
-	// c.Override("logger", action.NewLogger) // register provider as func() (*log.Logger, error)
-
-	g := c.New(emitter)
-	r := router()
-	if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
-		return err
-	}
-
-	// generate openapi doc via custom plugin
-	type defaultError struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	}
-	return g.ActivatePlugins(ctx, g.RootPkg,
-		gendoc.Options{
-			OutputFile:   "docs/openapi.json",
-			Handlers:     g.Handlers,
-			DefaultError: defaultError{},
-			Prepare: func(m *gendoc.Manager) {
-				// customize information
-				var doc *openapi3.T = m.Doc
-				doc.Info.Title = "Swagger Petstore"
-				doc.Info.Version = "1.0.0"
-				doc.Info.Description = "A sample API that uses a petstore as an example to demostorate features in the OpenAPI 3.0 specification."
-			},
-		},
-	)
 }
