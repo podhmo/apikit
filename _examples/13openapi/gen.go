@@ -19,6 +19,8 @@ import (
 func main() {
 	ctx := context.Background()
 	emitgo.NewConfigFromRelativePath(design.ListArticle, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		emitter.FilenameFormat = func(fname string) string { return fname[:len(fname)-3] + "_gen" + ".go" }
+
 		c := genchi.DefaultConfig()
 		override(c)
 
