@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"m/13openapi/design"
 	"m/13openapi/design/enum"
@@ -18,30 +17,13 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
-
-// TODO: schema description
-// TODO: (schema fields description)
-// TODO: examples
-// TODO: set error handler (500-handler)
-// TODO: set 404-handler
-
-func run() (err error) {
 	ctx := context.Background()
-	return emitgo.NewConfigFromRelativePath(design.ListArticle, "..").EmitWith(func(emitter *emitgo.Emitter) error {
+	emitgo.NewConfigFromRelativePath(design.ListArticle, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
 		c := genchi.DefaultConfig()
-		c.Override("db", design.NewDB)
+		override(c)
 
 		r := web.NewRouter()
-		r.Group("/articles", func(r *web.Router) {
-			// TODO: set tag
-			r.Get("/", design.ListArticle)
-			r.Get("/{articleId}", design.GetArticle)
-			r.Post("/{articleId}/comments", design.PostArticleComment)
-		})
+		mount(r)
 
 		g := c.New(emitter)
 		if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
@@ -49,6 +31,10 @@ func run() (err error) {
 		}
 
 		// generate openapi doc via custom plugin
+		type defaultError struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		}
 		return g.ActivatePlugins(ctx, g.RootPkg,
 			gendoc.Options{
 				OutputFile:   "docs/openapi.json",
@@ -62,7 +48,15 @@ func run() (err error) {
 	})
 }
 
-type defaultError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+func mount(r *web.Router) {
+	r.Group("/articles", func(r *web.Router) {
+		// TODO: set tag
+		r.Get("/", design.ListArticle)
+		r.Get("/{articleId}", design.GetArticle)
+		r.Post("/{articleId}/comments", design.PostArticleComment)
+	})
+}
+
+func override(c *genchi.Config) {
+	c.Override("db", design.NewDB)
 }
