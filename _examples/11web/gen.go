@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"m/11web/design"
 
@@ -16,15 +15,9 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
-
-func run() error {
 	ctx := context.Background()
 
-	return emitgo.NewConfigFromRelativePath(design.ListArticle, "..").EmitWith(func(emitter *emitgo.Emitter) error {
+	emitgo.NewConfigFromRelativePath(design.ListArticle, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
 		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 
 		r := web.NewRouter()
