@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"m/12with-auth/action"
 	"m/12with-auth/auth"
 	"m/12with-auth/design"
@@ -20,29 +19,22 @@ import (
 // generate code: VERBOSE=1 go run gen.go
 
 func main() {
-	if err := run(); err != nil {
-		log.Fatalf("!! %+v", err)
-	}
-}
+	ctx := context.Background()
+	emitgo.NewConfigFromRelativePath(action.Hello, "..").MustEmitWith(func(emitter *emitgo.Emitter) error {
+		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(action.Hello, "..").NewEmitter()
-	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
-	defer emitter.EmitWith(&err)
+		r := web.NewRouter()
+		// todo: conflict-check
+		r.Get("/hello", action.Hello)
+		r.Get("/hello-with-auth", action.Hello, web.WithExtraDependencies(auth.LoginRequired), web.WithAnotherHandlerName("HelloWithAuth"))
+		r.Get("/hello-with-auth-with-db", action.Hello, web.WithExtraDependencies(auth.LoginRequiredWithDB), web.WithAnotherHandlerName("HelloWithAuthWithDB"))
 
-	r := web.NewRouter()
-	// todo: conflict-check
-	r.Get("/hello", action.Hello)
-	r.Get("/hello-with-auth", action.Hello, web.WithExtraDependencies(auth.LoginRequired), web.WithAnotherHandlerName("HelloWithAuth"))
-	r.Get("/hello-with-auth-with-db", action.Hello, web.WithExtraDependencies(auth.LoginRequiredWithDB), web.WithAnotherHandlerName("HelloWithAuthWithDB"))
-
-	c := genchi.DefaultConfig()
-	// c.Override("logger", action.NewLogger)
-
-	g := c.New(emitter)
-	return g.Generate(
-		context.Background(),
-		r,
-		design.HTTPStatusOf,
-	)
+		c := genchi.DefaultConfig()
+		g := c.New(emitter)
+		return g.Generate(
+			ctx,
+			r,
+			design.HTTPStatusOf,
+		)
+	})
 }
