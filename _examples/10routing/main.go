@@ -12,7 +12,7 @@ import (
 
 func mount(r *web.Router) {
 	r.Group("/articles", func(r *web.Router) {
-		// TODO: set tag
+		r.MetaData.Tags = append(r.MetaData.Tags, "article")
 
 		r.Get("/", design.ListArticle)
 		r.Get("/{articleId}", design.GetArticle)
