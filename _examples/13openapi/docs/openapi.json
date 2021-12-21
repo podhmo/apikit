@@ -42,7 +42,6 @@
       "SortOrder": {
         "enum": [
           "desc",
-          "desc",
           "asc"
         ],
         "title": "SortOrder",

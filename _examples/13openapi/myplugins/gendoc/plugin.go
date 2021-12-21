@@ -64,7 +64,7 @@ func (m *Manager) DefineEnumWithEnumSet(value interface{}, set enum.EnumSet) {
 				hasDesc = true
 			}
 		}
-		schema.Enum = append([]interface{}{value}, values...)
+		schema.Enum = values
 		if schema.Extensions == nil {
 			schema.Extensions = map[string]interface{}{}
 		}
