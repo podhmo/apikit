@@ -21,19 +21,29 @@ func main() {
 	}
 }
 
-// TODO: parameters bindings
-// TODO: set lift function
-// TODO: set error handler (500-handler)
-// TODO: set 404-handler
+func run() error {
+	ctx := context.Background()
 
-// TODO: gentle message ( extract path info: expected variables are [], but want variables are [articleId] (in def GetArticle): mismatch-number-of-variables)
+	return emitgo.NewConfigFromRelativePath(design.ListArticle, "..").EmitWith(func(emitter *emitgo.Emitter) error {
+		emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
 
-func run() (err error) {
-	emitter := emitgo.NewConfigFromRelativePath(design.ListArticle, "..").NewEmitter()
-	emitter.FilenamePrefix = "gen_" // generated file name is "gen_<name>.go"
-	defer emitter.EmitWith(&err)
+		r := web.NewRouter()
+		mount(r)
 
-	r := web.NewRouter()
+		c := genchi.DefaultConfig()
+		override(c)
+
+		g := c.New(emitter)
+		if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
+			return err
+		}
+		return g.ActivatePlugins(ctx, g.RuntimePkg,
+			scroll.Options{LatestIDTypeZeroValue: 0}, // latestIDType is int
+		)
+	})
+}
+
+func mount(r *web.Router) {
 	r.Group("/articles", func(r *web.Router) {
 		// TODO: set tag
 
@@ -41,17 +51,8 @@ func run() (err error) {
 		r.Get("/{articleId}", design.GetArticle)
 		r.Post("/{articleId}/comments", design.PostArticleComment)
 	})
+}
 
-	c := genchi.DefaultConfig()
+func override(c *genchi.Config) {
 	c.Override("db", design.NewDB)
-
-	ctx := context.Background()
-	g := c.New(emitter)
-	if err := g.Generate(ctx, r, design.HTTPStatusOf); err != nil {
-		return err
-	}
-
-	return g.ActivatePlugins(ctx, g.RuntimePkg,
-		scroll.Options{LatestIDTypeZeroValue: 0}, // latestIDType is int
-	)
 }
