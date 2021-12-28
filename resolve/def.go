@@ -1,6 +1,8 @@
 package resolve
 
 import (
+	"reflect"
+
 	"github.com/podhmo/apikit/pkg/tinypkg"
 	reflectshape "github.com/podhmo/reflect-shape"
 )
@@ -30,19 +32,29 @@ func ExtractDef(universe *tinypkg.Universe, extractor *reflectshape.Extractor, f
 		})
 	}
 
+	isReturnSlice := false
+	if sfn.Returns.Len() > 0 {
+		switch sfn.Returns.Values[0].GetReflectKind() {
+		case reflect.Slice, reflect.Array:
+			isReturnSlice = true
+		}
+	}
+
 	return &Def{
-		Symbol:  pkg.NewSymbol(sfn.Name),
-		Shape:   sfn,
-		Args:    args,
-		Returns: returns,
+		Symbol:        pkg.NewSymbol(sfn.Name),
+		Shape:         sfn,
+		Args:          args,
+		Returns:       returns,
+		IsReturnSlice: isReturnSlice,
 	}
 }
 
 type Def struct {
 	*tinypkg.Symbol
-	Shape   reflectshape.Function
-	Args    []Item
-	Returns []Item
+	Shape         reflectshape.Function
+	Args          []Item
+	Returns       []Item
+	IsReturnSlice bool
 }
 
 type Item struct {
