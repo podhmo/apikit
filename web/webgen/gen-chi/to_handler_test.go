@@ -255,10 +255,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			db = provider.DB()
 		}
 		result, err := genchi.ListArticle(db)
-		if err == nil && result == nil {
-			runtime.HandleResult(w, req, []bool{}, nil) // nil as empty slice
-			return
-		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -293,10 +289,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			}
 		}
 		result, err := genchi.ListArticle(db)
-		if err == nil && result == nil {
-			runtime.HandleResult(w, req, []bool{}, nil) // nil as empty slice
-			return
-		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -354,10 +346,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			db = provider.DB()
 		}
 		result, err := genchi.ListArticleWithContext(ctx, db)
-		if err == nil && result == nil {
-			runtime.HandleResult(w, req, []bool{}, nil) // nil as empty slice
-			return
-		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,
@@ -393,10 +381,6 @@ func Handler(getProvider func(*http.Request) (*http.Request, Provider, error)) f
 			runtime.HandleResult(w, req, nil, err); return
 		}
 		result, err := genchi.ListArticleWithContext(ctx, db)
-		if err == nil && result == nil {
-			runtime.HandleResult(w, req, []bool{}, nil) // nil as empty slice
-			return
-		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }`,

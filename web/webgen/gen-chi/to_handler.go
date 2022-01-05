@@ -189,18 +189,9 @@ func WriteHandlerFunc(w io.Writer,
 		actionArgs := analyzed.Names.ActionFuncArgs
 		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionName, strings.Join(actionArgs, ", "))
 
-		// status code
 		if defaultStatusCode != 0 {
-			fmt.Fprintln(w, "\t\tif err == nil {")
+			fmt.Fprintln(w, "\t\tif err == nil{")
 			fmt.Fprintf(w, "\t\t\tw.WriteHeader(%d)\n", defaultStatusCode)
-			fmt.Fprintln(w, "\t\t}")
-		}
-
-		// nil as empty slice
-		if analyzed.PathInfo.Def.IsReturnSlice {
-			fmt.Fprintln(w, "\t\tif err == nil && result == nil {")
-			fmt.Fprintf(w, "\t\t\t%s(w, req, []bool{}, nil) // nil as empty slice\n", handleResultFunc)
-			fmt.Fprintln(w, "\t\t\treturn")
 			fmt.Fprintln(w, "\t\t}")
 		}
 
