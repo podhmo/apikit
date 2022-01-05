@@ -33,10 +33,6 @@ func ListArticle(getProvider func(*http.Request) (*http.Request, Provider, error
 			_ = err // ignored
 		}
 		result, err := design.ListArticle(ctx, db, queryParams.limit)
-		if err == nil && result == nil {
-			runtime.HandleResult(w, req, []bool{}, nil) // nil as empty slice
-			return
-		}
 		runtime.HandleResult(w, req, result, err)
 	}
 }
