@@ -88,7 +88,7 @@ func WriteHandlerFunc(w io.Writer,
 			pathParamsName := analyzed.Names.PathParams
 			bindPathParamsFunc := runtimeModule.Symbols.BindPathParams
 
-			fmt.Fprintf(w, "%svar %s struct {\n", indent, pathParamsName)
+			fmt.Fprintf(w, "%svar %s struct {\n", indent, *pathParamsName)
 			varNames := make([]string, len(pathBindings))
 			for i, b := range pathBindings {
 				fmt.Fprintf(w, "%s\t%s %s `path:\"%s,required\"`\n", indent, b.Name, b.Sym, b.Var.Name)
@@ -174,12 +174,12 @@ func WriteHandlerFunc(w io.Writer,
 			queryParamsName := analyzed.Names.QueryParams
 			bindQueryFunc := runtimeModule.Symbols.BindQuery
 
-			fmt.Fprintf(w, "%svar %s struct {\n", indent, queryParamsName)
+			fmt.Fprintf(w, "%svar %s struct {\n", indent, *queryParamsName)
 			for _, b := range queryBindings {
 				fmt.Fprintf(w, "%s\t%s %s `query:\"%s\"`\n", indent, b.Name, b.Sym, b.Name)
 			}
 			fmt.Fprintf(w, "%s}\n", indent)
-			fmt.Fprintf(w, "%sif err := %s(&%s, req); err != nil {\n", indent, bindQueryFunc, queryParamsName)
+			fmt.Fprintf(w, "%sif err := %s(&%s, req); err != nil {\n", indent, bindQueryFunc, *queryParamsName)
 			fmt.Fprintf(w, "\t%s_ = err // ignored\n", indent)
 			fmt.Fprintf(w, "%s}\n", indent)
 		}
@@ -187,7 +187,7 @@ func WriteHandlerFunc(w io.Writer,
 		// result, err := <action>(....)
 		actionName := analyzed.Names.ActionFunc
 		actionArgs := analyzed.Names.ActionFuncArgs
-		fmt.Fprintf(w, "\t\tresult, err := %s(%s)\n", actionName, strings.Join(actionArgs, ", "))
+		fmt.Fprintf(w, "\t\tresult, err := %s\n", tinypkg.ToFuncCall(actionName, actionArgs...))
 
 		if defaultStatusCode != 0 {
 			fmt.Fprintln(w, "\t\tif err == nil{")
