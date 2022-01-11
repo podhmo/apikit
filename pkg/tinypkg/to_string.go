@@ -5,6 +5,36 @@ import (
 	"strings"
 )
 
+type Name string
+
+func (s Name) String() string {
+	return string(s)
+}
+
+// LazyPrefixName express <X>.<Y>
+type LazyPrefixName struct {
+	Prefix *string
+	Value  string
+}
+
+const undefined = "<undefined>"
+
+func (s LazyPrefixName) String() string {
+	prefix := undefined
+	if s.Prefix != nil {
+		prefix = *s.Prefix
+	}
+	return prefix + s.Value
+}
+
+func ToFuncCall(name string, args ...fmt.Stringer) string {
+	sargs := make([]string, len(args))
+	for i, x := range args {
+		sargs[i] = x.String()
+	}
+	return fmt.Sprintf("%s(%s)", name, strings.Join(sargs, ", "))
+}
+
 // e.g.
 // - "m/foo"
 // - foo "m/foo"
