@@ -22,9 +22,9 @@ type Analyzed struct {
 	}
 	Names struct {
 		ActionFunc     string // core action
-		ActionFuncArgs []string
-		QueryParams    string
-		PathParams     string
+		ActionFuncArgs []fmt.Stringer
+		QueryParams    *string
+		PathParams     *string
 	}
 
 	Name      string
@@ -97,6 +97,8 @@ func Analyze(
 	extraDefs []*resolve.Def,
 	provider *tinypkg.Var,
 ) (*Analyzed, error) {
+	pathParamName := "pathParams"
+	queryParamName := "queryParams"
 
 	var componentBindings tinypkg.BindingList
 	var pathBindings []*PathBinding
@@ -107,7 +109,7 @@ func Analyze(
 	seen := map[reflectshape.Identity]bool{}
 	def := info.Def
 
-	argNames := make([]string, 0, len(def.Args))
+	argNames := make([]fmt.Stringer, 0, len(def.Args))
 
 	var subDepends []reflectshape.Function
 	for _, x := range def.Args {
@@ -118,7 +120,7 @@ func Analyze(
 			seen[x.Shape.GetIdentity()] = true
 
 			ignored = append(ignored, &tinypkg.Var{Name: x.Name, Node: sym})
-			argNames = append(argNames, x.Name)
+			argNames = append(argNames, tinypkg.Name(x.Name))
 		case resolve.KindComponent:
 			seen[x.Shape.GetIdentity()] = true
 
@@ -130,7 +132,7 @@ func Analyze(
 			sym := resolver.Symbol(here, shape)
 			factory, ok := sym.(*tinypkg.Func)
 			if !ok {
-				// func() <component>
+				// func() <component.
 				factory = here.NewFunc("", nil, []*tinypkg.Var{{Node: sym}})
 			}
 
@@ -144,20 +146,20 @@ func Analyze(
 			binding.ProviderAlias = fmt.Sprintf("%s.%s", provider.Name, methodName)
 
 			componentBindings = append(componentBindings, binding)
-			argNames = append(argNames, x.Name)
+			argNames = append(argNames, tinypkg.Name(x.Name))
 		case resolve.KindPrimitive: // handle pathParams
 			if v, ok := info.Vars[x.Name]; ok {
 				pathBindings = append(pathBindings, &PathBinding{Name: x.Name, Var: v, Sym: resolver.Symbol(here, v.Shape)})
 			}
-			argNames = append(argNames, "pathParams."+x.Name)
+			argNames = append(argNames, tinypkg.LazyPrefixName{Prefix: &pathParamName, Value: "." + x.Name})
 		case resolve.KindPrimitivePointer: // handle query string
 			queryBindings = append(queryBindings, &QueryBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
-			argNames = append(argNames, "queryParams."+x.Name)
+			argNames = append(argNames, tinypkg.LazyPrefixName{Prefix: &queryParamName, Value: "." + x.Name})
 		case resolve.KindData: // handle request.Body
 			dataBindings = append(dataBindings, &DataBinding{Name: x.Name, Sym: resolver.Symbol(here, x.Shape)})
-			argNames = append(argNames, x.Name)
+			argNames = append(argNames, tinypkg.Name(x.Name))
 		default:
-			argNames = append(argNames, x.Name)
+			argNames = append(argNames, tinypkg.Name(x.Name))
 		}
 	}
 
@@ -274,8 +276,8 @@ func Analyze(
 	analyzed.Vars.Ignored = ignored
 	analyzed.Vars.Provider = provider
 
-	analyzed.Names.QueryParams = "queryParams"
-	analyzed.Names.PathParams = "pathParams"
+	analyzed.Names.QueryParams = &queryParamName
+	analyzed.Names.PathParams = &pathParamName
 	analyzed.Names.ActionFunc = tinypkg.ToRelativeTypeString(here, info.Def.Symbol)
 	analyzed.Names.ActionFuncArgs = argNames
 

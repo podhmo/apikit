@@ -116,6 +116,17 @@ func (g *Generator) Generate(
 	resolver := g.Tracker.Resolver
 	var handlers []Handler
 
+	providerModule := analyzer.ProviderModule
+	getProviderFunc := providerModule.Funcs.GetProvider
+	chiPkg := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
+	mountFunc := g.RouterPkg.NewFunc("Mount",
+		[]*tinypkg.Var{
+			{Name: "r", Node: chiPkg.NewSymbol("Router")},
+			{Name: getProviderFunc.Name, Node: getProviderFunc},
+		},
+		nil,
+	)
+
 	// handler
 	{
 		g.Log.Printf("generate handler package ...")
@@ -133,13 +144,16 @@ func (g *Generator) Generate(
 			g.Emitter.Register(here, code.Name, code)
 
 			methodAndPath := strings.SplitN(strings.Join(node.Path(), ""), " ", 2)
-
+			handlerFunc := &tinypkg.Func{ // todo: add static dependencies
+				Package: here, Name: code.Name,
+				Args:    analyzed.ProviderModule.Funcs.CreateHandler.Args,
+				Returns: analyzed.ProviderModule.Funcs.CreateHandler.Returns,
+			}
 			h := Handler{
-				Name:        code.Name,
 				Method:      methodAndPath[0][:1] + strings.ToLower(methodAndPath[0][1:]), // GET -> Get
 				Path:        methodAndPath[1],
 				RawFn:       node.Node.Value,
-				HandlerFunc: here.NewSymbol(code.Name),
+				HandlerFunc: handlerFunc,
 				MetaData:    metadata,
 				Analyzed:    analyzed,
 			}
@@ -162,21 +176,14 @@ func (g *Generator) Generate(
 		g.Emitter.Register(here, "mount.go", &code.CodeEmitter{Code: g.Config.NewCode(
 			here, "Mount",
 			func(w io.Writer, c *code.Code) error {
-				providerModule := analyzer.ProviderModule
 				c.AddDependency(providerModule)
-				getProviderFunc := providerModule.Funcs.GetProvider
+				c.AddDependency(mountFunc)
 
-				chi := g.Config.Resolver.NewPackage("github.com/go-chi/chi/v5", "chi")
-				f := here.NewFunc("Mount", []*tinypkg.Var{
-					{Name: "r", Node: chi.NewSymbol("Router")},
-					{Name: getProviderFunc.Name, Node: getProviderFunc},
-				}, nil)
-				c.AddDependency(f)
-
-				return tinypkg.WriteFunc(w, here, "", f, func() error {
+				return tinypkg.WriteFunc(w, here, "", mountFunc, func() error {
 					for _, h := range handlers {
 						// TODO: grouping
-						fmt.Fprintf(w, "\tr.%s(%q, %s(%s))\n", h.Method, h.Path, h.HandlerFunc, getProviderFunc.Name)
+						fn := here.Use(h.HandlerFunc.Symbol())
+						fmt.Fprintf(w, "\tr.%s(%q, %s(%s))\n", h.Method, h.Path, fn, getProviderFunc.Name)
 					}
 					return nil
 				})
@@ -285,12 +292,11 @@ func (g *Generator) Generate(
 }
 
 type Handler struct {
-	Name   string
 	Method string
 	Path   string
 
 	RawFn       interface{}
-	HandlerFunc tinypkg.Node
+	HandlerFunc *tinypkg.Func
 	MetaData    web.MetaData
 	Analyzed    *Analyzed
 }
