@@ -23,6 +23,9 @@ default: 00 01 02 10 11 12 13
 14:
 	go run $(shell echo $@*/)gen.go
 
+x00:
+	go run $(shell echo $@*/)main.go
+
 check:
 	go install -v ./$(shell echo 00*/)/runner/...
 	go install -v ./$(shell echo 01*/)/runner/...
