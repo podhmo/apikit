@@ -3,6 +3,7 @@ package tinypkg
 import (
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -57,7 +58,7 @@ type Binding struct {
 
 	Provider      *Func
 	ProviderAlias string
-	argsAliases   []string // args in call alias
+	ArgsAliases   []string // args in call alias
 
 	ZeroReturnsDefault string
 
@@ -111,6 +112,25 @@ func NewBinding(name string, provider *Func) (*Binding, error) {
 // TODO: support non-pointer zero value
 // TODO: name-check (when calling provider function)
 
+func (b *Binding) CallString(here *Package) string {
+	provider := b.Provider
+	args := b.ArgsAliases
+	if args == nil {
+		args = make([]string, 0, len(provider.Args))
+		for _, x := range provider.Args {
+			args = append(args, x.Name)
+		}
+	}
+
+	providerName := provider.Name
+	if b.ProviderAlias != "" {
+		providerName = b.ProviderAlias
+	} else if provider.Package != nil && provider.Package != here {
+		providerName = ToRelativeTypeString(here, provider.Package.NewSymbol(provider.Name))
+	}
+	return fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
+}
+
 // WriteWithCleanaupAndError writes binding-code
 // support:
 // - func(...) <T>
@@ -125,25 +145,7 @@ func (b *Binding) WriteWithCleanupAndError(w io.Writer, here *Package, indent st
 
 	// similify: <lhs> := <call-rhs>; return <lhs>
 
-	var callRHS string // <fn>(...)
-	{
-		provider := b.Provider
-		args := b.argsAliases
-		if args == nil {
-			args = make([]string, 0, len(provider.Args))
-			for _, x := range provider.Args {
-				args = append(args, x.Name)
-			}
-		}
-
-		providerName := provider.Name
-		if b.ProviderAlias != "" {
-			providerName = b.ProviderAlias
-		} else if provider.Package != nil && provider.Package != here {
-			providerName = ToRelativeTypeString(here, provider.Package.NewSymbol(provider.Name))
-		}
-		callRHS = fmt.Sprintf("%s(%s)", providerName, strings.Join(args, ", "))
-	}
+	callRHS := b.CallString(here) // <fn>(...)
 
 	// TODO: support zero-value
 	returnValue := b.ZeroReturnsDefault
@@ -247,6 +249,19 @@ type topoState struct {
 	nodes map[string]*Binding
 }
 
+func (bl BindingList) Dump(vars ...*Var) {
+	fmt.Fprintln(os.Stderr, "****************************************")
+	fmt.Fprintln(os.Stderr, "variables")
+	for _, v := range vars {
+		fmt.Fprintln(os.Stderr, "\t", v)
+	}
+	fmt.Fprintln(os.Stderr, "bindings")
+	for _, b := range bl {
+		fmt.Fprintln(os.Stderr, "\t", b.Name, "<-", b.typ, "...", b.Provider)
+	}
+	fmt.Fprintln(os.Stderr, "****************************************")
+}
+
 func (bl BindingList) TopologicalSorted(vars ...*Var) ([]*Binding, error) {
 	s := &topoState{
 		sorted: make([]*Binding, 0, len(bl)),
@@ -281,7 +296,8 @@ func (bl *BindingList) topoWalk(s *topoState, current *Binding, history []*Bindi
 			if !ok {
 				return fmt.Errorf("node %q is not found in binding[name=%q, need=%s]", name, current.Name, current.Provider)
 			}
-			if b.typ != nil && !TypeEqual(current.Provider.Args[i].Node, b.typ) {
+
+			if b.typ != nil && !TypeEqualWithoutLevel(current.Provider.Args[i].Node, b.typ) {
 				// TODO: if DEBUG=1, logging message but keep going.
 				return fmt.Errorf("node %q is conflict type in binding[name=%q, need=%s], expected type is %s, but got type is %s", name, current.Name, current.Provider, current.Provider.Args[i].Node, b.typ)
 			}
